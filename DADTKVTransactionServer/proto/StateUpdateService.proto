@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service StateUpdateService {
+	rpc Update(UpdateRequest) returns (UpdateResponse);
+}
+
+message UpdateRequest {
+	string clientID = 1;
+	repeated DadInt writeSet = 2;
+}
+
+message UpdateResponse {
+	bool ok = 1;
+}

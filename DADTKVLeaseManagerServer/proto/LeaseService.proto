@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service LeaseService {
+	rpc RequestLease(LeaseRequest) returns (LeaseResponse);
+}
+
+message LeaseRequest {
+	string clientID = 1;
+	repeated string set = 2;
+}
+
+message LeaseResponse {
+	bool ok = 1;
+}
