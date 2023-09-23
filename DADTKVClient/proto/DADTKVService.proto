@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "DADTKVClient";
+
+service DADTKVService {
+	rpc TxSubmit(TxSubmitRequest) returns (TxSubmitResponse);
+	rpc Status(StatusRequest) returns (StatusResponse);
+}
+
+message TxSubmitRequest {
+	string clientID = 1;
+	repeated string readSet = 2;
+	repeated DadInt writeSet = 3;
+}
+
+message TxSubmitResponse {
+	repeated DadInt readSet = 1;
+}
+
+message DadInt {
+	string key = 1;
+	int32 value = 2;
+}
+
+message StatusRequest {
+}
+
+message StatusResponse {
+	repeated string status = 1;
+}

@@ -14,10 +14,13 @@
 
     internal class TransactionCommand : Command
     {
-        private string[] readSet;
-        private string[] writeSet;
+        private List<string> readSet;
+        public List<string> ReadSet { get => readSet; }
+        
+        private Dictionary<string, int> writeSet;
+        public Dictionary<string, int> WriteSet { get => writeSet; }
 
-        public TransactionCommand(string[] readSet, string[] writeSet)
+        public TransactionCommand(List<string> readSet, Dictionary<string, int> writeSet)
         {
             this.readSet = readSet;
             this.writeSet = writeSet;
@@ -27,6 +30,7 @@
     internal class WaitCommand : Command
     {
         private int milliseconds;
+        public int Milliseconds { get => milliseconds; set => milliseconds = value; }
 
         public WaitCommand(int milliseconds)
         {
@@ -62,8 +66,11 @@
                 case "#":
                     return NextCommand();
                 case "T":
-                    string[] readSet = args[1].Split(new string[] { "(", ")" }, StringSplitOptions.None)[1].Split(',');
-                    string[] writeSet = args[2].Split(new string[] { "(", ")" }, StringSplitOptions.None)[1].Split(',');
+                    List<string> readSet = args[1].Split(new string[] { "(", ")" }, StringSplitOptions.None)[1].Split(',').Select(x => x.Trim('"')).ToList();
+
+                    Dictionary<string, int> writeSet = args[2].Split(new string[] { "(", ")" }, StringSplitOptions.None)[1].Split(">,")
+                        .Select(x => x.Trim('<', '>').Split(','))
+                        .ToDictionary(x => x[0].Trim('"'), x => int.Parse(x[1]));
 
                     return new TransactionCommand(readSet, writeSet);                  
                 case "W":

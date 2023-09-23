@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DADTKV", "DADTKV\DADTKV.csproj", "{0220573D-25E8-4CB7-BAAF-C2A0A5780EBF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DADTKVClient", "DADTKVClient\DADTKVClient.csproj", "{FB053FCC-163C-453C-8B27-93671120EFF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DADTKVClient", "DADTKVClient\DADTKVClient.csproj", "{FB053FCC-163C-453C-8B27-93671120EFF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DADTKVTransactionServer", "DADTKVTransactionServer\DADTKVTransactionServer.csproj", "{E6AB0488-87CF-4279-A94B-0D424489D79F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DADTKVTransactionServer", "DADTKVTransactionServer\DADTKVTransactionServer.csproj", "{E6AB0488-87CF-4279-A94B-0D424489D79F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DADTKVLeaseManagerServer", "DADTKVLeaseManagerServer\DADTKVLeaseManagerServer.csproj", "{061793B1-201E-4DD8-B6CB-8D7B782985F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DADTKVLeaseManagerServer", "DADTKVLeaseManagerServer\DADTKVLeaseManagerServer.csproj", "{061793B1-201E-4DD8-B6CB-8D7B782985F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0220573D-25E8-4CB7-BAAF-C2A0A5780EBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0220573D-25E8-4CB7-BAAF-C2A0A5780EBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0220573D-25E8-4CB7-BAAF-C2A0A5780EBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0220573D-25E8-4CB7-BAAF-C2A0A5780EBF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FB053FCC-163C-453C-8B27-93671120EFF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FB053FCC-163C-453C-8B27-93671120EFF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB053FCC-163C-453C-8B27-93671120EFF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
