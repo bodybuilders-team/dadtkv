@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using DADTKVTransactionManagerServer;
+using Grpc.Core;
 
 namespace DADTKV
 {
@@ -28,12 +29,33 @@ namespace DADTKV
         // Arguments: port, hostname
         public static void Main(string[] args)
         {
-            const int port = 1001; // args[0];
+            Console.WriteLine("Server Identifier: ");
+            var serverId = Convert.ToUInt64(Console.ReadLine());
+
+            // Set up the gRPC server
+            var port = (int)(1000 + serverId);
             const string hostname = "localhost"; // args[1];
 
-            Server server = new Server
+            var transactionManagersLookup = new Dictionary<ulong, string>
             {
-                Services = { DADTKVService.BindService(new ServerService()) },
+                {1, "http://localhost:1001"},
+                {2, "http://localhost:1002"},
+                {3, "http://localhost:1003"}
+            };
+
+            transactionManagersLookup.Remove(serverId);
+
+            var server = new Server
+            {
+                Services =
+                {
+                    DADTKVService.BindService(
+                        new DADTKVServiceImpl(transactionManagersLookup, serverId, "TODO") //TODO Add lease manager url
+                    ),
+                    StateUpdateService.BindService(
+                        new StateUpdateServiceImpl(transactionManagersLookup)
+                    )
+                },
                 Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
             };
 

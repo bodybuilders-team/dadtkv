@@ -6,14 +6,15 @@ option csharp_namespace = "DADTKV";
 import "DadInt.proto";
 
 service StateUpdateService {
-	rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc UpdateBroadcast(UpdateRequest) returns (UpdateResponse);
 }
 
 message UpdateRequest {
-	string clientID = 1;
-	repeated dadtkv.DadInt writeSet = 2;
+  uint64 serverId = 1;
+  uint64 sequenceNum = 2;
+  repeated dadtkv.DadInt writeSet = 3;
 }
 
 message UpdateResponse {
-	bool ok = 1;
+  bool ok = 1;
 }
