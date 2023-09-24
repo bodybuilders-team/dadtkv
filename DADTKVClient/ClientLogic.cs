@@ -1,41 +1,41 @@
-﻿using Grpc.Net.Client;
+﻿using Google.Protobuf.Collections;
+using Grpc.Net.Client;
 
 namespace DADTKV
 {
     internal class ClientLogic
     {
-        private string clientID;
-        private readonly GrpcChannel channel;
-        private readonly DADTKVService.DADTKVServiceClient client;
+        private readonly string _clientId;
+        private readonly DADTKVService.DADTKVServiceClient _client;
 
-        public ClientLogic(string clientID, string serverHostname, int serverPort)
+        public ClientLogic(string clientId, string serverHostname, int serverPort)
         {
-            this.clientID = clientID;
+            this._clientId = clientId;
 
             // Set up the gRPC client
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-            channel = GrpcChannel.ForAddress($"http://{serverHostname}:{serverPort}");
-            client = new DADTKVService.DADTKVServiceClient(channel);
+            var channel = GrpcChannel.ForAddress($"http://{serverHostname}:{serverPort}");
+            _client = new DADTKVService.DADTKVServiceClient(channel);
         }
 
-        public async Task<List<DadInt>> TxSubmit(List<string> readSet, List<DadInt> writeSet)
+        public async Task<List<DadInt>> TxSubmit(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
         {
-            TxSubmitRequest request = new TxSubmitRequest
+            var request = new TxSubmitRequest
             {
-                ClientID = clientID,
+                ClientID = _clientId,
                 ReadSet = { readSet },
                 WriteSet = { writeSet }
             };
 
-            TxSubmitResponse response = await client.TxSubmitAsync(request);
+            var response = await _client.TxSubmitAsync(request);
             return response.ReadSet.ToList();
         }
 
-        public async Task Status()
+        public async Task<RepeatedField<string>> Status()
         {
-            StatusRequest request = new StatusRequest();
-            StatusResponse response = await client.StatusAsync(request);
-            // TODO: Implement statues
+            var request = new StatusRequest();
+            var response = await _client.StatusAsync(request);
+            return response.Status;
         }
     }
 }

@@ -4,14 +4,14 @@ package dadtkv;
 option csharp_namespace = "DADTKV";
 
 service LeaseService {
-	rpc RequestLease(LeaseRequest) returns (LeaseResponse);
+  rpc RequestLease(LeaseRequest) returns (LeaseResponse);
 }
 
 message LeaseRequest {
-	string clientID = 1;
-	repeated string set = 2;
+  string clientID = 1;
+  repeated string set = 2;
 }
 
 message LeaseResponse {
-	bool ok = 1;
+  bool ok = 1;
 }

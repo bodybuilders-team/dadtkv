@@ -21,19 +21,19 @@
 
         public TransactionCommand(List<string> readSet, Dictionary<string, int> writeSet)
         {
-            this.ReadSet = readSet;
-            this.WriteSet = writeSet;
+            ReadSet = readSet;
+            WriteSet = writeSet;
         }
     }
 
     // Command to wait for a number of milliseconds
     internal class WaitCommand : ICommand
     {
-        public int Milliseconds { get; set; }
+        public int Milliseconds { get; }
 
         public WaitCommand(int milliseconds)
         {
-            this.Milliseconds = milliseconds;
+            Milliseconds = milliseconds;
         }
     }
 
@@ -45,7 +45,7 @@
 
         public ScriptReader(string script)
         {
-            _lines = script.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            _lines = script.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             _currentLine = 0;
         }
 
@@ -68,13 +68,13 @@
                         continue;
                     case "T":
                         var readSet = args[1]
-                            .Split(new string[] { "(", ")" }, StringSplitOptions.None)[1]
+                            .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
                             .Split(',')
                             .Select(x => x.Trim('"'))
                             .ToList();
 
                         var writeSet = args[2]
-                            .Split(new string[] { "(", ")" }, StringSplitOptions.None)[1]
+                            .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
                             .Split(">,")
                             .Select(x => x.Trim('<', '>').Split(','))
                             .ToDictionary(x => x[0].Trim('"'), x => int.Parse(x[1]));

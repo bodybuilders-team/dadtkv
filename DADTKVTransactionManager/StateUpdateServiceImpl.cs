@@ -1,11 +1,6 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DADTKV;
 using Google.Protobuf.Collections;
 
@@ -18,7 +13,7 @@ namespace DADTKVTransactionManagerServer
 
         public StateUpdateServiceImpl(Dictionary<ulong, string> transactionManagersLookup)
         {
-            this._transactionManagersLookup = transactionManagersLookup;
+            _transactionManagersLookup = transactionManagersLookup;
             _sequenceNumCounterLookup = new ConcurrentDictionary<ulong, ulong>();
 
             foreach (var (id, url) in transactionManagersLookup)
@@ -34,9 +29,8 @@ namespace DADTKVTransactionManagerServer
             if (currSeqNum >= request.SequenceNum)
                 return Task.FromResult(new UpdateResponse { Ok = true });
 
-            // TODO
-            // Needs to be atomic
-            _sequenceNumCounterLookup[request.ServerId] = currSeqNum + 1; 
+            // TODO: Needs to be atomic
+            _sequenceNumCounterLookup[request.ServerId] = currSeqNum + 1;
 
             foreach (var (id, url) in _transactionManagersLookup)
             {
@@ -53,7 +47,6 @@ namespace DADTKVTransactionManagerServer
 
         private void executeTrans(RepeatedField<DadInt> writeSet)
         {
-            
         }
     }
 }

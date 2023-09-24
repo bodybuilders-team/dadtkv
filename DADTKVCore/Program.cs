@@ -4,7 +4,7 @@
     {
         // Entry point for the DADTKV system
         // Arguments: systemConfigFilePath
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // Read the system configuration file
             const string configurationFile = "system_config.txt"; // args[0];
