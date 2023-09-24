@@ -1,4 +1,7 @@
 syntax = "proto3";
+package dadtkv;
+
+option csharp_namespace = "DADTKV";
 
 service LeaseService {
 	rpc RequestLease(LeaseRequest) returns (LeaseResponse);

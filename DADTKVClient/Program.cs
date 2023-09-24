@@ -1,62 +1,49 @@
-﻿namespace DADTKVClient
+﻿// ReSharper disable once CheckNamespace
+
+namespace DADTKV
 {
     internal class Program
     {
-        public static void Main()
+        // Entry point for the client application
+        // Arguments: serverPort serverHostname clientID scriptPath
+        public static void Main(string[] args)
         {
-            // Transaction Managers configuration -> TODO: change later for multiple TM
-            const int serverPort = 1001;
-            const string serverHostname = "localhost";
+            // Transaction Managers configuration
+            const int serverPort = 1001; // args[0];
+            const string serverHostname = "localhost"; // args[1];
 
             // Client configuration
-            const string clientID = "client1"; // TODO: change later for multiple clients
-            ClientLogic clientLogic = new ClientLogic(clientID, serverHostname, serverPort);
+            const string clientId = "client1"; // args[2];
+            var clientLogic = new ClientLogic(clientId, serverHostname, serverPort);
 
             // Script configuration
-            var path = Path.Combine(Environment.CurrentDirectory, "/IST/Courses/1st Semester/PADI/ist-meic-dad-g05/DADTKVClient/scripts/DADTKV_client_script_sample.txt");
-            ScriptReader scriptReader = new ScriptReader(File.ReadAllText(path));
+            var path = Path.Combine(Environment.CurrentDirectory,
+                "/IST/Courses/1st Semester/PADI/ist-meic-dad-g05/DADTKVClient/scripts/DADTKV_client_script_sample.txt"); // args[3];
+            var scriptReader = new ScriptReader(File.ReadAllText(path));
 
             while (scriptReader.HasNextCommand())
             {
-                Command command = scriptReader.NextCommand();
-
-                switch (command)
-                {
-                    case TransactionCommand:
-                        Console.WriteLine("Transaction command");
-                        Console.WriteLine("Read set: ");
-                        foreach (string read in ((TransactionCommand)command).ReadSet)
-                        {
-                            Console.WriteLine(read);
-                        }
-                        Console.WriteLine("Write set: ");
-                        foreach (KeyValuePair<string, int> entry in ((TransactionCommand)command).WriteSet)
-                        {
-                            Console.WriteLine(entry.Key + " " + entry.Value);
-                        }
-                        break;
-                    case WaitCommand:
-                        Console.WriteLine("Wait command");
-                        Console.WriteLine("Milliseconds: " + ((WaitCommand)command).Milliseconds);
-                        break;
-                }
+                var command = scriptReader.NextCommand();
 
                 lock (clientLogic)
                 {
                     switch (command)
                     {
-                        case TransactionCommand:
-                            List<DadInt> writeSet = ((TransactionCommand)command).WriteSet 
+                        case TransactionCommand transactionCommand:
+                            var writeSet = transactionCommand.WriteSet
                                 .Select(x => new DadInt
                                 {
                                     Key = x.Key,
                                     Value = x.Value
-                                }).ToList(); 
+                                }).ToList();
 
-                            clientLogic.TxSubmit(((TransactionCommand)command).ReadSet.ToList(), writeSet);
+                            var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
+                                .Result;
+                            Console.WriteLine("Read set: " + readSet);
                             break;
-                        case WaitCommand:
-                            Thread.Sleep(((WaitCommand)command).Milliseconds);
+                        case WaitCommand waitCommand:
+                            Console.WriteLine("Waiting " + waitCommand.Milliseconds + " milliseconds");
+                            Thread.Sleep(waitCommand.Milliseconds);
                             break;
                         default:
                             Console.WriteLine("Unknown command");

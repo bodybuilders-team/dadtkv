@@ -1,4 +1,9 @@
 syntax = "proto3";
+package dadtkv;
+
+option csharp_namespace = "DADTKV";
+
+import "DadInt.proto";
 
 service StateUpdateService {
 	rpc Update(UpdateRequest) returns (UpdateResponse);
@@ -6,7 +11,7 @@ service StateUpdateService {
 
 message UpdateRequest {
 	string clientID = 1;
-	repeated DadInt writeSet = 2;
+	repeated dadtkv.DadInt writeSet = 2;
 }
 
 message UpdateResponse {

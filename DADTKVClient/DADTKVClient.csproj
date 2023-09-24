@@ -14,7 +14,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<Protobuf Include="proto/DADTKVService.proto" GrpcServices="Client" />
+		<Protobuf Include="../DADTKVCore/proto/DADTKVService.proto" GrpcServices="Client" />
+		<Protobuf Include="../DADTKVCore/proto/DadInt.proto" GrpcServices="None" />
 	</ItemGroup>
 
 </Project>

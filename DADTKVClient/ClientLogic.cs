@@ -1,7 +1,6 @@
-﻿using Grpc.Core;
-using Grpc.Net.Client;
+﻿using Grpc.Net.Client;
 
-namespace DADTKVClient
+namespace DADTKV
 {
     internal class ClientLogic
     {
@@ -19,7 +18,7 @@ namespace DADTKVClient
             client = new DADTKVService.DADTKVServiceClient(channel);
         }
 
-        public async Task TxSubmit(List<string> readSet, List<DadInt> writeSet)
+        public async Task<List<DadInt>> TxSubmit(List<string> readSet, List<DadInt> writeSet)
         {
             TxSubmitRequest request = new TxSubmitRequest
             {
@@ -29,14 +28,14 @@ namespace DADTKVClient
             };
 
             TxSubmitResponse response = await client.TxSubmitAsync(request);
-            //response.ReadSet;
+            return response.ReadSet.ToList();
         }
 
         public async Task Status()
         {
             StatusRequest request = new StatusRequest();
             StatusResponse response = await client.StatusAsync(request);
-            //response.Status;
+            // TODO: Implement statues
         }
     }
 }
