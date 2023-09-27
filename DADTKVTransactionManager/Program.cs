@@ -11,17 +11,17 @@ namespace DADTKV
         public static void Main(string[] args)
         {
             Console.WriteLine("Server Identifier: ");
-            var serverId = Convert.ToUInt64(Console.ReadLine());
+            var serverId = Console.ReadLine();
+            var port = int.Parse(Console.ReadLine());
 
             // Set up the gRPC server
-            var port = (int)(1000 + serverId);
             const string hostname = "localhost"; // args[1];
 
-            var transactionManagersLookup = new Dictionary<ulong, string>
+            var transactionManagersLookup = new Dictionary<string, string>
             {
-                { 1, "http://localhost:1001" },
-                { 2, "http://localhost:1002" },
-                { 3, "http://localhost:1003" }
+                { "TM1", "http://localhost:1001" },
+                { "TM2", "http://localhost:1002" },
+                { "TM3", "http://localhost:1003" }
             };
 
             transactionManagersLookup.Remove(serverId);

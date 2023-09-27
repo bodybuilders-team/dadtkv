@@ -8,13 +8,13 @@ namespace DADTKVTransactionManagerServer
 {
     internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
     {
-        private readonly ConcurrentDictionary<ulong, ulong> _sequenceNumCounterLookup;
-        private readonly Dictionary<ulong, string> _transactionManagersLookup;
+        private readonly ConcurrentDictionary<string, ulong> _sequenceNumCounterLookup;
+        private readonly Dictionary<string, string> _transactionManagersLookup;
 
-        public StateUpdateServiceImpl(Dictionary<ulong, string> transactionManagersLookup)
+        public StateUpdateServiceImpl(Dictionary<string, string> transactionManagersLookup)
         {
             _transactionManagersLookup = transactionManagersLookup;
-            _sequenceNumCounterLookup = new ConcurrentDictionary<ulong, ulong>();
+            _sequenceNumCounterLookup = new ConcurrentDictionary<string, ulong>();
 
             foreach (var (id, url) in transactionManagersLookup)
             {
@@ -39,10 +39,16 @@ namespace DADTKVTransactionManagerServer
                 var client = new StateUpdateService.StateUpdateServiceClient(channel);
                 client.UpdateBroadcast(request);
             }
-
-            executeTrans(request.WriteSet);
+            
+            // Deliver
+            deliver(request.WriteSet);
 
             return Task.FromResult(new UpdateResponse { Ok = true });
+        }
+
+        private void deliver(RepeatedField<DadInt> writeSet)
+        {
+            executeTrans(writeSet);
         }
 
         private void executeTrans(RepeatedField<DadInt> writeSet)

@@ -6,12 +6,12 @@ namespace DADTKVT
 {
     public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     {
-        private readonly ulong _serverId;
-        private readonly Dictionary<ulong, string> _transactionManagersLookup;
-        private ulong _sequenceNumCounter = 0;
+        private readonly string _serverId;
+        private readonly Dictionary<string, string> _transactionManagersLookup;
+        private ulong _sequenceNumCounter = 0; // TODO needs to be atomic
         private readonly string _leaseManagerUrl;
 
-        public DADTKVServiceImpl(Dictionary<ulong, string> transactionManagersLookup, ulong serverId,
+        public DADTKVServiceImpl(Dictionary<string, string> transactionManagersLookup, string serverId,
             string leaseManagerUrl)
         {
             _transactionManagersLookup = transactionManagersLookup;
@@ -25,6 +25,11 @@ namespace DADTKVT
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
             var lmChannel = GrpcChannel.ForAddress(_leaseManagerUrl);
             var lmClient = new LeaseService.LeaseServiceClient(lmChannel);
+            lmClient.RequestLease(new LeaseRequest
+            {
+                ClientID = _serverId,
+                Set = { request.WriteSet.Select(x => x.Key) }
+            });
 
             // Commit transaction
             foreach (var (id, url) in _transactionManagersLookup)

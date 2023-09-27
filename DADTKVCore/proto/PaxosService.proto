@@ -1,0 +1,28 @@
+syntax = "proto3";
+package dadtkv;
+
+option csharp_namespace = "DADTKV";
+
+service PaxosService {
+    rpc Prepare(PrepareRequest) returns (Promise);
+    rpc Accept(AcceptRequest) returns (AcceptResponse);
+}
+
+message PrepareRequest {
+    uint64 epochNumber = 1;
+}
+
+message Promise {
+    uint64 writeTimestamp = 1;
+    string value = 2;
+}
+
+message AcceptRequest {
+    uint64 writeTimestamp = 1;
+    string value = 2;
+}
+
+message AcceptResponse {
+    uint64 writeTimestamp = 1;
+    string value = 2;
+}

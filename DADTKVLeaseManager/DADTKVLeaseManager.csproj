@@ -18,4 +18,10 @@
 		<Protobuf Include="../DADTKVCore/proto/LeaseService.proto" GrpcServices="Server" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Content Include="..\DADTKVCore\proto\PaxosService.proto">
+	    <Link>proto\PaxosService.proto</Link>
+	  </Content>
+	</ItemGroup>
+
 </Project>

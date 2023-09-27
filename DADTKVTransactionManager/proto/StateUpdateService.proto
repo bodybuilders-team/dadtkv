@@ -10,7 +10,7 @@ service StateUpdateService {
 }
 
 message UpdateRequest {
-  uint64 serverId = 1;
+  string serverId = 1;
   uint64 sequenceNum = 2;
   repeated dadtkv.DadInt writeSet = 3;
 }
