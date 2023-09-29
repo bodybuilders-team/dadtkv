@@ -8,7 +8,7 @@
 # 
 # Process P commands appear always before client P commands.
 #
-# A P command for a server has a string indentifying the server e.g. "TM1"
+# A P command for a server has a string identifying the server e.g. "TM1"
 # a character indicating whether it's a (T)ransaction or (L)ease manager
 # and a URL for g-RPC calls.
 P TM1 T http://1.2.3.4:10000
@@ -33,7 +33,7 @@ S 100
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15
 #
-# Each time slots lasts 10000 miliseconds
+# Each time slots lasts 10000 milliseconds
 D 10000 
 #
 # F commands describe the state of server processes
@@ -43,10 +43,10 @@ D 10000
 # slot and no process suspects any other process.
 #
 # In a F command:
-# - The first integer indentifies the time slot it describes
+# - The first integer identifies the time slot it describes
 # - It is followed by a sequence of (N)ormal or (C)rashed characters,
 #   one for each server process in the system
-# - The line ends with a sequence of pairs indentifying suspected processes
+# - The line ends with a sequence of pairs identifying suspected processes
 # each pair includes the ids of the suspecting process and the suspected process,
 # e.g. (A,B) means that process A suspects process B
 F 1 N N N N N N (TM1,TM2) (lease3,LM2)

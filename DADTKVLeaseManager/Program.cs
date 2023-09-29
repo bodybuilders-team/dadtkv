@@ -2,38 +2,14 @@
 
 namespace DADTKV
 {
-    public class LeaseServiceImpl : LeaseService.LeaseServiceBase
+    internal class LeaseConsensusValue
     {
-        
-        public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
-        {
-            // Implement your lease request logic here
-            bool leaseGranted = GrantLease(request.ClientID, request.Set);
+        // TODO: add pointer to lease request
+        public Dictionary<string, Queue<string>> LeaseQueue { get; }
 
-            
-            return Task.FromResult(new LeaseResponse { Ok = leaseGranted });
-        }
-
-        private bool GrantLease(string clientID, IEnumerable<string> dataSet)
+        public LeaseConsensusValue()
         {
-            // Implement logic to grant leases based on clientID and dataSet
-            // Return true if the lease is granted, false otherwise
-            // You can keep track of granted leases in memory or a data store
-            // Check for conflicts and manage lease expiration as needed
-            return true; // Replace with actual implementation
-        }
-    }
-
-    class PaxosServiceImpl : PaxosService.PaxosServiceBase
-    {
-        public override Task<Promise> Prepare(PrepareRequest request, ServerCallContext context)
-        {
-            return base.Prepare(request, context);
-        }
-
-        public override Task<AcceptResponse> Accept(AcceptRequest request, ServerCallContext context)
-        {
-            return base.Accept(request, context);
+            LeaseQueue = new Dictionary<string, Queue<string>>();
         }
     }
 
@@ -46,9 +22,15 @@ namespace DADTKV
             const int port = 50051; // args[0];
             const string hostname = "localhost"; // args[1];
 
+            var lockObject = new Object();
+
             Server server = new Server
             {
-                Services = { LeaseService.BindService(new LeaseServiceImpl()) },
+                Services =
+                {
+                    LeaseService.BindService(new LeaseServiceImpl(lockObject)),
+                    PaxosService.BindService(new PaxosServiceImpl(lockObject))
+                },
                 Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
             };
 
@@ -60,6 +42,5 @@ namespace DADTKV
 
             server.ShutdownAsync().Wait();
         }
-        
     }
 }

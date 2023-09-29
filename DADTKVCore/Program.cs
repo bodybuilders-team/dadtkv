@@ -126,6 +126,7 @@
         {
             public List<ProcessInfo> Processes { get; } = new List<ProcessInfo>();
 
+            // TODO - Maybe use a counter of server processes
             public List<ProcessInfo> ServerProcesses
             {
                 get { return Processes.FindAll(p => p.Role is "T" or "L"); }
