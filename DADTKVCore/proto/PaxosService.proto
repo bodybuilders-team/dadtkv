@@ -18,7 +18,7 @@ message Promise {
 }
 
 message AcceptRequest {
-    uint64 writeTimestamp = 1;
+    uint64 epochNumber = 1;
     string value = 2;
 }
 
