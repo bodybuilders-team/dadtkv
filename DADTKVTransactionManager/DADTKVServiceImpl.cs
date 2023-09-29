@@ -45,9 +45,12 @@ namespace DADTKVT
                     WriteSet = { request.WriteSet }
                 };
 
-                client.UpdateBroadcast(updateReq);
+                client.UpdateBroadcast(updateReq); //TODO: Check if throws exception when timeout
             }
 
+
+           
+            // executeTransLocally()
 
             // ...
             return null;

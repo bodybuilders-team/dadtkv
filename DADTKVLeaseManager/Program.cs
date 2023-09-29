@@ -2,12 +2,15 @@
 
 namespace DADTKV
 {
-    public class ServerService : LeaseService.LeaseServiceBase
+    public class LeaseServiceImpl : LeaseService.LeaseServiceBase
     {
+        
         public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
         {
             // Implement your lease request logic here
             bool leaseGranted = GrantLease(request.ClientID, request.Set);
+
+            
             return Task.FromResult(new LeaseResponse { Ok = leaseGranted });
         }
 
@@ -18,6 +21,19 @@ namespace DADTKV
             // You can keep track of granted leases in memory or a data store
             // Check for conflicts and manage lease expiration as needed
             return true; // Replace with actual implementation
+        }
+    }
+
+    class PaxosServiceImpl : PaxosService.PaxosServiceBase
+    {
+        public override Task<Promise> Prepare(PrepareRequest request, ServerCallContext context)
+        {
+            return base.Prepare(request, context);
+        }
+
+        public override Task<AcceptResponse> Accept(AcceptRequest request, ServerCallContext context)
+        {
+            return base.Accept(request, context);
         }
     }
 
@@ -32,7 +48,7 @@ namespace DADTKV
 
             Server server = new Server
             {
-                Services = { LeaseService.BindService(new ServerService()) },
+                Services = { LeaseService.BindService(new LeaseServiceImpl()) },
                 Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
             };
 
@@ -44,5 +60,6 @@ namespace DADTKV
 
             server.ShutdownAsync().Wait();
         }
+        
     }
 }
