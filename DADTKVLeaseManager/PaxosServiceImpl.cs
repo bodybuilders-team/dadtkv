@@ -4,30 +4,34 @@ namespace DADTKV
 {
     class PaxosServiceImpl : PaxosService.PaxosServiceBase
     {
-        private ulong readTimestamp = 0;
-        private ulong writeTimestamp = 0;
-        private LeaseConsensusValue? leaseQueue = null;
-        private Object lockObject;
+        private readonly ConsensusState _consensusState;
+        private readonly object _lockObject;
 
-        public PaxosServiceImpl(Object lockObject)
+        public PaxosServiceImpl(object lockObject, ConsensusState consensusState)
         {
-            this.lockObject = lockObject;
+            this._lockObject = lockObject;
+            _consensusState = consensusState;
         }
 
-        public override Task<Promise> Prepare(PrepareRequest request, ServerCallContext context)
+        public override Task<PrepareResponse> Prepare(PrepareRequest request, ServerCallContext context)
         {
-            lock (lockObject)
+            lock (_lockObject)
             {
-                if (request.EpochNumber > readTimestamp)
+                if (request.EpochNumber > _consensusState.ReadTimestamp)
                 {
-                    readTimestamp = request.EpochNumber;
-                    return Task.FromResult(new Promise
-                        { WriteTimestamp = writeTimestamp, Value = leaseQueue }
+                    _consensusState.ReadTimestamp = request.EpochNumber;
+                    return Task.FromResult(new PrepareResponse
+                        {
+                            WriteTimestamp = _consensusState.WriteTimestamp,
+                            Value = _consensusState.Value != null
+                                ? ConsensusValueDtoConverter.ConvertToDto(_consensusState.Value)
+                                : null
+                        }
                     );
                 }
                 else
                 {
-                    return Task.FromResult(new Promise { WriteTimestamp = 0, Value = null });
+                    return Task.FromResult(new PrepareResponse { WriteTimestamp = 0, Value = null });
                 }
             }
         }

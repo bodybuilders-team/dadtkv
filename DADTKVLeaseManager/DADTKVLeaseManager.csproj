@@ -10,6 +10,7 @@
 	<ItemGroup>
 		<PackageReference Include="Google.Protobuf" Version="3.24.3" />
 		<PackageReference Include="Grpc.Core" Version="2.46.6" />
+		<PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
 		<PackageReference Include="Grpc.Tools" Version="2.58.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -18,5 +19,10 @@
 		<Protobuf Include="../DADTKVCore/proto/LeaseService.proto" GrpcServices="Server" />
 		<Protobuf Include="../DADTKVCore/proto/PaxosService.proto" GrpcServices="Both" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\DADTKVCore\DADTKVCore.csproj" />
+	</ItemGroup>
+
 
 </Project>

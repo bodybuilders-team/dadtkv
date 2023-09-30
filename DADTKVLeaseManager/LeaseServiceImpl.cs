@@ -1,33 +1,46 @@
 using Grpc.Core;
 
-namespace DADTKV
+namespace DADTKV;
+
+public class LeaseServiceImpl : LeaseService.LeaseServiceBase
 {
-    public class LeaseServiceImpl : LeaseService.LeaseServiceBase
+    private readonly object _lockObject;
+    private readonly List<ILeaseRequest> _leaseRequests;
+
+    public LeaseServiceImpl(object lockObject, List<ILeaseRequest> leaseRequests)
     {
-        private Object lockObject;
-        public Dictionary<string, Queue<string>> LeaseQueue { get; }
+        this._lockObject = lockObject;
+        this._leaseRequests = leaseRequests;
+    }
 
-        public LeaseServiceImpl(Object lockObject)
+    public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
+    {
+        lock (_lockObject)
         {
-            this.lockObject = lockObject;
+            // foreach (var leaseKey in request.Set)
+            // {
+            //     if (!LeaseQueue.ContainsKey(leaseKey))
+            //     {
+            //         LeaseQueue.Add(leaseKey, new Queue<string>());
+            //     }
+            //
+            //
+            //     if (!LeaseQueue[leaseKey].Contains(request.ClientID))
+            //         LeaseQueue[leaseKey].Enqueue(request.ClientID);
+            // }
+            this._leaseRequests.Add(request);
+
+            return Task.FromResult(new LeaseResponse { Ok = true });
         }
+    }
 
-        public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
+    public override Task<FreeLeaseResponse> FreeLease(FreeLeaseRequest request, ServerCallContext context)
+    {
+        lock (_lockObject)
         {
-            lock (lockObject)
-            {
-                foreach (var leaseKey in request.Set)
-                {
-                    if (!LeaseQueue.ContainsKey(leaseKey))
-                    {
-                        LeaseQueue.Add(leaseKey, new Queue<string>());
-                    }
+            this._leaseRequests.Add(request);
 
-                    LeaseQueue[leaseKey].Enqueue(request.ClientID);
-                }
-
-                return Task.FromResult(new LeaseResponse { Ok = true });
-            }
+            return Task.FromResult(new FreeLeaseResponse() { Ok = true });
         }
     }
 }

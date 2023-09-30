@@ -5,7 +5,7 @@ option csharp_namespace = "DADTKV";
 
 service LeaseService {
   rpc RequestLease(LeaseRequest) returns (LeaseResponse);
-  rpc FreeLease(LeaseRequest) returns (LeaseResponse);
+  rpc FreeLease(FreeLeaseRequest) returns (FreeLeaseResponse);
 }
 
 message LeaseRequest {
@@ -13,6 +13,15 @@ message LeaseRequest {
   repeated string set = 2;
 }
 
+message FreeLeaseRequest {
+  string clientID = 1;
+  repeated string set = 2;
+}
+
 message LeaseResponse {
+  bool ok = 1;
+}
+
+message FreeLeaseResponse {
   bool ok = 1;
 }
