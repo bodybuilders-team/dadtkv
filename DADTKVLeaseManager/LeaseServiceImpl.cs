@@ -9,27 +9,15 @@ public class LeaseServiceImpl : LeaseService.LeaseServiceBase
 
     public LeaseServiceImpl(object lockObject, List<ILeaseRequest> leaseRequests)
     {
-        this._lockObject = lockObject;
-        this._leaseRequests = leaseRequests;
+        _lockObject = lockObject;
+        _leaseRequests = leaseRequests;
     }
 
     public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
     {
         lock (_lockObject)
         {
-            // foreach (var leaseKey in request.Set)
-            // {
-            //     if (!LeaseQueue.ContainsKey(leaseKey))
-            //     {
-            //         LeaseQueue.Add(leaseKey, new Queue<string>());
-            //     }
-            //
-            //
-            //     if (!LeaseQueue[leaseKey].Contains(request.ClientID))
-            //         LeaseQueue[leaseKey].Enqueue(request.ClientID);
-            // }
-            this._leaseRequests.Add(request);
-
+            _leaseRequests.Add(request);
             return Task.FromResult(new LeaseResponse { Ok = true });
         }
     }
@@ -38,8 +26,7 @@ public class LeaseServiceImpl : LeaseService.LeaseServiceBase
     {
         lock (_lockObject)
         {
-            this._leaseRequests.Add(request);
-
+            _leaseRequests.Add(request);
             return Task.FromResult(new FreeLeaseResponse() { Ok = true });
         }
     }

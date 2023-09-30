@@ -24,8 +24,9 @@ message AcceptRequest {
 }
 
 message AcceptResponse {
-  uint64 writeTimestamp = 1;
-  ConsensusValueDto value = 2;
+  bool accepted = 1;
+  uint64 writeTimestamp = 2;
+  ConsensusValueDto value = 3;
 }
 
 message ConsensusValueDto {

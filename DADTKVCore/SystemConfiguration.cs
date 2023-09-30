@@ -2,15 +2,11 @@ namespace DADTKV;
 
 public class SystemConfiguration
 {
-    public List<ProcessInfo> Processes { get; } = new List<ProcessInfo>();
+    public List<ProcessInfo> Processes { get; } = new();
+    private static int _serverProcessesCount;
 
-    // TODO - Maybe use a counter of server processes
-    public List<ProcessInfo> ServerProcesses
-    {
-        get { return Processes.FindAll(p => p.Role is "T" or "L"); }
-    }
+    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
 
-    // TODO - Maybe use a counter of server processes
     public List<ProcessInfo> LeaseManagers
     {
         get { return Processes.FindAll(p => p.Role is "L"); }
@@ -20,22 +16,23 @@ public class SystemConfiguration
     {
         get { return Processes.FindAll(p => p.Role is "T"); }
     }
-    
+
     private int Slots { get; set; }
     private int Duration { get; set; }
     private DateTime WallTime { get; set; }
 
-    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } =
-        new Dictionary<int, List<Tuple<string, string>>>();
+    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
-    // public List<Tuple<string, string>> CurrentSuspicions
-    // {
-    //     get
-    //     {
-    //         var currentTimeSlot = ;
-    //         return Suspicions[currentTimeSlot];
-    //     }
-    // }
+    public List<Tuple<string, string>> CurrentSuspicions
+    {
+        get
+        {
+            // TODO: This is not correct - SUS
+            var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration);
+            return Suspicions[currentTimeSlot];
+        }
+    }
+
     public static SystemConfiguration? ReadSystemConfiguration(string filePath)
     {
         try
@@ -65,8 +62,13 @@ public class SystemConfiguration
                                 Id = parameters[0],
                                 Role = parameters[1]
                             };
+
                             if (parameters.Length > 2)
+                            {
                                 process.URL = parameters[2];
+                                _serverProcessesCount++;
+                            }
+
                             systemConfig.Processes.Add(process);
                             break;
 

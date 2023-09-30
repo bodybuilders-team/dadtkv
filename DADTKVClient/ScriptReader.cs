@@ -1,97 +1,56 @@
-﻿namespace DADTKV
+﻿namespace DADTKV;
+
+internal class ScriptReader
 {
-    // Class to read the script file for a client
-    // A script file has the following format:
-    // 1. Each line is a command
-    // 2. Each line starting with # is a comment
-    // 3. a T command includes a read set (list of string keys) and a
-    // write set (keys and values); e.g.: T ("a-key-name","another-key-name") (<"name1",10>,<"name2",20>)
-    // 4. a W command is used to wait for a number of milliseconds; e.g.: W 1000
+    private readonly string[] _lines;
+    private int _currentLine;
 
-    internal interface ICommand
+    public ScriptReader(string script)
     {
+        _lines = script.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+        _currentLine = 0;
     }
 
-    // Command to execute a transaction
-    // A transaction has a read set and a write set
-    internal class TransactionCommand : ICommand
+    // Returns the next command in the script
+    // Returns null if there is no more command
+    public ICommand? NextCommand()
     {
-        public List<string> ReadSet { get; }
-        public Dictionary<string, int> WriteSet { get; }
-
-        public TransactionCommand(List<string> readSet, Dictionary<string, int> writeSet)
+        while (true)
         {
-            ReadSet = readSet;
-            WriteSet = writeSet;
-        }
-    }
+            if (!HasNextCommand())
+                return null;
 
-    // Command to wait for a number of milliseconds
-    internal class WaitCommand : ICommand
-    {
-        public int Milliseconds { get; }
-
-        public WaitCommand(int milliseconds)
-        {
-            Milliseconds = milliseconds;
-        }
-    }
-
-
-    internal class ScriptReader
-    {
-        private readonly string[] _lines;
-        private int _currentLine;
-
-        public ScriptReader(string script)
-        {
-            _lines = script.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-            _currentLine = 0;
-        }
-
-        // Returns the next command in the script
-        // Returns null if there is no more command
-        public ICommand? NextCommand()
-        {
-            while (true)
+            var line = _lines[_currentLine++];
+            var args = line.Split(' ');
+            switch (args[0])
             {
-                if (!HasNextCommand())
-                {
-                    return null;
-                }
+                case "#":
+                    continue;
+                case "T":
+                    var readSet = args[1]
+                        .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
+                        .Split(',')
+                        .Select(x => x.Trim('"'))
+                        .ToList();
 
-                var line = _lines[_currentLine++];
-                var args = line.Split(' ');
-                switch (args[0])
-                {
-                    case "#":
-                        continue;
-                    case "T":
-                        var readSet = args[1]
-                            .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
-                            .Split(',')
-                            .Select(x => x.Trim('"'))
-                            .ToList();
+                    var writeSet = args[2]
+                        .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
+                        .Split(">,")
+                        .Select(x => x.Trim('<', '>').Split(','))
+                        .ToDictionary(x => x[0].Trim('"'), x => int.Parse(x[1]));
 
-                        var writeSet = args[2]
-                            .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
-                            .Split(">,")
-                            .Select(x => x.Trim('<', '>').Split(','))
-                            .ToDictionary(x => x[0].Trim('"'), x => int.Parse(x[1]));
-
-                        return new TransactionCommand(readSet, writeSet);
-                    case "W":
-                        return new WaitCommand(int.Parse(args[1]));
-                    default:
-                        throw new Exception("Invalid command");
-                }
+                    return new TransactionCommand(readSet, writeSet);
+                case "W":
+                    return new WaitCommand(int.Parse(args[1]));
+                default:
+                    throw new Exception("Invalid command");
             }
         }
+    }
 
-        // Returns true if there is more command in the script
-        public bool HasNextCommand()
-        {
-            return _currentLine < _lines.Length;
-        }
+    // Returns true if there is more command in the script
+    public bool HasNextCommand()
+    {
+        return _currentLine < _lines.Length;
     }
 }

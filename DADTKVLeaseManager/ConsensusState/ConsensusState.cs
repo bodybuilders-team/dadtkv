@@ -1,6 +1,5 @@
 namespace DADTKV;
 
-
 public class ConsensusState
 {
     public ulong ReadTimestamp = 0;

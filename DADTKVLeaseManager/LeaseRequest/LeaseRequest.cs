@@ -1,6 +1,5 @@
 namespace DADTKV;
 
-partial class LeaseRequest : ILeaseRequest
+public partial class LeaseRequest : ILeaseRequest
 {
-    
 }

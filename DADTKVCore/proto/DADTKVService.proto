@@ -7,7 +7,7 @@ import "DadInt.proto";
 
 service DADTKVService {
   rpc TxSubmit(TxSubmitRequest) returns (TxSubmitResponse);
-  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Status(StatusRequest) returns (StatusResponse); // TODO: Implement status operation
 }
 
 message TxSubmitRequest {

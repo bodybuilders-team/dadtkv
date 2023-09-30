@@ -1,52 +1,50 @@
 ﻿using DADTKVT;
-using DADTKVTransactionManagerServer;
 using Grpc.Core;
 
-namespace DADTKV
+namespace DADTKV;
+
+internal static class Program
 {
-    internal static class Program
+    // Entry point for the server application
+    // Arguments: port, hostname, serverId
+    public static void Main(string[] args)
     {
-        // Entry point for the server application
-        // Arguments: port, hostname, leaseManagerUrl
-        public static void Main(string[] args)
+        if (args.Length != 3)
+            throw new ArgumentException("Invalid arguments.");
+
+        var port = int.Parse(args[0]);
+        var hostname = args[1];
+        var serverId = args[2];
+
+        var transactionManagersLookup = new Dictionary<string, string>
         {
-            Console.WriteLine("Server Identifier: ");
-            var serverId = Console.ReadLine();
-            var port = int.Parse(Console.ReadLine());
+            { "TM1", "http://localhost:1001" },
+            { "TM2", "http://localhost:1002" },
+            { "TM3", "http://localhost:1003" }
+        };
 
-            // Set up the gRPC server
-            const string hostname = "localhost"; // args[1];
+        transactionManagersLookup.Remove(serverId);
 
-            var transactionManagersLookup = new Dictionary<string, string>
+        var server = new Server
+        {
+            Services =
             {
-                { "TM1", "http://localhost:1001" },
-                { "TM2", "http://localhost:1002" },
-                { "TM3", "http://localhost:1003" }
-            };
+                DADTKVService.BindService(
+                    new DADTKVServiceImpl(transactionManagersLookup, serverId, "TODO") // TODO: Add lease manager URL
+                ),
+                StateUpdateService.BindService(
+                    new StateUpdateServiceImpl(transactionManagersLookup)
+                )
+            },
+            Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
+        };
 
-            transactionManagersLookup.Remove(serverId);
+        server.Start();
 
-            var server = new Server
-            {
-                Services =
-                {
-                    DADTKVService.BindService(
-                        new DADTKVServiceImpl(transactionManagersLookup, serverId, "TODO") // args[2]
-                    ),
-                    StateUpdateService.BindService(
-                        new StateUpdateServiceImpl(transactionManagersLookup)
-                    )
-                },
-                Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
-            };
+        Console.WriteLine($"Transaction Manager server listening on port {port}");
+        Console.WriteLine("Press Enter to stop the server.");
+        Console.ReadLine();
 
-            server.Start();
-
-            Console.WriteLine($"Transaction Manager server listening on port {port}");
-            Console.WriteLine("Press Enter to stop the server.");
-            Console.ReadLine();
-
-            server.ShutdownAsync().Wait();
-        }
+        server.ShutdownAsync().Wait();
     }
 }

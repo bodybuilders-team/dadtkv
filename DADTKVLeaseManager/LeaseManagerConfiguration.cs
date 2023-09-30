@@ -2,15 +2,19 @@ namespace DADTKV;
 
 public class LeaseManagerConfiguration
 {
-    public ProcessConfiguration ProcessConfiguration;
+    public readonly ProcessConfiguration ProcessConfiguration;
 
     public LeaseManagerConfiguration(ProcessConfiguration processConfiguration)
     {
-        this.ProcessConfiguration = processConfiguration;
+        ProcessConfiguration = processConfiguration;
     }
 
-    public string getLeader()
+    public string GetLeaderId()
     {
-        return ProcessConfiguration.SystemConfiguration.Suspicions
+        return ProcessConfiguration.SystemConfiguration.LeaseManagers
+            .Where(leaseManager =>
+                ProcessConfiguration.MyCurrentSuspicions.All(suspicion => suspicion.Item2 != leaseManager.Id))
+            .Min()
+            ?.Id!;
     }
 }
