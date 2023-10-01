@@ -11,13 +11,18 @@ public class ProcessConfiguration
         ProcessInfo = systemConfiguration.Processes.Find((info) => info.Id == serverId)!;
     }
 
-    public IEnumerable<ProcessInfo> ServerProcesses
+    public IEnumerable<ProcessInfo> OtherServerProcesses
     {
         get { return SystemConfiguration.ServerProcesses.Where((info => info.Id != ProcessInfo.Id)).ToList(); }
     }
 
-    public IEnumerable<Tuple<string, string>> MyCurrentSuspicions
+    public IEnumerable<string> MyCurrentSuspicions
     {
-        get { return SystemConfiguration.CurrentSuspicions.Where((tuple) => tuple.Item1 == ProcessInfo.Id).ToList(); }
+        get
+        {
+            return SystemConfiguration.CurrentSuspicions
+                .Where((tuple) => tuple.Item1 == ProcessInfo.Id)
+                .Select((tuple) => tuple.Item2).ToList();
+        }
     }
 }

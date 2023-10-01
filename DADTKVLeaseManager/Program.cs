@@ -15,7 +15,7 @@ internal static class Program
             throw new ArgumentException("Invalid arguments.");
 
         var serverId = args[0];
-        var hostname = args[1];
+
 
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[2]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
@@ -23,7 +23,7 @@ internal static class Program
         var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
         var leaseManagerConfiguration = new LeaseManagerConfiguration(processConfiguration);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.URL).Port;
-
+        var hostname = new Uri(processConfiguration.ProcessInfo.URL).Host;
 
         var lockObject = new object();
         var leaseRequests = new List<ILeaseRequest>();
@@ -31,7 +31,7 @@ internal static class Program
         var consensusState = new ConsensusState();
 
         var channels =
-            processConfiguration.ServerProcesses.ToDictionary(
+            processConfiguration.OtherServerProcesses.ToDictionary(
                 processInfo => processInfo.Id,
                 processInfo => new ServerProcessChannel
                 {
@@ -60,8 +60,8 @@ internal static class Program
 
         timer.Elapsed += (source, e) =>
         {
-            // TODO: Place LeaseServiceImpl callbacks and process requests in a proposer/leader class
-            ProcessRequests(lockObject, channels, leaseRequests, consensusState, processConfiguration);
+            // TODO: Place LeaseServiceImpl callbacks and process requests in a proposer class
+            ProcessRequests(lockObject, channels, leaseRequests, consensusState, leaseManagerConfiguration);
             timer.Start();
         };
         timer.AutoReset = false;
@@ -80,18 +80,13 @@ internal static class Program
     {
         lock (lockObject)
         {
-            var epochNumber = consensusState.WriteTimestamp;
+            var epochNumber = consensusState.WriteTimestamp + 1;
 
-
-            //TODO: Check if we should choose minimum id to be leader or a rotating leader based on epoch
 
             var currentIsLeader = leaseManagerConfiguration.GetLeaderId() ==
                                   leaseManagerConfiguration.ProcessConfiguration.ProcessInfo.Id;
 
             //TODO: Verify edge case where leader is crashed but not suspected
-
-            //TODO: If we are not the leader return
-
 
             if (!currentIsLeader)
                 return;
@@ -100,7 +95,7 @@ internal static class Program
             var highestWriteTimestamp = consensusState
                 .WriteTimestamp; //TODO: Check if we should include our own highest write timestamp value 
 
-            var newConsensusValue = consensusState.Value ?? new ConsensusValue();
+            var newConsensusValue = consensusState.Value;
 
             // broadcast prepare
             foreach (var (_, serverProcessChannel) in serverProcessChannels)
@@ -115,8 +110,8 @@ internal static class Program
 
                 if (response.Promise)
                     numPromises++;
-
-                //TODO: Verify if the received write timestamp can be higher than epoch number
+                
+                //TODO: Should we do something if the received write timestamp is higher than epoch number?
 
                 if (response.WriteTimestamp <= highestWriteTimestamp) continue;
 
@@ -127,12 +122,16 @@ internal static class Program
                             .Value); //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
             }
 
+            //TODO: Adopt the highest consensus value
+            // consensusState.WriteTimestamp = highestWriteTimestamp;
+            // consensusState.Value = newConsensusValue;
 
             if (numPromises <= serverProcessChannels.Count / 2)
                 return;
 
+            
             // We have majority, so we need to calculate the new consensus value
-            var leaseQueue = newConsensusValue.LeaseQueue;
+            var leaseQueue = newConsensusValue.LeaseQueue; // TODO: Do not override previous consensus value
 
             foreach (var currentRequest in leaseRequests)
             {
@@ -145,13 +144,11 @@ internal static class Program
                             if (!leaseQueue.ContainsKey(leaseKey))
                                 leaseQueue.Add(leaseKey, new Queue<string>());
 
-                            if (!leaseQueue[leaseKey].Contains(leaseRequest.ClientID))
+                            if (!leaseQueue[leaseKey].Contains(leaseRequest.ClientID)) //TODO: ignore request? send not okay to transaction manager?
                                 leaseQueue[leaseKey].Enqueue(leaseRequest.ClientID);
                         }
-
                         break;
                     case FreeLeaseRequest freeLeaseRequest:
-
                         foreach (var leaseKey in freeLeaseRequest.Set)
                         {
                             if (!leaseQueue.ContainsKey(leaseKey))
@@ -166,15 +163,17 @@ internal static class Program
                 }
             }
 
-            foreach (var (_, serverProcessChannel) in serverProcessChannels)
+            foreach (var (_, serverProcessChannel) in serverProcessChannels) //TODO: Only to lease managers
             {
                 var client = new PaxosService.PaxosServiceClient(serverProcessChannel.GrpcChannel);
 
-                client.Accept(new AcceptRequest
+               var response = client.Accept(new AcceptRequest
                 {
                     EpochNumber = epochNumber,
                     Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue)
                 });
+                
+               // Check if we got accept majority
             }
         }
     }

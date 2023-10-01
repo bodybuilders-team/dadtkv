@@ -23,12 +23,11 @@ public class SystemConfiguration
 
     private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
-    public List<Tuple<string, string>> CurrentSuspicions
+    public IEnumerable<Tuple<string, string>> CurrentSuspicions
     {
         get
         {
-            // TODO: This is not correct - SUS
-            var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration);
+            var currentTimeSlot = ((int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration)) + 1;
             return Suspicions[currentTimeSlot];
         }
     }
