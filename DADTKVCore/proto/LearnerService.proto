@@ -1,0 +1,19 @@
+syntax = "proto3";
+package dadtkv;
+
+option csharp_namespace = "DADTKV";
+
+import "AcceptorService.proto";
+
+service LearnerService {
+  rpc Learn(LearnRequest) returns (LearnResponse) {}
+}
+
+message LearnRequest {
+  uint64 epochNumber = 1;
+  ConsensusValueDto consensusValue = 2;
+}
+
+message LearnResponse {
+  bool ok = 1;
+}

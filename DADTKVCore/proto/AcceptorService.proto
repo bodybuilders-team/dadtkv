@@ -3,7 +3,7 @@ package dadtkv;
 
 option csharp_namespace = "DADTKV";
 
-service PaxosService {
+service AcceptorService {
   rpc Prepare(PrepareRequest) returns (PrepareResponse);
   rpc Accept(AcceptRequest) returns (AcceptResponse);
 }
@@ -24,9 +24,7 @@ message AcceptRequest {
 }
 
 message AcceptResponse {
-  bool accepted = 1;
-  uint64 writeTimestamp = 2;
-  ConsensusValueDto value = 3;
+  bool ok = 1;
 }
 
 message ConsensusValueDto {

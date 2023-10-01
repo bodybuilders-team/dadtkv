@@ -17,12 +17,12 @@
 		</PackageReference>
 
 		<Protobuf Include="../DADTKVCore/proto/LeaseService.proto" GrpcServices="Server" />
-		<Protobuf Include="../DADTKVCore/proto/PaxosService.proto" GrpcServices="Both" />
+		<Protobuf Include="..\DADTKVCore\proto\AcceptorService.proto" GrpcServices="Both" />
+		<Protobuf Include="..\DADTKVCore\proto\LearnerService.proto" GrpcServices="Client" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\DADTKVCore\DADTKVCore.csproj" />
 	</ItemGroup>
-
-
+	
 </Project>
