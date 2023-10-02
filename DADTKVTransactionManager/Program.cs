@@ -14,7 +14,6 @@ internal static class Program
 
         var serverId = args[0];
 
-
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[2]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
@@ -31,12 +30,9 @@ internal static class Program
         {
             Services =
             {
-                DADTKVService.BindService(
-                    new DADTKVServiceImpl(lockObject, processConfiguration) // TODO: Add lease manager URL
-                ),
-                StateUpdateService.BindService(
-                    new StateUpdateServiceImpl(lockObject, processConfiguration)
-                ),
+                // TODO: Add lease manager URL
+                DADTKVService.BindService(new DADTKVServiceImpl(lockObject, processConfiguration)),
+                StateUpdateService.BindService(new StateUpdateServiceImpl(lockObject, processConfiguration)),
                 LearnerService.BindService(new LearnerServiceImpl(lockObject))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }

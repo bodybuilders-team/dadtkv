@@ -1,3 +1,5 @@
+using Grpc.Core;
+
 namespace DADTKV;
 
 public static class DADTKVUtils
@@ -16,5 +18,27 @@ public static class DADTKVUtils
         {
             action.Invoke(element);
         }
+    }
+
+    public static void WaitForMajority<TResponse>(
+        List<AsyncUnaryCall<TResponse>> asyncTasks,
+        Func<TResponse, CountdownEvent, Task> responseHandler
+    )
+    {
+        // Majority is defined as n/2 + 1
+        var cde = new CountdownEvent(asyncTasks.Count / 2 + 1);
+
+        asyncTasks.ForEach(asyncTask =>
+        {
+            var thread = new Thread(() =>
+            {
+                asyncTask.ResponseAsync.Wait();
+                var res = asyncTask.ResponseAsync.Result;
+                responseHandler.Invoke(res, cde);
+            });
+            thread.Start();
+        });
+
+        cde.Wait();
     }
 }

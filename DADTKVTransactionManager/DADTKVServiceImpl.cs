@@ -13,8 +13,8 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
     public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
-        this._processConfiguration = processConfiguration;
-        this._lockObject = lockObject;
+        _processConfiguration = processConfiguration;
+        _lockObject = lockObject;
 
         _processConfiguration.OtherTransactionManagers
             .Select(tm => GrpcChannel.ForAddress(tm.URL))
@@ -65,6 +65,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
                     cde.Signal();
                 });
+                thread.Start();
             }
 
             cde.Wait(); // TODO: Check if majority was not reached

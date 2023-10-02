@@ -21,7 +21,6 @@ internal static class SystemManager
         StopServers();
     }
 
-
     private static void StartServers(SystemConfiguration? config)
     {
         // Start server processes based on configuration

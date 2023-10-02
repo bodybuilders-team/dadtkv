@@ -35,12 +35,6 @@ public static class ConsensusValueDtoConverter
             mapDto.Add(key, value);
         }
 
-        return new ConsensusValueDto
-        {
-            LeaseQueue =
-            {
-                mapDto
-            }
-        };
+        return new ConsensusValueDto { LeaseQueue = { mapDto } };
     }
 }

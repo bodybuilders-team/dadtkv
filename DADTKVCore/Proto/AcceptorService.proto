@@ -3,7 +3,7 @@ package dadtkv;
 
 option csharp_namespace = "DADTKV";
 import "ConsensusValue.proto";
-    
+
 service AcceptorService {
   rpc Prepare(PrepareRequest) returns (PrepareResponse);
   rpc Accept(AcceptRequest) returns (AcceptResponse);
@@ -22,6 +22,8 @@ message PrepareResponse {
 message AcceptRequest {
   uint64 epochNumber = 1;
   ConsensusValueDto value = 2;
+  string serverId = 3;
+  uint64 sequenceNum = 4;
 }
 
 message AcceptResponse {

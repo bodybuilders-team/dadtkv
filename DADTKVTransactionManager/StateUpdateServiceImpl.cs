@@ -1,6 +1,5 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
-using System.Collections.Concurrent;
 using Google.Protobuf.Collections;
 
 namespace DADTKV;
@@ -14,16 +13,18 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
     public StateUpdateServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
-        this._lockObject = lockObject;
-        this._processConfiguration = processConfiguration;
-        this._sequenceNumCounterLookup = new Dictionary<string, HashSet<ulong>>();
+        _lockObject = lockObject;
+        _processConfiguration = processConfiguration;
+        _sequenceNumCounterLookup = new Dictionary<string, HashSet<ulong>>();
+        _sequenceNumCounterLookup = new Dictionary<string, HashSet<ulong>>();
 
+        _processConfiguration = processConfiguration;
         foreach (var tm in processConfiguration.SystemConfiguration.TransactionManagers)
         {
             _sequenceNumCounterLookup[tm.Id] = new HashSet<ulong>();
         }
 
-        this._stateUpdateServiceClients = _processConfiguration.OtherTransactionManagers
+        _stateUpdateServiceClients = processConfiguration.OtherTransactionManagers
             .Select(tm => GrpcChannel.ForAddress(tm.URL))
             .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
             .ToList();
@@ -40,25 +41,44 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
             _sequenceNumCounterLookup[request.ServerId].Add(request.SequenceNum);
 
+            var asyncUnaryCalls = new List<AsyncUnaryCall<UpdateResponse>>();
             foreach (var stateUpdateServiceClient in _stateUpdateServiceClients)
             {
-                stateUpdateServiceClient.Update(request);
+                var res = stateUpdateServiceClient.UpdateAsync(request);
+                asyncUnaryCalls.Add(res);
             }
+
+            var cde = new CountdownEvent(_processConfiguration.SystemConfiguration.TransactionManagers.Count / 2);
+            foreach (var asyncUnaryCall in asyncUnaryCalls)
+            {
+                var thread = new Thread(() =>
+                {
+                    asyncUnaryCall.ResponseAsync.Wait();
+                    var res = asyncUnaryCall.ResponseAsync.Result;
+                    if (!res.Ok) //TODO: Is this necessary?
+                        throw new Exception();
+
+                    cde.Signal();
+                });
+                thread.Start();
+            }
+
+            cde.Wait();
 
             //TODO: Needs majority to deliver
             // Deliver
-            deliver(request.WriteSet);
+            Deliver(request.WriteSet);
 
             return Task.FromResult(new UpdateResponse { Ok = true });
         }
     }
 
-    private void deliver(RepeatedField<DadInt> writeSet)
+    private void Deliver(RepeatedField<DadInt> writeSet)
     {
-        executeTrans(writeSet);
+        ExecuteTrans(writeSet);
     }
 
-    private void executeTrans(RepeatedField<DadInt> writeSet)
+    private void ExecuteTrans(RepeatedField<DadInt> writeSet)
     {
     }
 }

@@ -12,6 +12,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
     private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
+    private ulong _sequenceNumCounter;
+
     private ulong EpochNumber => _consensusState.WriteTimestamp + 1;
 
     public Proposer(
@@ -76,46 +78,39 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (!currentIsLeader)
                 return;
 
-            var highestWriteTimestamp = _consensusState
-                .WriteTimestamp; //TODO: Check if we should include our own highest write timestamp value 
-
+            //TODO: Check if we should include our own highest write timestamp value 
+            var highestWriteTimestamp = _consensusState.WriteTimestamp;
             var newConsensusValue = _consensusState.Value;
 
             // broadcast prepare
-            var asyncUnaryCalls = new List<AsyncUnaryCall<PrepareResponse>>();
-            foreach (var client in _acceptorServiceServiceClients)
+            var asyncTasks = new List<AsyncUnaryCall<PrepareResponse>>();
+            foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
             {
                 var prepareRequest = new PrepareRequest { EpochNumber = EpochNumber };
-                var res = client.PrepareAsync(prepareRequest);
-                asyncUnaryCalls.Add(res);
+                var res = acceptorServiceServiceClient.PrepareAsync(prepareRequest);
+                asyncTasks.Add(res);
             }
 
-            var cde = new CountdownEvent(_leaseManagerConfiguration.LeaseManagers.Count / 2);
-            foreach (var asyncUnaryCall in asyncUnaryCalls)
-            {
-                var thread = new Thread(() =>
+            DADTKVUtils.WaitForMajority(
+                asyncTasks,
+                (res, cde) =>
                 {
-                    asyncUnaryCall.ResponseAsync.Wait();
-                    var res = asyncUnaryCall.ResponseAsync.Result;
-
                     if (res.Promise)
                         cde.Signal();
                     else
                     {
                         //TODO: Should we do something if the received write timestamp is higher than epoch number?
-
                         if (res.WriteTimestamp <= highestWriteTimestamp)
-                            return;
+                            return Task.CompletedTask;
 
                         highestWriteTimestamp = res.WriteTimestamp;
                         //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
                         newConsensusValue = ConsensusValueDtoConverter.ConvertFromDto(res.Value);
                     }
-                });
-                thread.Start();
-            }
 
-            cde.Wait();
+                    return Task.CompletedTask;
+                }
+            );
 
             //TODO: Adopt the highest consensus value
             // consensusState.WriteTimestamp = highestWriteTimestamp;
@@ -147,14 +142,32 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
         }
 
-        // TODO: Add URB for Acceptors
-        _acceptorServiceServiceClients.ForEach(client => client.Accept(new AcceptRequest
+        var asyncUnaryCalls = new List<AsyncUnaryCall<AcceptResponse>>();
+        _acceptorServiceServiceClients.ForEach(client =>
         {
-            EpochNumber = EpochNumber,
-            Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue)
-        }));
+            var acceptReq = new AcceptRequest
+            {
+                EpochNumber = EpochNumber,
+                Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
+                ServerId = _leaseManagerConfiguration.ProcessConfiguration.ProcessInfo.Id,
+                SequenceNum = _sequenceNumCounter++
+            };
 
-        // TODO: Check if majority is needed
+            var res = client.AcceptAsync(acceptReq);
+            asyncUnaryCalls.Add(res);
+        });
+
+        DADTKVUtils.WaitForMajority(
+            asyncUnaryCalls,
+            (res, cde) =>
+            {
+                if (!res.Accepted) //TODO: Is this necessary?
+                    throw new Exception();
+
+                cde.Signal();
+                return Task.CompletedTask;
+            }
+        );
 
         Decide(newConsensusValue);
     }
@@ -194,9 +207,8 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (!leaseQueue.ContainsKey(leaseKey))
                 leaseQueue.Add(leaseKey, new Queue<string>());
 
-            if (!leaseQueue[leaseKey]
-                    .Contains(leaseRequest
-                        .ClientID)) //TODO: ignore request? send not okay to transaction manager?
+            //TODO: ignore request? send not okay to transaction manager?
+            if (!leaseQueue[leaseKey].Contains(leaseRequest.ClientID))
                 leaseQueue[leaseKey].Enqueue(leaseRequest.ClientID);
         }
     }

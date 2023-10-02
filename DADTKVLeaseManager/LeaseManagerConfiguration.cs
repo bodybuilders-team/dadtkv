@@ -17,7 +17,7 @@ public class LeaseManagerConfiguration
                 .Where((info => info.Id != ProcessConfiguration.ProcessInfo.Id)).ToList();
         }
     }
-    
+
     public List<ProcessInfo> LeaseManagers => ProcessConfiguration.SystemConfiguration.LeaseManagers;
 
     //TODO: Check if we should choose minimum id to be leader or a rotating leader based on epoch

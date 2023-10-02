@@ -63,13 +63,15 @@ internal static class Program
 
         var proposer = new Proposer(lockObject, leaseRequests, acceptorServiceClients, learnerServiceClients,
             consensusState, leaseManagerConfiguration);
+        var acceptor = new Acceptor(lockObject, consensusState, acceptorServiceClients, learnerServiceClients,
+            leaseManagerConfiguration);
 
         var server = new Server
         {
             Services =
             {
                 LeaseService.BindService(proposer),
-                AcceptorService.BindService(new Acceptor(lockObject, consensusState, learnerServiceClients))
+                AcceptorService.BindService(acceptor)
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
