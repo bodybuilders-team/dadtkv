@@ -51,7 +51,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     {
         lock (_lockObject)
         {
-            if (request.EpochNumber <= _consensusState.ReadTimestamp)
+            if (request.EpochNumber <= _consensusState.WriteTimestamp)
                 return Task.FromResult(new AcceptResponse { Ok = false });
 
             _consensusState.WriteTimestamp =
@@ -70,4 +70,6 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
             });
         }
     }
+    
+    public accept
 }

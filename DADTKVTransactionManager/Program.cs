@@ -25,6 +25,7 @@ internal static class Program
         var lockObject = new object();
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+        
         var server = new Server
         {
             Services =

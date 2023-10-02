@@ -8,7 +8,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly ProcessConfiguration _processConfiguration;
     private readonly object _lockObject;
-    private ulong _sequenceNumCounter = 0; // TODO needs to be atomic
+    private ulong _sequenceNumCounter = 0; 
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
 
     public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
@@ -49,6 +49,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
                 };
 
                var res= susClient.UpdateBroadcast(updateReq); //TODO: Check if throws exception when timeout
+               //TODO: Needs majority
             }
             
 

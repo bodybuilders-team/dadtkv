@@ -8,34 +8,37 @@ namespace DADTKV;
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
     private readonly ProcessConfiguration _processConfiguration;
-    private readonly ConcurrentDictionary<string, ulong> _sequenceNumCounterLookup;
+    private readonly ConcurrentDictionary<string, HashSet<ulong>> _sequenceNumCounterLookup;
+    private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients;
 
     public StateUpdateServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
         this._processConfiguration = processConfiguration;
-        _sequenceNumCounterLookup = new ConcurrentDictionary<string, ulong>();
+        _sequenceNumCounterLookup = new ConcurrentDictionary<string, HashSet<ulong>>();
 
-        foreach (var tm in processConfiguration.TransactionManagers)
+        foreach (var tm in processConfiguration.SystemConfiguration.TransactionManagers)
         {
-            _sequenceNumCounterLookup[tm.Id] = 0;
+            _sequenceNumCounterLookup[tm.Id] = new HashSet<ulong>();
         }
+
+        this._stateUpdateServiceClients = _processConfiguration.OtherTransactionManagers
+            .Select(tm => GrpcChannel.ForAddress(tm.URL))
+            .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
+            .ToList();
     }
 
     public override Task<UpdateResponse> UpdateBroadcast(UpdateRequest request, ServerCallContext context)
     {
-        var currSeqNum = _sequenceNumCounterLookup[request.ServerId];
+        var currSeqNumSet = _sequenceNumCounterLookup[request.ServerId];
 
-        if (currSeqNum >= request.SequenceNum)
-            return Task.FromResult(new UpdateResponse { Ok = true });
+        if (currSeqNumSet.Contains(request.SequenceNum))
+            return Task.FromResult(new UpdateResponse { Ok = true }); //TODO: Should it be okay?
 
-        // TODO: Needs to be atomic
-        _sequenceNumCounterLookup[request.ServerId] = currSeqNum + 1;
+        _sequenceNumCounterLookup[request.ServerId].Add(request.SequenceNum);
 
-        foreach (var tm in _processConfiguration.TransactionManagers)
+        foreach (var stateUpdateServiceClient in _stateUpdateServiceClients)
         {
-            var channel = GrpcChannel.ForAddress(tm.URL);
-            var client = new StateUpdateService.StateUpdateServiceClient(channel);
-            client.UpdateBroadcast(request);
+            stateUpdateServiceClient.UpdateBroadcast(request);
         }
 
         // Deliver
