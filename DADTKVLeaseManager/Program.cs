@@ -16,7 +16,6 @@ internal static class Program
 
         var serverId = args[0];
 
-
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[2]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
@@ -50,15 +49,27 @@ internal static class Program
                         GrpcChannel = GrpcChannel.ForAddress(processInfo.URL)
                     });
 
-        var proposer = new Proposer(lockObject, leaseRequests, otherLeaseManagersChannels, transactionManagersChannels, consensusState,
-            leaseManagerConfiguration);
+        var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
+        foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
+        {
+            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
+        }
+
+        var acceptorServiceClients = new List<AcceptorService.AcceptorServiceClient>();
+        foreach (var (_, leaseManagerChannel) in otherLeaseManagersChannels)
+        {
+            acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
+        }
+
+        var proposer = new Proposer(lockObject, leaseRequests, acceptorServiceClients, learnerServiceClients,
+            consensusState, leaseManagerConfiguration);
 
         var server = new Server
         {
             Services =
             {
                 LeaseService.BindService(proposer),
-                AcceptorService.BindService(new Acceptor(lockObject, consensusState, transactionManagersChannels))
+                AcceptorService.BindService(new Acceptor(lockObject, consensusState, learnerServiceClients))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };

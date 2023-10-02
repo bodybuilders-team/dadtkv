@@ -27,7 +27,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             .ToList();
     }
 
-    public override Task<UpdateResponse> UpdateBroadcast(UpdateRequest request, ServerCallContext context)
+    public override Task<UpdateResponse> Update(UpdateRequest request, ServerCallContext context)
     {
         var currSeqNumSet = _sequenceNumCounterLookup[request.ServerId];
 
@@ -38,7 +38,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
         foreach (var stateUpdateServiceClient in _stateUpdateServiceClients)
         {
-            stateUpdateServiceClient.UpdateBroadcast(request);
+            stateUpdateServiceClient.Update(request);
         }
 
         //TODO: Needs majority to deliver

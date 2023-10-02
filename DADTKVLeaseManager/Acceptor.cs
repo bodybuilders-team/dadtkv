@@ -6,18 +6,14 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _lockObject;
-    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients = new();
+    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
     public Acceptor(object lockObject, ConsensusState consensusState,
-        Dictionary<string, ServerProcessChannel> transactionManagersChannels)
+        List<LearnerService.LearnerServiceClient> learnerServiceClients)
     {
         _lockObject = lockObject;
         _consensusState = consensusState;
-        //TODO: Duplicated code in proposer
-        foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
-        {
-            _learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
-        }
+        _learnerServiceClients = learnerServiceClients;
     }
 
     public override Task<PrepareResponse> Prepare(PrepareRequest request, ServerCallContext context)
@@ -54,8 +50,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
             if (request.EpochNumber <= _consensusState.WriteTimestamp)
                 return Task.FromResult(new AcceptResponse { Ok = false });
 
-            _consensusState.WriteTimestamp =
-                request.EpochNumber; // TODO does it need to be exactly the current read timestamp?
+            _consensusState.WriteTimestamp = request.EpochNumber; // TODO does it need to be exactly the current read timestamp?
             _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.Value);
 
             _learnerServiceClients.ForEach(client => client.Learn(new LearnRequest
@@ -70,6 +65,4 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
             });
         }
     }
-    
-    public accept
 }

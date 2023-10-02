@@ -6,39 +6,29 @@ public class Proposer : LeaseService.LeaseServiceBase
 {
     private readonly object _lockObject;
     private readonly List<ILeaseRequest> _leaseRequests;
-    private readonly Dictionary<string, ServerProcessChannel> _otherLeaseManagerChannels;
     private readonly ConsensusState _consensusState;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
 
-    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceClients = new();
-    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients = new();
+    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
+    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
     private ulong EpochNumber => _consensusState.WriteTimestamp + 1;
 
     public Proposer(
         object lockObject,
         List<ILeaseRequest> leaseRequests,
-        Dictionary<string, ServerProcessChannel> otherLeaseManagerChannels,
-        Dictionary<string, ServerProcessChannel> transactionManagersChannels,
+        List<AcceptorService.AcceptorServiceClient> acceptorServiceClients,
+        List<LearnerService.LearnerServiceClient> learnerServiceClients,
         ConsensusState consensusState,
         LeaseManagerConfiguration leaseManagerConfiguration
     )
     {
         _lockObject = lockObject;
         _leaseRequests = leaseRequests;
-        _otherLeaseManagerChannels = otherLeaseManagerChannels;
+        _acceptorServiceServiceClients = acceptorServiceClients;
+        _learnerServiceClients = learnerServiceClients;
         _consensusState = consensusState;
         _leaseManagerConfiguration = leaseManagerConfiguration;
-
-        foreach (var (_, leaseManagerChannel) in _otherLeaseManagerChannels)
-        {
-            _acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
-        }
-        //TODO: Duplicated code in acceptor
-        foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
-        {
-            _learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
-        }
     }
 
     public void Start()
@@ -86,41 +76,50 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (!currentIsLeader)
                 return;
 
-            var numPromises = 0;
             var highestWriteTimestamp = _consensusState
                 .WriteTimestamp; //TODO: Check if we should include our own highest write timestamp value 
 
             var newConsensusValue = _consensusState.Value;
 
             // broadcast prepare
-            foreach (var client in _acceptorServiceClients)
+            var asyncUnaryCalls = new List<AsyncUnaryCall<PrepareResponse>>();
+            foreach (var client in _acceptorServiceServiceClients)
             {
-                // TODO: Make Async
-                var response = client.Prepare(new PrepareRequest
-                {
-                    EpochNumber = EpochNumber // TODO: Do not send prepare when in middle of consensus phase.
-                });
-
-                if (response.Promise)
-                    numPromises++;
-
-                //TODO: Should we do something if the received write timestamp is higher than epoch number?
-
-                if (response.WriteTimestamp <= highestWriteTimestamp) continue;
-
-                highestWriteTimestamp = response.WriteTimestamp;
-                newConsensusValue =
-                    ConsensusValueDtoConverter
-                        .ConvertFromDto(response
-                            .Value); //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
+                var prepareRequest = new PrepareRequest { EpochNumber = EpochNumber };
+                var res = client.PrepareAsync(prepareRequest);
+                asyncUnaryCalls.Add(res);
             }
+
+            var cde = new CountdownEvent(_leaseManagerConfiguration.LeaseManagers.Count / 2);
+            foreach (var asyncUnaryCall in asyncUnaryCalls)
+            {
+                var thread = new Thread(() =>
+                {
+                    asyncUnaryCall.ResponseAsync.Wait();
+                    var res = asyncUnaryCall.ResponseAsync.Result;
+
+                    if (res.Promise)
+                        cde.Signal();
+                    else
+                    {
+                        //TODO: Should we do something if the received write timestamp is higher than epoch number?
+
+                        if (res.WriteTimestamp <= highestWriteTimestamp)
+                            return;
+
+                        highestWriteTimestamp = res.WriteTimestamp;
+                        //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
+                        newConsensusValue = ConsensusValueDtoConverter.ConvertFromDto(res.Value);
+                    }
+                });
+                thread.Start();
+            }
+
+            cde.Wait();
 
             //TODO: Adopt the highest consensus value
             // consensusState.WriteTimestamp = highestWriteTimestamp;
             // consensusState.Value = newConsensusValue;
-
-            if (numPromises <= _leaseManagerConfiguration.LeaseManagers.Count / 2)
-                return;
 
             ActOnMajority();
         }
@@ -149,11 +148,13 @@ public class Proposer : LeaseService.LeaseServiceBase
         }
 
         // TODO: Add URB for Acceptors
-        _acceptorServiceClients.ForEach(client => client.Accept(new AcceptRequest
+        _acceptorServiceServiceClients.ForEach(client => client.Accept(new AcceptRequest
         {
             EpochNumber = EpochNumber,
             Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue)
         }));
+
+        // TODO: Check if majority is needed
 
         Decide(newConsensusValue);
     }
@@ -161,10 +162,10 @@ public class Proposer : LeaseService.LeaseServiceBase
     private void Decide(ConsensusValue newConsensusValue)
     {
         // TODO: acceptor.accept
-        
+
         _consensusState.WriteTimestamp = EpochNumber;
         _consensusState.Value = newConsensusValue;
-        
+
         _learnerServiceClients.ForEach(client => client.Learn(new LearnRequest
         {
             ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),

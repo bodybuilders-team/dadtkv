@@ -6,7 +6,7 @@ option csharp_namespace = "DADTKV";
 import "DadInt.proto";
 
 service StateUpdateService {
-  rpc UpdateBroadcast(UpdateRequest) returns (UpdateResponse);
+  rpc Update(UpdateRequest) returns (UpdateResponse);
 }
 
 message UpdateRequest {
