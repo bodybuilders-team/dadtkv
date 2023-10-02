@@ -41,6 +41,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             stateUpdateServiceClient.UpdateBroadcast(request);
         }
 
+        //TODO: Needs majority to deliver
         // Deliver
         deliver(request.WriteSet);
 
