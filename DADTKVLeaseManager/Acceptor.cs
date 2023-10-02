@@ -47,8 +47,9 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     {
         lock (_lockObject)
         {
-            if (request.EpochNumber <= _consensusState.WriteTimestamp)
-                return Task.FromResult(new AcceptResponse { Ok = false });
+            // TODO does it need to be exactly the current read timestamp?
+            if (request.EpochNumber != _consensusState.ReadTimestamp)
+                return Task.FromResult(new AcceptResponse { Accepted = false });
 
             _consensusState.WriteTimestamp = request.EpochNumber; // TODO does it need to be exactly the current read timestamp?
             _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.Value);
@@ -61,7 +62,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
 
             return Task.FromResult(new AcceptResponse
             {
-                Ok = true
+                Accepted = true
             });
         }
     }

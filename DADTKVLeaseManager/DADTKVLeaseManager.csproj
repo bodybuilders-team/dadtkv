@@ -17,7 +17,7 @@
 		</PackageReference>
 
 		<Protobuf Include="../DADTKVCore/proto/LeaseService.proto" GrpcServices="Server" />
-		<Protobuf Include="..\DADTKVCore\proto\AcceptorService.proto" GrpcServices="Both" />
+		<Protobuf Include="..\DADTKVCore\proto\AcceptorService.proto" AdditionalImportDirs="../DADTKVCore/proto/" GrpcServices="Both" />
 		<Protobuf Include="..\DADTKVCore\proto\LearnerService.proto" GrpcServices="Client" />
 	</ItemGroup>
 

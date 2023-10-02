@@ -2,7 +2,8 @@ syntax = "proto3";
 package dadtkv;
 
 option csharp_namespace = "DADTKV";
-
+import "ConsensusValue.proto";
+    
 service AcceptorService {
   rpc Prepare(PrepareRequest) returns (PrepareResponse);
   rpc Accept(AcceptRequest) returns (AcceptResponse);
@@ -24,13 +25,6 @@ message AcceptRequest {
 }
 
 message AcceptResponse {
-  bool ok = 1;
+  bool accepted = 1;
 }
 
-message ConsensusValueDto {
-  map<string, LeaseQueueDto> leaseQueue = 1;
-}
-
-message LeaseQueueDto {
-  repeated string transactionManagers = 1;
-}

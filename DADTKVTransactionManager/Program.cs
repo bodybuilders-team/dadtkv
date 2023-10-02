@@ -25,6 +25,7 @@ internal static class Program
         var lockObject = new object();
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+        var datastore = new Dictionary<string, int>();
         
         var server = new Server
         {
@@ -35,7 +36,8 @@ internal static class Program
                 ),
                 StateUpdateService.BindService(
                     new StateUpdateServiceImpl(lockObject, processConfiguration)
-                )
+                ),
+                LearnerService.BindService(new LearnerServiceImpl(lockObject))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };

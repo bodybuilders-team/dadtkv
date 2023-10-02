@@ -7,14 +7,16 @@ namespace DADTKV;
 
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
+    private readonly object _lockObject;
     private readonly ProcessConfiguration _processConfiguration;
-    private readonly ConcurrentDictionary<string, HashSet<ulong>> _sequenceNumCounterLookup;
+    private readonly Dictionary<string, HashSet<ulong>> _sequenceNumCounterLookup;
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients;
 
     public StateUpdateServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
+        this._lockObject = lockObject;
         this._processConfiguration = processConfiguration;
-        _sequenceNumCounterLookup = new ConcurrentDictionary<string, HashSet<ulong>>();
+        this._sequenceNumCounterLookup = new Dictionary<string, HashSet<ulong>>();
 
         foreach (var tm in processConfiguration.SystemConfiguration.TransactionManagers)
         {
@@ -29,23 +31,26 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
     public override Task<UpdateResponse> Update(UpdateRequest request, ServerCallContext context)
     {
-        var currSeqNumSet = _sequenceNumCounterLookup[request.ServerId];
-
-        if (currSeqNumSet.Contains(request.SequenceNum))
-            return Task.FromResult(new UpdateResponse { Ok = true }); //TODO: Should it be okay?
-
-        _sequenceNumCounterLookup[request.ServerId].Add(request.SequenceNum);
-
-        foreach (var stateUpdateServiceClient in _stateUpdateServiceClients)
+        lock (_lockObject)
         {
-            stateUpdateServiceClient.Update(request);
+            var currSeqNumSet = _sequenceNumCounterLookup[request.ServerId];
+
+            if (currSeqNumSet.Contains(request.SequenceNum))
+                return Task.FromResult(new UpdateResponse { Ok = true }); //TODO: Should it be okay?
+
+            _sequenceNumCounterLookup[request.ServerId].Add(request.SequenceNum);
+
+            foreach (var stateUpdateServiceClient in _stateUpdateServiceClients)
+            {
+                stateUpdateServiceClient.Update(request);
+            }
+
+            //TODO: Needs majority to deliver
+            // Deliver
+            deliver(request.WriteSet);
+
+            return Task.FromResult(new UpdateResponse { Ok = true });
         }
-
-        //TODO: Needs majority to deliver
-        // Deliver
-        deliver(request.WriteSet);
-
-        return Task.FromResult(new UpdateResponse { Ok = true });
     }
 
     private void deliver(RepeatedField<DadInt> writeSet)

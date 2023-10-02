@@ -3,7 +3,7 @@ package dadtkv;
 
 option csharp_namespace = "DADTKV";
 
-import "AcceptorService.proto";
+import "ConsensusValue.proto";
 
 service LearnerService {
   rpc Learn(LearnRequest) returns (LearnResponse) {}
