@@ -34,7 +34,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         {
             _acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
         }
-
+        //TODO: Duplicated code in acceptor
         foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
         {
             _learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));

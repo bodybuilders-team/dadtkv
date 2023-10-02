@@ -12,8 +12,6 @@ internal class ClientLogic
     {
         _clientId = clientId;
 
-        // Set up the gRPC client
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         var channel = GrpcChannel.ForAddress($"http://{serverHostname}:{serverPort}");
         _client = new DADTKVService.DADTKVServiceClient(channel);
     }

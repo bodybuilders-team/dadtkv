@@ -6,59 +6,66 @@ namespace DADTKVT;
 
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
-    private readonly string _serverId;
-    private readonly Dictionary<string, string> _transactionManagersLookup;
+    private readonly ProcessConfiguration _processConfiguration;
+    private readonly object _lockObject;
     private ulong _sequenceNumCounter = 0; // TODO needs to be atomic
-    private readonly string _leaseManagerUrl;
+    private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
 
-    public DADTKVServiceImpl(
-        Dictionary<string, string> transactionManagersLookup,
-        string serverId,
-        string leaseManagerUrl)
+    public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
-        _transactionManagersLookup = transactionManagersLookup;
-        _serverId = serverId;
-        _leaseManagerUrl = leaseManagerUrl;
+        this._processConfiguration = processConfiguration;
+        this._lockObject = lockObject;
+
+        _processConfiguration.OtherTransactionManagers
+            .Select(tm => GrpcChannel.ForAddress(tm.URL))
+            .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
+            .ForEach((client) => this._stateUpdateServiceClients.Add(client));
     }
 
     public override Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request, ServerCallContext context)
     {
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var lmChannel = GrpcChannel.ForAddress(_leaseManagerUrl);
-        var lmClient = new LeaseService.LeaseServiceClient(lmChannel);
-        lmClient.RequestLease(new LeaseRequest
+        lock (_lockObject)
         {
-            ClientID = _serverId,
-            Set = { request.WriteSet.Select(x => x.Key) }
-        });
-
-        // Commit transaction
-        foreach (var (id, url) in _transactionManagersLookup)
-        {
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-            var channel = GrpcChannel.ForAddress(url);
-            var client = new StateUpdateService.StateUpdateServiceClient(channel);
-
-            var updateReq = new UpdateRequest
+            var lmChannel =
+                GrpcChannel.ForAddress(_processConfiguration.SystemConfiguration.LeaseManagers.Random().URL);
+            var lmClient = new LeaseService.LeaseServiceClient(lmChannel);
+            var leaseRes = lmClient.RequestLease(new LeaseRequest
             {
-                ServerId = _serverId,
-                SequenceNum = _sequenceNumCounter++,
-                WriteSet = { request.WriteSet }
-            };
+                ClientID = _processConfiguration.ProcessInfo.Id,
+                Set = { request.WriteSet.Select(x => x.Key) }
+            });
 
-            client.UpdateBroadcast(updateReq); //TODO: Check if throws exception when timeout
+            if (!leaseRes.Ok)
+                throw new Exception(); //TODO: What to do?
+
+            // Commit transaction
+            foreach (var susClient in _stateUpdateServiceClients)
+            {
+                var updateReq = new UpdateRequest
+                {
+                    ServerId = _processConfiguration.ProcessInfo.Id,
+                    SequenceNum = _sequenceNumCounter++,
+                    WriteSet = { request.WriteSet }
+                };
+
+               var res= susClient.UpdateBroadcast(updateReq); //TODO: Check if throws exception when timeout
+            }
+            
+
+
+            // executeTransLocally()
+
+            // ...
+            return null;
         }
-
-
-        // executeTransLocally()
-
-        // ...
-        return null;
     }
 
     public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)
     {
-        // ...
-        return null;
+        lock (_lockObject)
+        {
+            // ...
+            return null;
+        }
     }
 }

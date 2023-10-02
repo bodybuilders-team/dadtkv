@@ -13,6 +13,8 @@ internal static class Program
         var serverPort = int.Parse(args[0]);
         var serverHostname = args[1];
 
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+        
         // Client configuration
         var clientId = args[2];
         var clientLogic = new ClientLogic(clientId, serverHostname, serverPort);

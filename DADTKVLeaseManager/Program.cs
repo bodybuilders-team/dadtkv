@@ -11,7 +11,7 @@ internal static class Program
     // Arguments: serverId, hostName, configurationFile
     private static void Main(string[] args)
     {
-        if (args.Length != 3)
+        if (args.Length != 1)
             throw new ArgumentException("Invalid arguments.");
 
         var serverId = args[0];
@@ -58,7 +58,7 @@ internal static class Program
             Services =
             {
                 LeaseService.BindService(proposer),
-                AcceptorService.BindService(new Acceptor(lockObject, consensusState))
+                AcceptorService.BindService(new Acceptor(lockObject, consensusState, transactionManagersChannels))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };

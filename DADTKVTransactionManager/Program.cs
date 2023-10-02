@@ -9,39 +9,39 @@ internal static class Program
     // Arguments: port, hostname, serverId
     public static void Main(string[] args)
     {
-        if (args.Length != 3)
+        if (args.Length != 1)
             throw new ArgumentException("Invalid arguments.");
 
-        var port = int.Parse(args[0]);
-        var hostname = args[1];
-        var serverId = args[2];
+        var serverId = args[0];
 
-        var transactionManagersLookup = new Dictionary<string, string>
-        {
-            { "TM1", "http://localhost:1001" },
-            { "TM2", "http://localhost:1002" },
-            { "TM3", "http://localhost:1003" }
-        };
 
-        transactionManagersLookup.Remove(serverId);
+        var configurationFile = Path.Combine(Environment.CurrentDirectory, args[2]);
+        var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
+
+        var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
+        var serverProcessPort = new Uri(processConfiguration.ProcessInfo.URL).Port;
+        var hostname = new Uri(processConfiguration.ProcessInfo.URL).Host;
+
+        var lockObject = new object();
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var server = new Server
         {
             Services =
             {
                 DADTKVService.BindService(
-                    new DADTKVServiceImpl(transactionManagersLookup, serverId, "TODO") // TODO: Add lease manager URL
+                    new DADTKVServiceImpl(lockObject, processConfiguration) // TODO: Add lease manager URL
                 ),
                 StateUpdateService.BindService(
-                    new StateUpdateServiceImpl(transactionManagersLookup)
+                    new StateUpdateServiceImpl(lockObject, processConfiguration)
                 )
             },
-            Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
+            Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
 
         server.Start();
 
-        Console.WriteLine($"Transaction Manager server listening on port {port}");
+        Console.WriteLine($"Transaction Manager server listening on port {serverProcessPort}");
         Console.WriteLine("Press Enter to stop the server.");
         Console.ReadLine();
 

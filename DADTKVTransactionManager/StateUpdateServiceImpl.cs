@@ -7,17 +7,17 @@ namespace DADTKV;
 
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly ConcurrentDictionary<string, ulong> _sequenceNumCounterLookup;
-    private readonly Dictionary<string, string> _transactionManagersLookup;
 
-    public StateUpdateServiceImpl(Dictionary<string, string> transactionManagersLookup)
+    public StateUpdateServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
     {
-        _transactionManagersLookup = transactionManagersLookup;
+        this._processConfiguration = processConfiguration;
         _sequenceNumCounterLookup = new ConcurrentDictionary<string, ulong>();
 
-        foreach (var (id, url) in transactionManagersLookup)
+        foreach (var tm in processConfiguration.TransactionManagers)
         {
-            _sequenceNumCounterLookup[id] = 0;
+            _sequenceNumCounterLookup[tm.Id] = 0;
         }
     }
 
@@ -31,10 +31,9 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         // TODO: Needs to be atomic
         _sequenceNumCounterLookup[request.ServerId] = currSeqNum + 1;
 
-        foreach (var (id, url) in _transactionManagersLookup)
+        foreach (var tm in _processConfiguration.TransactionManagers)
         {
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-            var channel = GrpcChannel.ForAddress(url);
+            var channel = GrpcChannel.ForAddress(tm.URL);
             var client = new StateUpdateService.StateUpdateServiceClient(channel);
             client.UpdateBroadcast(request);
         }

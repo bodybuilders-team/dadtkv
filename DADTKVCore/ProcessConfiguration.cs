@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace DADTKV;
 
 public class ProcessConfiguration
@@ -11,12 +13,13 @@ public class ProcessConfiguration
         ProcessInfo = systemConfiguration.Processes.Find((info) => info.Id == serverId)!;
     }
 
-    public IEnumerable<ProcessInfo> OtherServerProcesses
-    {
-        get { return SystemConfiguration.ServerProcesses.Where((info => info.Id != ProcessInfo.Id)).ToList(); }
-    }
+    public List<ProcessInfo> OtherServerProcesses =>
+        SystemConfiguration.ServerProcesses.Where((info => info.Id != ProcessInfo.Id)).ToList();
 
-    public IEnumerable<string> MyCurrentSuspicions
+    public List<ProcessInfo> OtherTransactionManagers =>
+        SystemConfiguration.TransactionManagers.Where((info => info.Id != ProcessInfo.Id)).ToList();
+
+    public List<string> MyCurrentSuspicions
     {
         get
         {
