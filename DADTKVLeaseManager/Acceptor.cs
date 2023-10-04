@@ -29,22 +29,40 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                 return Task.FromResult(new PrepareResponse
                 {
                     Promise = false,
-                    WriteTimestamp = _acceptorState.WriteTimestamp,
-                    Value = _acceptorState.Value != null
-                        ? ConsensusValueDtoConverter.ConvertToDto(_acceptorState.Value)
-                        : null
+                    WriteTimestamp = 0,
+                    Value = null
                 });
 
             _acceptorState.ReadTimestamp = request.EpochNumber;
+            
+            /*
+             * If the acceptor has not yet accepted any proposal (that is, it responded with a PROMISE to a past proposal
+             * but not an ACCEPTED, it will simply respond back to the proposer with a PROMISE. However, if the acceptor
+             * has already accepted an earlier message it responds to the proposer with a PROMISE that contains the
+             * accepted ID and its corresponding value.
+             */
+            
+            // Previously didn't respond with ACCEPTED
+            if (_acceptorState.Value == null)
+            {
+                return Task.FromResult(new PrepareResponse
+                    {
+                        Promise = true,
+                        WriteTimestamp = 0,
+                        Value = null
+                    }
+                );
+            }
+            
+            // Previously responded with ACCEPTED
             return Task.FromResult(new PrepareResponse
-                {
-                    Promise = true,
-                    WriteTimestamp = _acceptorState.WriteTimestamp,
-                    Value = _acceptorState.Value != null
-                        ? ConsensusValueDtoConverter.ConvertToDto(_acceptorState.Value)
-                        : null
-                }
-            );
+            {
+                Promise = true,
+                WriteTimestamp = _acceptorState.WriteTimestamp,
+                Value = _acceptorState.Value != null
+                    ? ConsensusValueDtoConverter.ConvertToDto(_acceptorState.Value)
+                    : null
+            });
         }
     }
 
@@ -52,7 +70,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     {
         lock (_lockObject)
         {
-            // TODO does it need to be exactly the current read timestamp?
+            // TODO does it need to be exactly the current read timestamp? Just checked, and greater or equal seems fine
             if (request.EpochNumber != _acceptorState.ReadTimestamp)
                 return Task.FromResult(new AcceptResponse { Accepted = false });
 
