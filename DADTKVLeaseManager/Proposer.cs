@@ -13,15 +13,16 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
     private ulong _sequenceNumCounter;
-
-    private ulong EpochNumber => _consensusState.WriteTimestamp + 1;
+    private ulong _proposalNumber;
 
     public Proposer(
         object lockObject,
         List<ILeaseRequest> leaseRequests,
         List<AcceptorService.AcceptorServiceClient> acceptorServiceClients,
         List<LearnerService.LearnerServiceClient> learnerServiceClients,
-        LeaseManagerConfiguration leaseManagerConfiguration, ConsensusState consensusState)
+        LeaseManagerConfiguration leaseManagerConfiguration,
+        ConsensusState consensusState
+    )
     {
         _lockObject = lockObject;
         _leaseRequests = leaseRequests;
@@ -29,6 +30,8 @@ public class Proposer : LeaseService.LeaseServiceBase
         _learnerServiceClients = learnerServiceClients;
         _leaseManagerConfiguration = leaseManagerConfiguration;
         _consensusState = consensusState;
+        _proposalNumber =
+            (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
     }
 
     public void Start()
@@ -69,7 +72,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         lock (_lockObject)
         {
-            var currentIsLeader = _leaseManagerConfiguration.GetLeaderId(EpochNumber) ==
+            // TODO: This is sus, we are always the leader?
+            var currentIsLeader = _leaseManagerConfiguration.GetLeaderId(_proposalNumber) ==
                                   _leaseManagerConfiguration.ProcessInfo.Id;
 
             //TODO: Verify edge case where leader is crashed but not suspected
@@ -77,18 +81,20 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (!currentIsLeader)
                 return;
 
-            //TODO: Check if we should include our own highest write timestamp value 
-            var highestWriteTimestamp = _consensusState.WriteTimestamp;
-            var newConsensusValue = _consensusState.Value;
-
             // broadcast prepare
             var asyncTasks = new List<Task<PrepareResponse>>();
             foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
             {
-                var prepareRequest = new PrepareRequest { EpochNumber = EpochNumber };
+                var prepareRequest = new PrepareRequest { EpochNumber = _proposalNumber };
                 var res = acceptorServiceServiceClient.PrepareAsync(prepareRequest);
                 asyncTasks.Add(res.ResponseAsync);
             }
+
+            _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+
+            //TODO: Check if we should include our own highest write timestamp value 
+            var highestWriteTimestamp = _consensusState.WriteTimestamp;
+            ConsensusValueDto? newConsensusValue = null;
 
             DADTKVUtils.WaitForMajority(
                 asyncTasks,
@@ -102,16 +108,16 @@ public class Proposer : LeaseService.LeaseServiceBase
                         return false;
 
                     highestWriteTimestamp = res.WriteTimestamp;
-                    //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
-                    newConsensusValue = ConsensusValueDtoConverter.ConvertFromDto(res.Value);
+                    newConsensusValue = res.Value;
 
                     return false;
                 }
             );
 
-            //TODO: Adopt the highest consensus value
             _consensusState.WriteTimestamp = highestWriteTimestamp;
-            _consensusState.Value = newConsensusValue;
+            _consensusState.Value = newConsensusValue == null
+                ? _consensusState.Value
+                : ConsensusValueDtoConverter.ConvertFromDto(newConsensusValue);
 
             ActOnPromiseMajority();
         }
@@ -144,7 +150,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         {
             var acceptReq = new AcceptRequest
             {
-                EpochNumber = EpochNumber,
+                EpochNumber = _proposalNumber,
                 Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
             };
 
@@ -169,16 +175,14 @@ public class Proposer : LeaseService.LeaseServiceBase
                     ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
                     SequenceNum = _sequenceNumCounter++,
                     ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-                    EpochNumber = EpochNumber
+                    EpochNumber = _proposalNumber
                 });
         }
-        
-        
 
-        _consensusState.WriteTimestamp = EpochNumber;
+
+        _consensusState.WriteTimestamp = _proposalNumber;
         _consensusState.Value = newConsensusValue; // TODO: Acceptor state is not decided by consensus
         _leaseRequests.Clear();
-
     }
 
     private static void HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
