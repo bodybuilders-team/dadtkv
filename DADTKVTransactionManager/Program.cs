@@ -37,7 +37,7 @@ internal static class Program
                 DADTKVService.BindService(new DADTKVServiceImpl(lockObject, processConfiguration, consensusState,
                     datastore, executedTrans)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(lockObject, processConfiguration, datastore)),
-                LearnerService.BindService(new TMLearner(lockObject, processConfiguration, consensusState,
+                LearnerService.BindService(new TmLearner(lockObject, processConfiguration, consensusState,
                     executedTrans))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }

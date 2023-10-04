@@ -4,7 +4,7 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
-public class TMLearner : LearnerService.LearnerServiceBase
+public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly object _lockObject;
     private readonly ConsensusState _consensusState;
@@ -13,7 +13,7 @@ public class TMLearner : LearnerService.LearnerServiceBase
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
     private readonly ProcessConfiguration _processConfiguration;
 
-    public TMLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
+    public TmLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
         Dictionary<LeaseId, bool> executedTrans)
     {
         _lockObject = lockObject;
@@ -27,7 +27,7 @@ public class TMLearner : LearnerService.LearnerServiceBase
             var channel = GrpcChannel.ForAddress(process.URL);
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
         }
-        
+
         this._leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
         foreach (var process in processConfiguration.OtherServerProcesses)
         {
@@ -39,7 +39,6 @@ public class TMLearner : LearnerService.LearnerServiceBase
             learnerServiceClients,
             LearnUrbDeliver,
             (req) => req.ServerId + req.SequenceNum,
-            (req) => new LearnResponse { Ok = true },
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }
@@ -48,14 +47,15 @@ public class TMLearner : LearnerService.LearnerServiceBase
     {
         lock (_lockObject)
         {
-            return Task.FromResult(_urbReceiver.UrbProcessRequest(request));
+            _urbReceiver.UrbProcessRequest(request);
+            return Task.FromResult(new LearnResponse { Ok = true });
         }
     }
 
-    private LearnResponse LearnUrbDeliver(LearnRequest request)
+    private void LearnUrbDeliver(LearnRequest request)
     {
         if (request.EpochNumber <= _consensusState.WriteTimestamp)
-            return new LearnResponse { Ok = true };
+            return;
 
         _consensusState.WriteTimestamp = request.EpochNumber;
         _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
@@ -80,7 +80,5 @@ public class TMLearner : LearnerService.LearnerServiceBase
                 });
             }
         }
-
-        return new LearnResponse { Ok = true };
     }
 }

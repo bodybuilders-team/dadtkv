@@ -4,14 +4,14 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
-public class LMLearner : LearnerService.LearnerServiceBase
+public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly object _lockObject;
     private readonly ConsensusState _consensusState;
     private readonly List<ILeaseRequest> _leaseRequests;
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public LMLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
+    public LmLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
         List<ILeaseRequest> leaseRequests)
     {
         _lockObject = lockObject;
@@ -28,7 +28,6 @@ public class LMLearner : LearnerService.LearnerServiceBase
             learnerServiceClients,
             LearnUrbDeliver,
             (req) => req.ServerId + req.SequenceNum,
-            (req) => new LearnResponse { Ok = true },
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }
@@ -37,26 +36,23 @@ public class LMLearner : LearnerService.LearnerServiceBase
     {
         lock (_lockObject)
         {
-            return Task.FromResult(_urbReceiver.UrbProcessRequest(request));
+            _urbReceiver.UrbProcessRequest(request);
+
+            return Task.FromResult(new LearnResponse
+            {
+                Ok = true
+            });
         }
     }
 
-    private LearnResponse LearnUrbDeliver(LearnRequest request)
+    private void LearnUrbDeliver(LearnRequest request)
     {
         if (request.EpochNumber <= _consensusState.WriteTimestamp)
-            return new LearnResponse
-            {
-                Ok = true
-            };
+            return;
 
         _consensusState.WriteTimestamp = request.EpochNumber;
         _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
 
         _leaseRequests.Clear();
-
-        return new LearnResponse
-        {
-            Ok = true
-        };
     }
 }

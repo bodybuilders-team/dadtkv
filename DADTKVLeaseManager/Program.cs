@@ -71,7 +71,7 @@ internal static class Program
             leaseManagerConfiguration, consensusState);
         var acceptor = new Acceptor(lockObject, acceptorServiceClients, learnerServiceClients,
             leaseManagerConfiguration);
-        var learner = new LMLearner(lockObject, processConfiguration, consensusState, leaseRequests);
+        var learner = new LmLearner(lockObject, processConfiguration, consensusState, leaseRequests);
         var server = new Server
         {
             Services =

@@ -1,3 +1,4 @@
+using DADTKVCore;
 using Grpc.Core;
 
 namespace DADTKV;
@@ -12,7 +13,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
     private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
-    private ulong _sequenceNumCounter;
+    private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
     private ulong _proposalNumber;
 
     public Proposer(
@@ -32,6 +33,8 @@ public class Proposer : LeaseService.LeaseServiceBase
         _consensusState = consensusState;
         _proposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
+        _urBroadcaster =
+            new UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(learnerServiceClients);
     }
 
     public void Start()
@@ -96,7 +99,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             var highestWriteTimestamp = _consensusState.WriteTimestamp;
             ConsensusValueDto? newConsensusValue = null;
 
-            DADTKVUtils.WaitForMajority(
+            var majority = DADTKVUtils.WaitForMajority(
                 asyncTasks,
                 (res) =>
                 {
@@ -113,6 +116,8 @@ public class Proposer : LeaseService.LeaseServiceBase
                     return false;
                 }
             );
+
+            if (!majority) return;
 
             _consensusState.WriteTimestamp = highestWriteTimestamp;
             _consensusState.Value = newConsensusValue == null
@@ -158,31 +163,32 @@ public class Proposer : LeaseService.LeaseServiceBase
             acceptCalls.Add(res.ResponseAsync);
         });
 
-        DADTKVUtils.WaitForMajority(acceptCalls, (res) => res.Accepted);
+        var majority = DADTKVUtils.WaitForMajority(acceptCalls, (res) => res.Accepted);
 
-        Decide(newConsensusValue);
+        if (majority)
+            Decide(newConsensusValue);
     }
 
     private void Decide(ConsensusValue newConsensusValue)
     {
-        // TODO: acceptor.accept
-
-        foreach (var learnerServiceClient in _learnerServiceClients)
+        var request = new LearnRequest
         {
-            learnerServiceClient.LearnAsync(
-                new LearnRequest
-                {
-                    ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
-                    SequenceNum = _sequenceNumCounter++,
-                    ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-                    EpochNumber = _proposalNumber
-                });
-        }
+            ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
+            ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
+            EpochNumber = _proposalNumber
+        };
 
-
-        _consensusState.WriteTimestamp = _proposalNumber;
-        _consensusState.Value = newConsensusValue; // TODO: Acceptor state is not decided by consensus
-        _leaseRequests.Clear();
+        _urBroadcaster.UrBroadcast(
+            request,
+            (req, seqNum) => req.SequenceNum = seqNum,
+            (req) =>
+            {
+                _consensusState.WriteTimestamp = _proposalNumber;
+                _consensusState.Value = newConsensusValue; // TODO: Acceptor state is not decided by consensus
+                _leaseRequests.Clear();
+            },
+            (client, req) => client.LearnAsync(req).ResponseAsync
+        );
     }
 
     private static void HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
