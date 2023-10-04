@@ -25,7 +25,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     {
         lock (_lockObject)
         {
-            if (request.EpochNumber <= _acceptorState.ReadTimestamp)
+            if (request.ProposalNumber <= _acceptorState.ReadTimestamp)
                 return Task.FromResult(new PrepareResponse
                 {
                     Promise = false,
@@ -33,7 +33,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                     Value = null
                 });
 
-            _acceptorState.ReadTimestamp = request.EpochNumber;
+            _acceptorState.ReadTimestamp = request.ProposalNumber;
             
             /*
              * If the acceptor has not yet accepted any proposal (that is, it responded with a PROMISE to a past proposal
@@ -71,10 +71,10 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
         lock (_lockObject)
         {
             // TODO does it need to be exactly the current read timestamp? Just checked, and greater or equal seems fine
-            if (request.EpochNumber != _acceptorState.ReadTimestamp)
+            if (request.ProposalNumber != _acceptorState.ReadTimestamp)
                 return Task.FromResult(new AcceptResponse { Accepted = false });
 
-            _acceptorState.WriteTimestamp = request.EpochNumber;
+            _acceptorState.WriteTimestamp = request.ProposalNumber;
             _acceptorState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.Value);
 
             return Task.FromResult(new AcceptResponse { Accepted = true });

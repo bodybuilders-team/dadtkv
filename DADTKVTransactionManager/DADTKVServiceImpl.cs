@@ -87,7 +87,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         // Verify if we need to check leases of this leaseReq.leaseId or just the lease keys
 
         // Waiting for consensus value where lease id are on the top of the queue
-        while (_consensusState.Value == null || !CheckLeases(_consensusState.Value, leaseReq))
+        while (_consensusState.Values == null || !CheckLeases(_consensusState.Values, leaseReq))
         {
             Monitor.Exit(_lockObject);
             Thread.Sleep(100);

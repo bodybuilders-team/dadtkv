@@ -28,8 +28,8 @@ internal static class Program
         var leaseRequests = new List<ILeaseRequest>();
 
 
-        var otherLeaseManagersChannels =
-            leaseManagerConfiguration.OtherLeaseManagers.ToDictionary(
+        var leaseManagersChannels =
+            leaseManagerConfiguration.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
                 processInfo => new ServerProcessChannel
                 {
@@ -54,13 +54,13 @@ internal static class Program
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
         }
 
-        foreach (var (_, leaseManagersChannel) in otherLeaseManagersChannels)
+        foreach (var (_, leaseManagersChannel) in leaseManagersChannels)
         {
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagersChannel.GrpcChannel));
         }
 
         var acceptorServiceClients = new List<AcceptorService.AcceptorServiceClient>();
-        foreach (var (_, leaseManagerChannel) in otherLeaseManagersChannels)
+        foreach (var (_, leaseManagerChannel) in leaseManagersChannels)
         {
             acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
         }

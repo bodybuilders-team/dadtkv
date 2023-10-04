@@ -54,14 +54,14 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
     private void LearnUrbDeliver(LearnRequest request)
     {
-        if (request.EpochNumber <= _consensusState.WriteTimestamp)
+        if (request.ProposalNumber <= _consensusState.WriteTimestamp)
             return;
 
-        _consensusState.WriteTimestamp = request.EpochNumber;
-        _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
+        _consensusState.WriteTimestamp = request.ProposalNumber;
+        _consensusState.Values = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
 
         var leasesToBeFreed = new HashSet<LeaseId>();
-        foreach (var (key, queue) in _consensusState.Value.LeaseQueues)
+        foreach (var (key, queue) in _consensusState.Values.LeaseQueues)
         {
             var leaseId = queue.Peek();
 

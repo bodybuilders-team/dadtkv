@@ -11,7 +11,6 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
 
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
-    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
 
     private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
     private ulong _proposalNumber;
@@ -19,18 +18,17 @@ public class Proposer : LeaseService.LeaseServiceBase
     public Proposer(
         object lockObject,
         List<ILeaseRequest> leaseRequests,
+        ConsensusState consensusState,
         List<AcceptorService.AcceptorServiceClient> acceptorServiceClients,
         List<LearnerService.LearnerServiceClient> learnerServiceClients,
-        LeaseManagerConfiguration leaseManagerConfiguration,
-        ConsensusState consensusState
+        LeaseManagerConfiguration leaseManagerConfiguration
     )
     {
         _lockObject = lockObject;
         _leaseRequests = leaseRequests;
-        _acceptorServiceServiceClients = acceptorServiceClients;
-        _learnerServiceClients = learnerServiceClients;
-        _leaseManagerConfiguration = leaseManagerConfiguration;
         _consensusState = consensusState;
+        _acceptorServiceServiceClients = acceptorServiceClients;
+        _leaseManagerConfiguration = leaseManagerConfiguration;
         _proposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
         _urBroadcaster =
@@ -39,17 +37,53 @@ public class Proposer : LeaseService.LeaseServiceBase
 
     public void Start()
     {
-        const int timeDelta = 1000;
+        // TODO ADD LOCK
+
+        var roundNumber = _consensusState.Values.Count;
+
+        if (_leaseRequests.Count == 0)
+        {
+            return;
+        }
+
+        ConsensusValue? previouslyConsensusValue = null;
+
+        var myProposalValue = previouslyConsensusValue?.DeepCopy() ?? new ConsensusValue();
+
+        var leaseQueue = myProposalValue.LeaseQueues;
+
+        foreach (var currentRequest in _leaseRequests)
+        {
+            switch (currentRequest)
+            {
+                case LeaseRequest leaseRequest:
+                    HandleLeaseRequest(leaseQueue, leaseRequest);
+                    break;
+                case FreeLeaseRequest freeLeaseRequest:
+                    HandleFreeLeaseRequest(leaseQueue, freeLeaseRequest);
+                    break;
+            }
+        }
+
+        Propose(myProposalValue);
+
+        /*const int timeDelta = 1000;
         var timer = new System.Timers.Timer(timeDelta);
 
         timer.Elapsed += (source, e) =>
         {
+            if (_leaseRequests.Count == 0)
+            {
+                timer.Start();
+                return;
+            }
+
             // TODO: Place LeaseServiceImpl callbacks and process requests in a proposer class
             ProcessRequests();
             timer.Start();
         };
         timer.AutoReset = false;
-        timer.Start();
+        timer.Start();*/
     }
 
     public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
@@ -71,7 +105,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         }
     }
 
-    private void ProcessRequests()
+    private void Propose(ConsensusValue myProposalValue)
     {
         lock (_lockObject)
         {
@@ -88,75 +122,61 @@ public class Proposer : LeaseService.LeaseServiceBase
             var asyncTasks = new List<Task<PrepareResponse>>();
             foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
             {
-                var prepareRequest = new PrepareRequest { EpochNumber = _proposalNumber };
+                var prepareRequest = new PrepareRequest { ProposalNumber = _proposalNumber };
                 var res = acceptorServiceServiceClient.PrepareAsync(prepareRequest);
                 asyncTasks.Add(res.ResponseAsync);
             }
 
-            _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+            var highestWriteTimestamp = 0UL;
+            ConsensusValueDto? adoptedValue = null;
 
-            //TODO: Check if we should include our own highest write timestamp value 
-            var highestWriteTimestamp = _consensusState.WriteTimestamp;
-            ConsensusValueDto? newConsensusValue = null;
-
-            var majority = DADTKVUtils.WaitForMajority(
+            var majorityPromised = DADTKVUtils.WaitForMajority(
                 asyncTasks,
                 (res) =>
                 {
-                    if (res.Promise)
+                    if (!res.Promise) return false;
+
+                    if (res.WriteTimestamp == 0)
                         return true;
 
-                    //TODO: Should we do something if the received write timestamp is higher than epoch number?
                     if (res.WriteTimestamp <= highestWriteTimestamp)
-                        return false;
+                        return true;
 
                     highestWriteTimestamp = res.WriteTimestamp;
-                    newConsensusValue = res.Value;
+                    adoptedValue = res.Value;
 
-                    return false;
+                    return true;
                 }
             );
 
-            if (!majority) return;
+            if (!majorityPromised)
+            {
+                _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+                Propose(myProposalValue);
+                return;
+            }
 
-            _consensusState.WriteTimestamp = highestWriteTimestamp;
-            _consensusState.Value = newConsensusValue == null
-                ? _consensusState.Value
-                : ConsensusValueDtoConverter.ConvertFromDto(newConsensusValue);
+            var majorityAccepted = ActOnPromiseMajority(adoptedValue == null
+                ? myProposalValue
+                : ConsensusValueDtoConverter.ConvertFromDto(adoptedValue));
 
-            ActOnPromiseMajority();
+            if (!majorityAccepted)
+            {
+                _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+                Propose(myProposalValue);
+            }
         }
     }
 
-    private void ActOnPromiseMajority()
+    private bool ActOnPromiseMajority(ConsensusValue proposalValue)
     {
-        // We have majority, so we need to calculate the new consensus value
-        var newConsensusValue = _consensusState.Value == null
-            ? new ConsensusValue()
-            : _consensusState.Value.DeepCopy();
-
-        var leaseQueue = newConsensusValue.LeaseQueues;
-
-        foreach (var currentRequest in _leaseRequests)
-        {
-            switch (currentRequest)
-            {
-                case LeaseRequest leaseRequest:
-                    HandleLeaseRequest(leaseQueue, leaseRequest);
-                    break;
-                case FreeLeaseRequest freeLeaseRequest:
-                    HandleFreeLeaseRequest(leaseQueue, freeLeaseRequest);
-                    break;
-            }
-        }
-
         var acceptCalls = new List<Task<AcceptResponse>>();
         _acceptorServiceServiceClients.ForEach(client =>
         {
             var acceptReq = new AcceptRequest
             {
-                EpochNumber = _proposalNumber,
-                Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
+                ProposalNumber = _proposalNumber,
+                Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
             };
 
             var res = client.AcceptAsync(acceptReq);
@@ -166,7 +186,9 @@ public class Proposer : LeaseService.LeaseServiceBase
         var majority = DADTKVUtils.WaitForMajority(acceptCalls, (res) => res.Accepted);
 
         if (majority)
-            Decide(newConsensusValue);
+            Decide(proposalValue);
+
+        return majority;
     }
 
     private void Decide(ConsensusValue newConsensusValue)
@@ -175,18 +197,13 @@ public class Proposer : LeaseService.LeaseServiceBase
         {
             ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
             ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-            EpochNumber = _proposalNumber
+            RoundNumber = _roundNumber
         };
 
         _urBroadcaster.UrBroadcast(
             request,
             (req, seqNum) => req.SequenceNum = seqNum,
-            (req) =>
-            {
-                _consensusState.WriteTimestamp = _proposalNumber;
-                _consensusState.Value = newConsensusValue; // TODO: Acceptor state is not decided by consensus
-                _leaseRequests.Clear();
-            },
+            (req) => { /* TODO Update the consensus round value here too? */},
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }

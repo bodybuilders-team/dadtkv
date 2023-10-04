@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -47,12 +48,12 @@ public class LmLearner : LearnerService.LearnerServiceBase
 
     private void LearnUrbDeliver(LearnRequest request)
     {
-        if (request.EpochNumber <= _consensusState.WriteTimestamp)
-            return;
-
-        _consensusState.WriteTimestamp = request.EpochNumber;
-        _consensusState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
-
-        _leaseRequests.Clear();
+        if (_consensusState.Values[(int)request.RoundNumber] != null)
+        {
+            Debug.WriteLine($"Value for the round already exists." +
+                            $"Previous: {_consensusState.Values[(int) request.RoundNumber]}, " +
+                            $"Current: {ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue)}");
+        }
+        _consensusState.Values[(int) request.RoundNumber] = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
     }
 }

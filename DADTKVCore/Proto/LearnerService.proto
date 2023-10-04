@@ -12,7 +12,7 @@ service LearnerService {
 message LearnRequest {
   string serverId = 1;
   uint64 sequenceNum = 2;
-  uint64 epochNumber = 3;
+  uint64 roundNumber = 3;
   ConsensusValueDto consensusValue = 4;
 }
 

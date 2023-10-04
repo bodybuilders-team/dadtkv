@@ -10,7 +10,7 @@ service AcceptorService {
 }
 
 message PrepareRequest {
-  uint64 epochNumber = 1;
+  uint64 proposalNumber = 1;
 }
 
 message PrepareResponse {
@@ -20,7 +20,7 @@ message PrepareResponse {
 }
 
 message AcceptRequest {
-  uint64 epochNumber = 1;
+  uint64 proposalNumber = 1;
   ConsensusValueDto value = 2;
 }
 

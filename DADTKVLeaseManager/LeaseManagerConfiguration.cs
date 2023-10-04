@@ -13,8 +13,8 @@ public class LeaseManagerConfiguration : ProcessConfiguration
     }
 
     //TODO: Check if we should choose minimum id to be leader or a rotating leader based on epoch
-    public string GetLeaderId(ulong epochNumber)
+    public string GetLeaderId(ulong proposalNumber)
     {
-        return LeaseManagers[(int)(epochNumber % (ulong)LeaseManagers.Count) - 1].Id;
+        return LeaseManagers[(int)(proposalNumber % (ulong)LeaseManagers.Count) - 1].Id;
     }
 }
