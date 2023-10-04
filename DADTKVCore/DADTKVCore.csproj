@@ -15,7 +15,8 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <Protobuf Include="./proto/ConsensusValue.proto" GrpcServices="None"/>
+        <Protobuf Include="./proto/ConsensusValue.proto" AdditionalImportDirs="../DADTKVCore/proto/" GrpcServices="None"/>
+        <Protobuf Include="./proto/LeaseId.proto" GrpcServices="None"/>
     </ItemGroup>
     
 </Project>

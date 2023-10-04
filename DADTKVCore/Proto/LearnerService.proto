@@ -10,8 +10,10 @@ service LearnerService {
 }
 
 message LearnRequest {
-  uint64 epochNumber = 1;
-  ConsensusValueDto consensusValue = 2;
+  string serverId = 1;
+  uint64 sequenceNum = 2;
+  uint64 epochNumber = 3;
+  ConsensusValueDto consensusValue = 4;
 }
 
 message LearnResponse {

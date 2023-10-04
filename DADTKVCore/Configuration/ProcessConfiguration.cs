@@ -1,27 +1,25 @@
 namespace DADTKV;
 
-public class ProcessConfiguration
+public class ProcessConfiguration : SystemConfiguration
 {
-    public readonly SystemConfiguration SystemConfiguration;
     public readonly ProcessInfo ProcessInfo;
 
-    public ProcessConfiguration(SystemConfiguration systemConfiguration, string serverId)
+    public ProcessConfiguration(SystemConfiguration systemConfiguration, string serverId): base(systemConfiguration)
     {
-        SystemConfiguration = systemConfiguration;
-        ProcessInfo = systemConfiguration.Processes.Find((info) => info.Id == serverId)!;
+        ProcessInfo = this.Processes.Find((info) => info.Id == serverId)!;
     }
 
     public List<ProcessInfo> OtherServerProcesses =>
-        SystemConfiguration.ServerProcesses.Where((info => info.Id != ProcessInfo.Id)).ToList();
+        this.ServerProcesses.Where((info => info.Id != ProcessInfo.Id)).ToList();
 
     public List<ProcessInfo> OtherTransactionManagers =>
-        SystemConfiguration.TransactionManagers.Where((info => info.Id != ProcessInfo.Id)).ToList();
+        this.TransactionManagers.Where((info => info.Id != ProcessInfo.Id)).ToList();
 
     public List<string> MyCurrentSuspicions
     {
         get
         {
-            return SystemConfiguration.CurrentSuspicions
+            return this.CurrentSuspicions
                 .Where((tuple) => tuple.Item1 == ProcessInfo.Id)
                 .Select((tuple) => tuple.Item2).ToList();
         }

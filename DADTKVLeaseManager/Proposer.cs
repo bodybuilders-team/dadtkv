@@ -21,16 +21,14 @@ public class Proposer : LeaseService.LeaseServiceBase
         List<ILeaseRequest> leaseRequests,
         List<AcceptorService.AcceptorServiceClient> acceptorServiceClients,
         List<LearnerService.LearnerServiceClient> learnerServiceClients,
-        ConsensusState consensusState,
-        LeaseManagerConfiguration leaseManagerConfiguration
-    )
+        LeaseManagerConfiguration leaseManagerConfiguration, ConsensusState consensusState)
     {
         _lockObject = lockObject;
         _leaseRequests = leaseRequests;
         _acceptorServiceServiceClients = acceptorServiceClients;
         _learnerServiceClients = learnerServiceClients;
-        _consensusState = consensusState;
         _leaseManagerConfiguration = leaseManagerConfiguration;
+        _consensusState = consensusState;
     }
 
     public void Start()
@@ -53,6 +51,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         lock (_lockObject)
         {
             _leaseRequests.Add(request);
+
             return Task.FromResult(new LeaseResponse { Ok = true });
         }
     }
@@ -70,8 +69,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         lock (_lockObject)
         {
-            var currentIsLeader = _leaseManagerConfiguration.GetLeaderId() ==
-                                  _leaseManagerConfiguration.ProcessConfiguration.ProcessInfo.Id;
+            var currentIsLeader = _leaseManagerConfiguration.GetLeaderId(EpochNumber) ==
+                                  _leaseManagerConfiguration.ProcessInfo.Id;
 
             //TODO: Verify edge case where leader is crashed but not suspected
 
@@ -83,51 +82,49 @@ public class Proposer : LeaseService.LeaseServiceBase
             var newConsensusValue = _consensusState.Value;
 
             // broadcast prepare
-            var asyncTasks = new List<AsyncUnaryCall<PrepareResponse>>();
+            var asyncTasks = new List<Task<PrepareResponse>>();
             foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
             {
                 var prepareRequest = new PrepareRequest { EpochNumber = EpochNumber };
                 var res = acceptorServiceServiceClient.PrepareAsync(prepareRequest);
-                asyncTasks.Add(res);
+                asyncTasks.Add(res.ResponseAsync);
             }
 
             DADTKVUtils.WaitForMajority(
                 asyncTasks,
-                (res, cde) =>
+                (res) =>
                 {
                     if (res.Promise)
-                        cde.Signal();
-                    else
-                    {
-                        //TODO: Should we do something if the received write timestamp is higher than epoch number?
-                        if (res.WriteTimestamp <= highestWriteTimestamp)
-                            return Task.CompletedTask;
+                        return true;
 
-                        highestWriteTimestamp = res.WriteTimestamp;
-                        //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
-                        newConsensusValue = ConsensusValueDtoConverter.ConvertFromDto(res.Value);
-                    }
+                    //TODO: Should we do something if the received write timestamp is higher than epoch number?
+                    if (res.WriteTimestamp <= highestWriteTimestamp)
+                        return false;
 
-                    return Task.CompletedTask;
+                    highestWriteTimestamp = res.WriteTimestamp;
+                    //TODO: Fix, no need to convert, only for the last one. but only if it doesn't become a mess!
+                    newConsensusValue = ConsensusValueDtoConverter.ConvertFromDto(res.Value);
+
+                    return false;
                 }
             );
 
             //TODO: Adopt the highest consensus value
-            // consensusState.WriteTimestamp = highestWriteTimestamp;
-            // consensusState.Value = newConsensusValue;
+            _consensusState.WriteTimestamp = highestWriteTimestamp;
+            _consensusState.Value = newConsensusValue;
 
-            ActOnMajority();
+            ActOnPromiseMajority();
         }
     }
 
-    private void ActOnMajority()
+    private void ActOnPromiseMajority()
     {
         // We have majority, so we need to calculate the new consensus value
         var newConsensusValue = _consensusState.Value == null
             ? new ConsensusValue()
             : _consensusState.Value.DeepCopy();
 
-        var leaseQueue = newConsensusValue.LeaseQueue;
+        var leaseQueue = newConsensusValue.LeaseQueues;
 
         foreach (var currentRequest in _leaseRequests)
         {
@@ -142,32 +139,20 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
         }
 
-        var asyncUnaryCalls = new List<AsyncUnaryCall<AcceptResponse>>();
+        var acceptCalls = new List<Task<AcceptResponse>>();
         _acceptorServiceServiceClients.ForEach(client =>
         {
             var acceptReq = new AcceptRequest
             {
                 EpochNumber = EpochNumber,
                 Value = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-                ServerId = _leaseManagerConfiguration.ProcessConfiguration.ProcessInfo.Id,
-                SequenceNum = _sequenceNumCounter++
             };
 
             var res = client.AcceptAsync(acceptReq);
-            asyncUnaryCalls.Add(res);
+            acceptCalls.Add(res.ResponseAsync);
         });
 
-        DADTKVUtils.WaitForMajority(
-            asyncUnaryCalls,
-            (res, cde) =>
-            {
-                if (!res.Accepted) //TODO: Is this necessary?
-                    throw new Exception();
-
-                cde.Signal();
-                return Task.CompletedTask;
-            }
-        );
+        DADTKVUtils.WaitForMajority(acceptCalls, (res) => res.Accepted);
 
         Decide(newConsensusValue);
     }
@@ -176,40 +161,50 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         // TODO: acceptor.accept
 
-        _consensusState.WriteTimestamp = EpochNumber;
-        _consensusState.Value = newConsensusValue;
-
-        _learnerServiceClients.ForEach(client => client.Learn(new LearnRequest
+        foreach (var learnerServiceClient in _learnerServiceClients)
         {
-            ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-            EpochNumber = EpochNumber
-        }));
+            learnerServiceClient.LearnAsync(
+                new LearnRequest
+                {
+                    ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
+                    SequenceNum = _sequenceNumCounter++,
+                    ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
+                    EpochNumber = EpochNumber
+                });
+        }
+        
+        
+
+        _consensusState.WriteTimestamp = EpochNumber;
+        _consensusState.Value = newConsensusValue; // TODO: Acceptor state is not decided by consensus
+        _leaseRequests.Clear();
+
     }
 
-    private static void HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<string>> leaseQueue,
+    private static void HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
         FreeLeaseRequest freeLeaseRequest)
     {
-        foreach (var leaseKey in freeLeaseRequest.Set)
-        {
-            if (!leaseQueue.ContainsKey(leaseKey))
-                continue; //TODO: ignore request? send not okay to transaction manager?
+        var leaseId = LeaseIdDtoConverter.ConvertFromDto(freeLeaseRequest.LeaseId);
 
-            if (leaseQueue[leaseKey].Peek() == freeLeaseRequest.ClientID)
-                leaseQueue[leaseKey].Dequeue();
-            //TODO: else ignore request? send not okay to transaction manager?
+        foreach (var (key, queue) in leaseQueues)
+        {
+            if (queue.Peek().Equals(leaseId))
+                queue.Dequeue();
         }
     }
 
-    private static void HandleLeaseRequest(IDictionary<string, Queue<string>> leaseQueue, LeaseRequest leaseRequest)
+    private static void HandleLeaseRequest(IDictionary<string, Queue<LeaseId>> leaseQueue, LeaseRequest leaseRequest)
     {
+        var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseRequest.LeaseId);
+
         foreach (var leaseKey in leaseRequest.Set)
         {
             if (!leaseQueue.ContainsKey(leaseKey))
-                leaseQueue.Add(leaseKey, new Queue<string>());
+                leaseQueue.Add(leaseKey, new Queue<LeaseId>());
 
             //TODO: ignore request? send not okay to transaction manager?
-            if (!leaseQueue[leaseKey].Contains(leaseRequest.ClientID))
-                leaseQueue[leaseKey].Enqueue(leaseRequest.ClientID);
+            if (!leaseQueue[leaseKey].Contains(leaseId))
+                leaseQueue[leaseKey].Enqueue(leaseId);
         }
     }
 }

@@ -1,19 +1,36 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
 using DADTKV;
+using DADTKVTransactionManager;
 
 namespace DADTKVT;
 
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly ProcessConfiguration _processConfiguration;
+    private readonly ConsensusState _consensusState;
+    private readonly DataStore _dataStore;
     private readonly object _lockObject;
-    private ulong _sequenceNumCounter;
+    private ulong _susSequenceNumCounter;
+    private ulong _leaseSequenceNumCounter;
+    private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
+    private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
 
-    public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration)
+    public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration,
+        ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans)
     {
         _processConfiguration = processConfiguration;
+        _consensusState = consensusState;
+        _dataStore = dataStore;
+        _executedTrans = executedTrans;
+        _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
+        foreach (var leaseManager in _processConfiguration.LeaseManagers)
+        {
+            var channel = GrpcChannel.ForAddress(leaseManager.URL);
+            _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
+        }
+
         _lockObject = lockObject;
 
         _processConfiguration.OtherTransactionManagers
@@ -26,56 +43,145 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     {
         lock (_lockObject)
         {
-            var lmChannel = GrpcChannel
-                .ForAddress(_processConfiguration.SystemConfiguration.LeaseManagers.Random().URL);
-            var lmClient = new LeaseService.LeaseServiceClient(lmChannel);
-            var leaseRes = lmClient.RequestLease(new LeaseRequest
+            lock (this)
             {
-                ClientID = _processConfiguration.ProcessInfo.Id,
-                Set = { request.WriteSet.Select(x => x.Key) }
-            });
-
-            if (!leaseRes.Ok)
-                throw new Exception(); //TODO: What to do?
-
-            // Commit transaction
-            var asyncUnaryCalls = new List<AsyncUnaryCall<UpdateResponse>>();
-            foreach (var susClient in _stateUpdateServiceClients)
-            {
-                var updateReq = new UpdateRequest
-                {
-                    ServerId = _processConfiguration.ProcessInfo.Id,
-                    SequenceNum = _sequenceNumCounter++,
-                    WriteSet = { request.WriteSet }
-                };
-
-                var res = susClient.UpdateAsync(updateReq); //TODO: Check if throws exception when timeout
-                asyncUnaryCalls.Add(res);
+                return TxSubmit(request);
             }
-
-            var cde = new CountdownEvent(_processConfiguration.SystemConfiguration.TransactionManagers.Count / 2);
-            foreach (var asyncUnaryCall in asyncUnaryCalls)
-            {
-                var thread = new Thread(() =>
-                {
-                    asyncUnaryCall.ResponseAsync.Wait();
-                    var res = asyncUnaryCall.ResponseAsync.Result;
-                    if (!res.Ok) //TODO: Is this necessary?
-                        throw new Exception();
-
-                    cde.Signal();
-                });
-                thread.Start();
-            }
-
-            cde.Wait(); // TODO: Check if majority was not reached
-
-
-            // executeTransLocally()
-
-            // ...
-            return null;
         }
+    }
+
+    private Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request)
+    {
+        var leases = ExtractLeases(request);
+
+        //TODO: Validate if we already have lease and there is no conflict
+        // Waiting for consensus value where lease id are on the top of the queue
+
+        //TODO: Optimization
+        // Fast path, can only execute if all the lease ids we are using have not been sent free lease req
+        // if (_consensusState.Value != null && CheckLeases(_consensusState.Value, leases))
+        // {
+        //     ExecuteTransaction(request.ReadSet, request.WriteSet);
+        // }
+
+        var leaseId = new LeaseId
+        {
+            ServerId = _processConfiguration.ProcessInfo.Id,
+            SequenceNum = _leaseSequenceNumCounter++
+        };
+
+        var leaseReq = new LeaseRequest
+        {
+            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId),
+            Set = { leases }
+        };
+
+        foreach (var leaseServiceClient in _leaseServiceClients)
+        {
+            leaseServiceClient.RequestLeaseAsync(leaseReq);
+        }
+
+        _executedTrans.Add(leaseId, false);
+
+        // TODO: Optimization
+        // Verify if we need to check leases of this leaseReq.leaseId or just the lease keys
+
+        // Waiting for consensus value where lease id are on the top of the queue
+        while (_consensusState.Value == null || !CheckLeases(_consensusState.Value, leaseReq))
+        {
+            Monitor.Exit(_lockObject);
+            Thread.Sleep(100);
+            Monitor.Enter(_lockObject);
+        }
+
+        // Commit transaction
+        var readData = ExecuteTransaction(request.ReadSet, request.WriteSet);
+
+        // TODO: Optimization
+        // Check conflicts in our lease request
+        // Immediately free the lease request if there is conflict in any of the leases
+
+        _executedTrans.Add(leaseId, true);
+
+        return Task.FromResult(new TxSubmitResponse
+        {
+            ReadSet = { readData }
+        });
+    }
+
+
+    private IEnumerable<DadInt> ExecuteTransaction(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
+    {
+        var resTasks = new List<Task<UpdateResponse>>();
+        foreach (var susClient in _stateUpdateServiceClients)
+        {
+            var updateReq = new UpdateRequest
+            {
+                ServerId = _processConfiguration.ProcessInfo.Id,
+                SequenceNum = _susSequenceNumCounter++,
+                WriteSet = { writeSet }
+            };
+
+            var res = susClient.UpdateAsync(updateReq); //TODO: Check if throws exception when timeout
+            resTasks.Add(res.ResponseAsync);
+        }
+
+        Task.WaitAll(resTasks.ToArray());
+
+        return _dataStore.ExecuteTransaction(readSet, writeSet);
+    }
+
+    private static HashSet<string> ExtractLeases(TxSubmitRequest request)
+    {
+        var leases = new HashSet<string>();
+        foreach (var lease in request.WriteSet.Select(x => x.Key))
+        {
+            leases.Add(lease);
+        }
+
+        foreach (var lease in request.ReadSet)
+        {
+            leases.Add(lease);
+        }
+
+        return leases;
+    }
+
+    private static bool CheckLeases(ConsensusValue consensusStateValue, LeaseRequest leaseReq)
+    {
+        var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
+
+        foreach (var lease in leaseReq.Set)
+        {
+            if (consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId))
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool CheckLeases(ConsensusValue consensusStateValue, HashSet<string> leases)
+    {
+        var queues = consensusStateValue.LeaseQueues;
+
+        var leaseIds = new HashSet<LeaseId>();
+
+        foreach (var lease in leases)
+        {
+            var leaseId = queues[lease].Peek();
+
+            if (leaseId.ServerId != _processConfiguration.ProcessInfo.Id)
+                return false;
+
+            leaseIds.Add(leaseId);
+        }
+
+        return checkForFreeLeaseReq(leaseIds);
+    }
+
+    private bool checkForFreeLeaseReq(HashSet<LeaseId> leaseIds)
+    {
+        throw new NotImplementedException();
     }
 
     public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)

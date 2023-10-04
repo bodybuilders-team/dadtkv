@@ -1,32 +1,24 @@
 namespace DADTKV;
 
-public class LeaseManagerConfiguration
+public class LeaseManagerConfiguration : ProcessConfiguration
 {
-    public readonly ProcessConfiguration ProcessConfiguration;
-
-    public LeaseManagerConfiguration(ProcessConfiguration processConfiguration)
+    public LeaseManagerConfiguration(ProcessConfiguration processConfiguration) : base(
+        processConfiguration, processConfiguration.ProcessInfo.Id)
     {
-        ProcessConfiguration = processConfiguration;
     }
 
     public IEnumerable<ProcessInfo> OtherLeaseManagers
     {
         get
         {
-            return ProcessConfiguration.SystemConfiguration.LeaseManagers
-                .Where((info => info.Id != ProcessConfiguration.ProcessInfo.Id)).ToList();
+            return LeaseManagers
+                .Where((info => info.Id != ProcessInfo.Id)).ToList();
         }
     }
 
-    public List<ProcessInfo> LeaseManagers => ProcessConfiguration.SystemConfiguration.LeaseManagers;
-
     //TODO: Check if we should choose minimum id to be leader or a rotating leader based on epoch
-    public string GetLeaderId()
+    public string GetLeaderId(ulong epochNumber)
     {
-        return ProcessConfiguration.SystemConfiguration.LeaseManagers
-            .Where(leaseManager =>
-                !ProcessConfiguration.MyCurrentSuspicions.Contains(leaseManager.Id)
-            )
-            .Min()!.Id;
+        return LeaseManagers[(int)(epochNumber % (ulong)LeaseManagers.Count) - 1].Id;
     }
 }

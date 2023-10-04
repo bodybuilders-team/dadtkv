@@ -8,12 +8,14 @@ public static class ConsensusValueDtoConverter
     {
         return new ConsensusValue
         {
-            LeaseQueue = new Dictionary<string, Queue<string>>(
-                consensusValueDto.LeaseQueue
+            LeaseQueues = new Dictionary<string, Queue<LeaseId>>(
+                consensusValueDto.LeaseQueues
                     .Select(pair =>
-                        new KeyValuePair<string, Queue<string>>(
+                        new KeyValuePair<string, Queue<LeaseId>>(
                             pair.Key,
-                            new Queue<string>(pair.Value.TransactionManagers)
+                            new Queue<LeaseId>(
+                                pair.Value.LeaseIds.Select(LeaseIdDtoConverter.ConvertFromDto)
+                            )
                         )
                     )
             )
@@ -24,10 +26,16 @@ public static class ConsensusValueDtoConverter
     {
         var mapDto = new MapField<string, LeaseQueueDto>();
 
-        var map = consensusValue.LeaseQueue
+        var map = consensusValue.LeaseQueues
             .Select(pair => new KeyValuePair<string, LeaseQueueDto>(
                 pair.Key,
-                new LeaseQueueDto { TransactionManagers = { pair.Value } }
+                new LeaseQueueDto
+                {
+                    LeaseIds =
+                    {
+                        pair.Value.Select(LeaseIdDtoConverter.ConvertToDto)
+                    }
+                }
             ));
 
         foreach (var (key, value) in map)
@@ -35,6 +43,6 @@ public static class ConsensusValueDtoConverter
             mapDto.Add(key, value);
         }
 
-        return new ConsensusValueDto { LeaseQueue = { mapDto } };
+        return new ConsensusValueDto { LeaseQueues = { mapDto } };
     }
 }

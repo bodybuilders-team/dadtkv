@@ -3,19 +3,20 @@ package dadtkv;
 
 option csharp_namespace = "DADTKV";
 
+import "LeaseId.proto";
+
 service LeaseService {
   rpc RequestLease(LeaseRequest) returns (LeaseResponse);
   rpc FreeLease(FreeLeaseRequest) returns (FreeLeaseResponse);
 }
 
 message LeaseRequest {
-  string clientID = 1;
-  repeated string set = 2;
+  LeaseIdDto leaseId = 1;
+  repeated string set = 3;
 }
 
 message FreeLeaseRequest {
-  string clientID = 1;
-  repeated string set = 2;
+  LeaseIdDto leaseId = 1;
 }
 
 message LeaseResponse {

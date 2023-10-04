@@ -4,6 +4,8 @@ namespace DADTKV;
 
 public static class DADTKVUtils
 {
+    private const int DefaultTimeout = 1000;
+
     public static T Random<T>(this List<T> list)
     {
         var random = new Random();
@@ -20,9 +22,10 @@ public static class DADTKVUtils
         }
     }
 
-    public static void WaitForMajority<TResponse>(
-        List<AsyncUnaryCall<TResponse>> asyncTasks,
-        Func<TResponse, CountdownEvent, Task> responseHandler
+    public static bool WaitForMajority<TResponse>(
+        List<Task<TResponse>> asyncTasks,
+        Func<TResponse, bool> predicate,
+        int timeout = DefaultTimeout
     )
     {
         // Majority is defined as n/2 + 1
@@ -32,13 +35,16 @@ public static class DADTKVUtils
         {
             var thread = new Thread(() =>
             {
-                asyncTask.ResponseAsync.Wait();
-                var res = asyncTask.ResponseAsync.Result;
-                responseHandler.Invoke(res, cde);
+                asyncTask.Wait();
+                var res = asyncTask.Result;
+                var signal = predicate.Invoke(res);
+                if (signal)
+                    cde.Signal();
             });
             thread.Start();
         });
 
-        cde.Wait();
+        // TODO: use the failure detector for each 
+        return cde.Wait(timeout);
     }
 }

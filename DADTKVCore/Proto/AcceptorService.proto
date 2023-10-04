@@ -22,8 +22,6 @@ message PrepareResponse {
 message AcceptRequest {
   uint64 epochNumber = 1;
   ConsensusValueDto value = 2;
-  string serverId = 3;
-  uint64 sequenceNum = 4;
 }
 
 message AcceptResponse {

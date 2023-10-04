@@ -27,7 +27,6 @@ internal static class Program
         var lockObject = new object();
         var leaseRequests = new List<ILeaseRequest>();
 
-        var consensusState = new ConsensusState();
 
         var otherLeaseManagersChannels =
             leaseManagerConfiguration.OtherLeaseManagers.ToDictionary(
@@ -39,7 +38,7 @@ internal static class Program
                 });
 
         var transactionManagersChannels =
-            leaseManagerConfiguration.ProcessConfiguration.SystemConfiguration
+            leaseManagerConfiguration
                 .TransactionManagers
                 .ToDictionary(
                     processInfo => processInfo.Id,
@@ -55,17 +54,24 @@ internal static class Program
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
         }
 
+        foreach (var (_, leaseManagersChannel) in otherLeaseManagersChannels)
+        {
+            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagersChannel.GrpcChannel));
+        }
+
         var acceptorServiceClients = new List<AcceptorService.AcceptorServiceClient>();
         foreach (var (_, leaseManagerChannel) in otherLeaseManagersChannels)
         {
             acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
         }
 
-        var proposer = new Proposer(lockObject, leaseRequests, acceptorServiceClients, learnerServiceClients,
-            consensusState, leaseManagerConfiguration);
-        var acceptor = new Acceptor(lockObject, consensusState, acceptorServiceClients, learnerServiceClients,
-            leaseManagerConfiguration);
+        var consensusState = new ConsensusState();
 
+        var proposer = new Proposer(lockObject, leaseRequests, acceptorServiceClients, learnerServiceClients,
+            leaseManagerConfiguration, consensusState);
+        var acceptor = new Acceptor(lockObject, acceptorServiceClients, learnerServiceClients,
+            leaseManagerConfiguration);
+        var learner = new LMLearner(lockObject, processConfiguration, consensusState, leaseRequests);
         var server = new Server
         {
             Services =

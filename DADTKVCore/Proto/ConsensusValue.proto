@@ -2,11 +2,12 @@ syntax = "proto3";
 package dadtkv;
 
 option csharp_namespace = "DADTKV";
+import "LeaseId.proto";
 
 message ConsensusValueDto {
-  map<string, LeaseQueueDto> leaseQueue = 1;
+  map<string, LeaseQueueDto> leaseQueues = 1;
 }
 
 message LeaseQueueDto {
-  repeated string transactionManagers = 1;
+  repeated LeaseIdDto leaseIds = 1;
 }

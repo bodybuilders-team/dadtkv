@@ -3,25 +3,34 @@ namespace DADTKV;
 public class SystemConfiguration
 {
     public List<ProcessInfo> Processes { get; } = new();
-    private static int _serverProcessesCount;
+    private int _serverProcessesCount;
+
+    private SystemConfiguration()
+    {
+    }
+
+    protected SystemConfiguration(SystemConfiguration systemConfiguration)
+    {
+        this._serverProcessesCount = systemConfiguration._serverProcessesCount;
+        this.Processes = systemConfiguration.Processes;
+        this.Duration = systemConfiguration.Duration;
+        this.Slots = systemConfiguration.Slots;
+        this.WallTime = systemConfiguration.WallTime;
+    }
 
     public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
 
-    public List<ProcessInfo> LeaseManagers
-    {
-        get { return Processes.FindAll(p => p.Role is "L"); }
-    }
+    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
 
-    public List<ProcessInfo> TransactionManagers
-    {
-        get { return Processes.FindAll(p => p.Role is "T"); }
-    }
+    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
 
     private int Slots { get; set; }
     private int Duration { get; set; }
     private DateTime WallTime { get; set; }
 
     private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
+
+    public int GetLeaseManagerIdNum(string id) => LeaseManagers.FindIndex((proc) => proc.Id == id) + 1;
 
     public IEnumerable<Tuple<string, string>> CurrentSuspicions
     {
@@ -65,7 +74,7 @@ public class SystemConfiguration
                             if (parameters.Length > 2)
                             {
                                 process.URL = parameters[2];
-                                _serverProcessesCount++;
+                                systemConfig._serverProcessesCount++;
                             }
 
                             systemConfig.Processes.Add(process);

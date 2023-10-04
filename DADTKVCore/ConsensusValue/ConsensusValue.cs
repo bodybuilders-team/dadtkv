@@ -2,15 +2,15 @@ namespace DADTKV;
 
 public class ConsensusValue
 {
-    public Dictionary<string, Queue<string>> LeaseQueue = new();
+    public Dictionary<string, Queue<LeaseId>> LeaseQueues = new();
 
     public ConsensusValue DeepCopy()
     {
         return new ConsensusValue
         {
-            LeaseQueue = LeaseQueue.ToDictionary(
+            LeaseQueues = LeaseQueues.ToDictionary(
                 pair => pair.Key,
-                pair => new Queue<string>(pair.Value)
+                pair => new Queue<LeaseId>(pair.Value)
             )
         };
     }
