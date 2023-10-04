@@ -1,4 +1,6 @@
-﻿namespace DADTKV;
+﻿using System.Diagnostics;
+
+namespace DADTKV;
 
 internal static class SystemManager
 {
@@ -29,6 +31,11 @@ internal static class SystemManager
             // Start the server process using process.ID and process.URL
             Console.WriteLine($"Starting {process.Role} {process.Id} at {process.URL}");
             // Implement the logic to start server processes
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "",
+                ArgumentList = { }
+            });
         }
     }
 
