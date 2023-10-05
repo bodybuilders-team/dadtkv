@@ -2,5 +2,5 @@ namespace DADTKV;
 
 public class ConsensusState
 {
-    public List<ConsensusValue?> Values = new();
+    public readonly List<ConsensusValue?> Values = new();
 }

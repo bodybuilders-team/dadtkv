@@ -11,13 +11,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly object _lockObject;
     private readonly ProcessConfiguration _processConfiguration;
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
     private ulong _leaseSequenceNumCounter;
     private ulong _susSequenceNumCounter;
 
-    public DADTKVServiceImpl(object lockObject, ProcessConfiguration processConfiguration,
+    public DADTKVServiceImpl(ProcessConfiguration processConfiguration,
         ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans)
     {
         _processConfiguration = processConfiguration;
@@ -31,8 +30,6 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
         }
 
-        _lockObject = lockObject;
-
         _processConfiguration.OtherTransactionManagers
             .Select(tm => GrpcChannel.ForAddress(tm.Url))
             .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
@@ -41,12 +38,9 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
     public override Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request, ServerCallContext context)
     {
-        lock (_lockObject)
+        lock (this) // One transaction at a time
         {
-            lock (this)
-            {
-                return TxSubmit(request);
-            }
+            return TxSubmit(request);
         }
     }
 
@@ -89,7 +83,9 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         {
             for (var i = _consensusState.Values.Count - 1; i >= 0; i--)
             {
-                if (_consensusState.Values[i] == null || !CheckLeases(_consensusState.Values[i], leaseReq))
+                var consensusValue = _consensusState.Values[i];
+
+                if (consensusValue == null || !CheckLeases(consensusValue, leaseReq))
                     continue;
 
                 reachedConsensus = true;
@@ -97,11 +93,8 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
             if (reachedConsensus) break;
 
-            Monitor.Exit(_lockObject);
             Thread.Sleep(100);
-            Monitor.Enter(_lockObject);
         }
-
 
         // Commit transaction
         var readData = ExecuteTransaction(request.ReadSet, request.WriteSet);
@@ -137,7 +130,10 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
         Task.WaitAll(resTasks.ToArray());
 
-        return _dataStore.ExecuteTransaction(readSet, writeSet);
+        lock (_dataStore)
+        {
+            return _dataStore.ExecuteTransaction(readSet, writeSet);
+        }
     }
 
     private static HashSet<string> ExtractLeases(TxSubmitRequest request)
@@ -187,10 +183,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
     public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)
     {
-        lock (_lockObject)
-        {
-            // ...
-            return null;
-        }
+        // ...
+        return null;
     }
 }

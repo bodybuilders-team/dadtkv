@@ -24,10 +24,6 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
-        var lockObject = new object();
-        var leaseRequests = new List<ILeaseRequest>();
-
-
         var leaseManagersChannels =
             leaseManagerConfiguration.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
@@ -61,12 +57,10 @@ internal static class Program
 
         var consensusState = new ConsensusState();
 
-        var proposer = new Proposer(lockObject, leaseRequests, consensusState, acceptorServiceClients,
-            learnerServiceClients,
+        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients,
             leaseManagerConfiguration);
-        var acceptor = new Acceptor(lockObject, acceptorServiceClients, learnerServiceClients,
-            leaseManagerConfiguration);
-        var learner = new LmLearner(lockObject, processConfiguration, consensusState, leaseRequests);
+        var acceptor = new Acceptor();
+        var learner = new LmLearner(processConfiguration, consensusState);
 
         var server = new Server
         {

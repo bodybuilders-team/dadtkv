@@ -23,7 +23,6 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
-        var lockObject = new object();
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var datastore = new DataStore();
@@ -33,11 +32,10 @@ internal static class Program
         {
             Services =
             {
-                // TODO: Add lease manager URL
-                DADTKVService.BindService(new DADTKVServiceImpl(lockObject, processConfiguration, consensusState,
+                DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration, consensusState,
                     datastore, executedTrans)),
-                StateUpdateService.BindService(new StateUpdateServiceImpl(lockObject, processConfiguration, datastore)),
-                LearnerService.BindService(new TmLearner(lockObject, processConfiguration, consensusState,
+                StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore)),
+                LearnerService.BindService(new TmLearner(processConfiguration, consensusState,
                     executedTrans))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }

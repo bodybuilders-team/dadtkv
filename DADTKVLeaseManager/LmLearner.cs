@@ -8,16 +8,12 @@ namespace DADTKV;
 public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
-    private readonly List<ILeaseRequest> _leaseRequests;
-    private readonly object _lockObject;
+    private readonly object _consensusStateLockObject = new();
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public LmLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
-        List<ILeaseRequest> leaseRequests)
+    public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
     {
-        _lockObject = lockObject;
         _consensusState = consensusState;
-        _leaseRequests = leaseRequests;
 
         var learnerServiceClients =
             processConfiguration.OtherServerProcesses
@@ -33,26 +29,45 @@ public class LmLearner : LearnerService.LearnerServiceBase
         );
     }
 
-    public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
+    private void ResizeConsensusStateList(int roundNumber)
     {
-        lock (_lockObject)
+        lock (_consensusStateLockObject)
         {
-            _urbReceiver.UrbProcessRequest(request);
-
-            return Task.FromResult(new LearnResponse
-            {
-                Ok = true
-            });
+            for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
+                _consensusState.Values.Add(null);
         }
     }
 
+    /**
+     * Receive a learn request from the proposer, which has decided on a value for the round.
+     */
+    public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
+    {
+        _urbReceiver.UrbProcessRequest(request);
+
+        return Task.FromResult(new LearnResponse
+        {
+            Ok = true
+        });
+    }
+
+    /**
+     * Deliver the value to the consensus state.
+     *
+     * @param request The learn request.
+     */
     private void LearnUrbDeliver(LearnRequest request)
     {
-        if (_consensusState.Values[(int)request.RoundNumber] != null)
-            Debug.WriteLine($"Value for the round already exists." +
-                            $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
-                            $"Current: {ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue)}");
-        _consensusState.Values[(int)request.RoundNumber] =
-            ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
+        lock (_consensusStateLockObject)
+        {
+            ResizeConsensusStateList((int)request.RoundNumber);
+
+            if (_consensusState.Values[(int)request.RoundNumber] != null)
+                Debug.WriteLine($"Value for the round already exists." +
+                                $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
+                                $"Current: {ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue)}");
+            _consensusState.Values[(int)request.RoundNumber] =
+                ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
+        }
     }
 }

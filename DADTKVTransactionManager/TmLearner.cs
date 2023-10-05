@@ -7,16 +7,15 @@ namespace DADTKV;
 public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
+    private readonly object _consensusStateLockObject = new();
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly object _lockObject;
     private readonly ProcessConfiguration _processConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public TmLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
+    public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
         Dictionary<LeaseId, bool> executedTrans)
     {
-        _lockObject = lockObject;
         _processConfiguration = processConfiguration;
         _consensusState = consensusState;
         _executedTrans = executedTrans;
@@ -43,37 +42,49 @@ public class TmLearner : LearnerService.LearnerServiceBase
         );
     }
 
+    private void ResizeConsensusStateList(int roundNumber)
+    {
+        lock (_consensusStateLockObject)
+        {
+            for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
+                _consensusState.Values.Add(null);
+        }
+    }
+
     public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
     {
-        lock (_lockObject)
-        {
-            _urbReceiver.UrbProcessRequest(request);
-            return Task.FromResult(new LearnResponse { Ok = true });
-        }
+        _urbReceiver.UrbProcessRequest(request);
+        return Task.FromResult(new LearnResponse { Ok = true });
     }
 
     private void LearnUrbDeliver(LearnRequest request)
     {
-        _consensusState.Values[(int)request.RoundNumber] =
-            ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
-
-        var leasesToBeFreed = new HashSet<LeaseId>();
-        foreach (var (key, queue) in _consensusState.Values[(int)request.RoundNumber]!.LeaseQueues)
+        lock (_consensusStateLockObject)
         {
-            var leaseId = queue.Peek();
+            ResizeConsensusStateList((int)request.RoundNumber);
 
-            if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 && _executedTrans[leaseId])
-                leasesToBeFreed.Add(leaseId);
-        }
+            _consensusState.Values[(int)request.RoundNumber] =
+                ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
 
-        foreach (var leaseId in leasesToBeFreed)
-        {
-            foreach (var leaseServiceClient in _leaseServiceClients)
+            var leasesToBeFreed = new HashSet<LeaseId>();
+            foreach (var (key, queue) in _consensusState.Values[(int)request.RoundNumber]!.LeaseQueues)
             {
-                leaseServiceClient.FreeLease(new FreeLeaseRequest
+                var leaseId = queue.Peek();
+
+                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
+                    _executedTrans[leaseId])
+                    leasesToBeFreed.Add(leaseId);
+            }
+
+            foreach (var leaseId in leasesToBeFreed)
+            {
+                foreach (var leaseServiceClient in _leaseServiceClients)
                 {
-                    LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                });
+                    leaseServiceClient.FreeLease(new FreeLeaseRequest
+                    {
+                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
+                    });
+                }
             }
         }
     }

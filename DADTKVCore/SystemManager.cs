@@ -21,6 +21,8 @@ internal static class SystemManager
 
         // Start DADTKV servers (Transaction Managers, Lease Managers)
         StartServers(configuration, configurationFilePath);
+        
+        Thread.Sleep(5000);
 
         // Start DADTKV clients
         StartClients(configuration);
