@@ -2,8 +2,8 @@ namespace DADTKV;
 
 public class LeaseId
 {
-    public string ServerId = "";
     public ulong SequenceNum = 0;
+    public string ServerId = "";
 
     private bool Equals(LeaseId other)
     {
@@ -14,7 +14,7 @@ public class LeaseId
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        return obj.GetType() == this.GetType() && Equals((LeaseId)obj);
+        return obj.GetType() == GetType() && Equals((LeaseId)obj);
     }
 
     public override int GetHashCode()

@@ -11,17 +11,20 @@ service AcceptorService {
 
 message PrepareRequest {
   uint64 proposalNumber = 1;
+  uint64 roundNumber = 2;
 }
 
 message PrepareResponse {
   bool promise = 1;
   uint64 writeTimestamp = 2;
-  ConsensusValueDto value = 3;
+  uint64 roundNumber = 3;
+  ConsensusValueDto value = 4;
 }
 
 message AcceptRequest {
   uint64 proposalNumber = 1;
-  ConsensusValueDto value = 2;
+  uint64 roundNumber = 2;
+  ConsensusValueDto value = 3;
 }
 
 message AcceptResponse {

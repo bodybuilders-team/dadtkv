@@ -3,25 +3,22 @@
 internal static class Program
 {
     // Entry point for the client application
-    // Arguments: serverPort serverHostname clientID scriptPath
+    // Arguments: serverUrl clientID scriptFilePath
     public static void Main(string[] args)
     {
-        if (args.Length != 4)
+        if (args.Length != 3)
             throw new ArgumentException("Invalid arguments.");
-        
-        // Transaction Managers configuration
-        var serverPort = int.Parse(args[0]);
-        var serverHostname = args[1];
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        
+
         // Client configuration
-        var clientId = args[2];
-        var clientLogic = new ClientLogic(clientId, serverHostname, serverPort);
+        var clientId = args[1];
+        var serverUrl = args[0];
+        var clientLogic = new ClientLogic(clientId, serverUrl);
 
         // Script configuration
-        var path = Path.Combine(Environment.CurrentDirectory, args[3]);
-        var scriptReader = new ScriptReader(File.ReadAllText(path));
+        var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
+        var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
 
         while (scriptReader.HasNextCommand())
         {

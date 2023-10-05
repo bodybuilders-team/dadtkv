@@ -5,14 +5,14 @@ namespace DADTKV;
 
 internal class ClientLogic
 {
-    private readonly string _clientId;
     private readonly DADTKVService.DADTKVServiceClient _client;
+    private readonly string _clientId;
 
-    public ClientLogic(string clientId, string serverHostname, int serverPort)
+    public ClientLogic(string clientId, string serverUrl)
     {
         _clientId = clientId;
 
-        var channel = GrpcChannel.ForAddress($"http://{serverHostname}:{serverPort}");
+        var channel = GrpcChannel.ForAddress(serverUrl);
         _client = new DADTKVService.DADTKVServiceClient(channel);
     }
 

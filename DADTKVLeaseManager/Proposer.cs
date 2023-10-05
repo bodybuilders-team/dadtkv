@@ -5,12 +5,11 @@ namespace DADTKV;
 
 public class Proposer : LeaseService.LeaseServiceBase
 {
-    private readonly object _lockObject;
-    private readonly List<ILeaseRequest> _leaseRequests;
+    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
     private readonly ConsensusState _consensusState;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
-
-    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
+    private readonly List<ILeaseRequest> _leaseRequests;
+    private readonly object _lockObject;
 
     private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
     private ulong _proposalNumber;
@@ -39,33 +38,15 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         // TODO ADD LOCK
 
-        var roundNumber = _consensusState.Values.Count;
+        if (_leaseRequests.Count == 0) return;
 
-        if (_leaseRequests.Count == 0)
-        {
-            return;
-        }
+        var roundNumber = (ulong)_consensusState.Values.Count;
 
-        ConsensusValue? previouslyConsensusValue = null;
+        var isUpdated = updateConsensusValues();
 
-        var myProposalValue = previouslyConsensusValue?.DeepCopy() ?? new ConsensusValue();
+        var myProposalValue = getMyProposalValue();
 
-        var leaseQueue = myProposalValue.LeaseQueues;
-
-        foreach (var currentRequest in _leaseRequests)
-        {
-            switch (currentRequest)
-            {
-                case LeaseRequest leaseRequest:
-                    HandleLeaseRequest(leaseQueue, leaseRequest);
-                    break;
-                case FreeLeaseRequest freeLeaseRequest:
-                    HandleFreeLeaseRequest(leaseQueue, freeLeaseRequest);
-                    break;
-            }
-        }
-
-        Propose(myProposalValue);
+        Propose(myProposalValue, roundNumber);
 
         /*const int timeDelta = 1000;
         var timer = new System.Timers.Timer(timeDelta);
@@ -86,12 +67,54 @@ public class Proposer : LeaseService.LeaseServiceBase
         timer.Start();*/
     }
 
+    private bool updateConsensusValues()
+    {
+        var isUpdated = true;
+        for (var i = 0; i < _consensusState.Values.Count; i++)
+        {
+            if (_consensusState.Values[i] != null)
+                continue;
+
+            isUpdated = false;
+            Propose(new ConsensusValue(), (ulong)i);
+        }
+
+        return isUpdated;
+    }
+
+    private ConsensusValue getMyProposalValue()
+    {
+        var myProposalValue = _consensusState.Values.Count == 0
+            ? new ConsensusValue()
+            : _consensusState.Values[^1].DeepCopy();
+
+        var leaseQueue = myProposalValue.LeaseQueues;
+
+        var toRemove = new List<ILeaseRequest>();
+        // Update the lease queues in the proposal value
+        foreach (var currentRequest in _leaseRequests)
+            switch (currentRequest)
+            {
+                case LeaseRequest leaseRequest:
+                    if (HandleLeaseRequest(leaseQueue, leaseRequest))
+                        toRemove.Add(currentRequest);
+                    break;
+                case FreeLeaseRequest freeLeaseRequest:
+                    if (HandleFreeLeaseRequest(leaseQueue, freeLeaseRequest))
+                        toRemove.Add(currentRequest);
+                    break;
+            }
+
+        toRemove.ForEach(request => _leaseRequests.Remove(request));
+
+        return myProposalValue;
+    }
+
     public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
     {
         lock (_lockObject)
         {
             _leaseRequests.Add(request);
-
             return Task.FromResult(new LeaseResponse { Ok = true });
         }
     }
@@ -101,137 +124,172 @@ public class Proposer : LeaseService.LeaseServiceBase
         lock (_lockObject)
         {
             _leaseRequests.Add(request);
-            return Task.FromResult(new FreeLeaseResponse() { Ok = true });
+            return Task.FromResult(new FreeLeaseResponse { Ok = true });
         }
     }
 
-    private void Propose(ConsensusValue myProposalValue)
+    private void Propose(ConsensusValue myProposalValue, ulong roundNumber)
     {
         lock (_lockObject)
         {
-            // TODO: This is sus, we are always the leader?
-            var currentIsLeader = _leaseManagerConfiguration.GetLeaderId(_proposalNumber) ==
-                                  _leaseManagerConfiguration.ProcessInfo.Id;
-
-            //TODO: Verify edge case where leader is crashed but not suspected
-
-            if (!currentIsLeader)
+            if (!_leaseManagerConfiguration.IsLeader())
                 return;
 
-            // broadcast prepare
-            var asyncTasks = new List<Task<PrepareResponse>>();
-            foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
-            {
-                var prepareRequest = new PrepareRequest { ProposalNumber = _proposalNumber };
-                var res = acceptorServiceServiceClient.PrepareAsync(prepareRequest);
-                asyncTasks.Add(res.ResponseAsync);
-            }
-
-            var highestWriteTimestamp = 0UL;
+            // Step 1 - Prepare
             ConsensusValueDto? adoptedValue = null;
-
-            var majorityPromised = DADTKVUtils.WaitForMajority(
-                asyncTasks,
-                (res) =>
-                {
-                    if (!res.Promise) return false;
-
-                    if (res.WriteTimestamp == 0)
-                        return true;
-
-                    if (res.WriteTimestamp <= highestWriteTimestamp)
-                        return true;
-
-                    highestWriteTimestamp = res.WriteTimestamp;
-                    adoptedValue = res.Value;
-
-                    return true;
-                }
-            );
+            var majorityPromised = ConsensusValueDto(roundNumber, (v) => adoptedValue = v);
 
             if (!majorityPromised)
             {
-                _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
-                Propose(myProposalValue);
+                RePropose(myProposalValue, roundNumber);
                 return;
             }
 
-            var majorityAccepted = ActOnPromiseMajority(adoptedValue == null
+            var proposalValue = adoptedValue == null
                 ? myProposalValue
-                : ConsensusValueDtoConverter.ConvertFromDto(adoptedValue));
+                : ConsensusValueDtoConverter.ConvertFromDto(adoptedValue);
 
-            if (!majorityAccepted)
-            {
-                _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
-                Propose(myProposalValue);
-            }
+            // Step 2 - Accept
+            var majorityAccepted = SendAccepts(proposalValue, roundNumber);
+
+            if (majorityAccepted)
+                Decide(proposalValue, roundNumber);
+            else
+                RePropose(myProposalValue, roundNumber);
         }
     }
 
-    private bool ActOnPromiseMajority(ConsensusValue proposalValue)
+    /**
+     * Re-propose with a higher proposal number.
+     *
+     * @param myProposalValue The value to propose.
+     * @param roundNumber The round number to propose.
+     */
+    private void RePropose(ConsensusValue myProposalValue, ulong roundNumber)
+    {
+        _proposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+        Propose(myProposalValue, roundNumber);
+    }
+
+    private bool ConsensusValueDto(ulong roundNumber, Action<ConsensusValueDto?> updateAdoptedValue)
+    {
+        var asyncTasks = new List<Task<PrepareResponse>>();
+        foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
+        {
+            var res = acceptorServiceServiceClient.PrepareAsync(
+                new PrepareRequest
+                {
+                    ProposalNumber = _proposalNumber,
+                    RoundNumber = roundNumber
+                }
+            );
+            asyncTasks.Add(res.ResponseAsync);
+        }
+
+        var highestWriteTimestamp = 0UL;
+
+        return DADTKVUtils.WaitForMajority(
+            asyncTasks,
+            res =>
+            {
+                if (!res.Promise)
+                    return false;
+
+                if (res.WriteTimestamp == 0)
+                    return true;
+
+                if (res.WriteTimestamp <= highestWriteTimestamp)
+                    return true;
+
+                highestWriteTimestamp = res.WriteTimestamp;
+                updateAdoptedValue(res.Value);
+
+                return true;
+            }
+        );
+    }
+
+    private bool SendAccepts(ConsensusValue proposalValue, ulong roundNumber)
     {
         var acceptCalls = new List<Task<AcceptResponse>>();
         _acceptorServiceServiceClients.ForEach(client =>
         {
-            var acceptReq = new AcceptRequest
-            {
-                ProposalNumber = _proposalNumber,
-                Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
-            };
-
-            var res = client.AcceptAsync(acceptReq);
+            var res = client.AcceptAsync(
+                new AcceptRequest
+                {
+                    ProposalNumber = _proposalNumber,
+                    Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
+                    RoundNumber = roundNumber
+                }
+            );
             acceptCalls.Add(res.ResponseAsync);
         });
 
-        var majority = DADTKVUtils.WaitForMajority(acceptCalls, (res) => res.Accepted);
-
-        if (majority)
-            Decide(proposalValue);
-
-        return majority;
+        return DADTKVUtils.WaitForMajority(acceptCalls, res => res.Accepted);
     }
 
-    private void Decide(ConsensusValue newConsensusValue)
+    private void Decide(ConsensusValue newConsensusValue, ulong roundNumber)
     {
-        var request = new LearnRequest
-        {
-            ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
-            ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-            RoundNumber = _roundNumber
-        };
-
         _urBroadcaster.UrBroadcast(
-            request,
+            new LearnRequest
+            {
+                ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
+                ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
+                RoundNumber = roundNumber
+            },
             (req, seqNum) => req.SequenceNum = seqNum,
-            (req) => { /* TODO Update the consensus round value here too? */},
+            req =>
+            {
+                /* TODO Update the consensus round value here too? */
+            },
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }
 
-    private static void HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
+    private bool HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
         FreeLeaseRequest freeLeaseRequest)
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(freeLeaseRequest.LeaseId);
 
+        var existed = false;
+        var alreadyFreed = false;
+
         foreach (var (key, queue) in leaseQueues)
         {
+            foreach (var consensusValue in _consensusState.Values)
+            {
+                if (consensusValue.LeaseQueues[key].Contains(leaseId))
+                    existed = true;
+
+                if (existed && !consensusValue.LeaseQueues[key].Contains(leaseId))
+                    alreadyFreed = true;
+            }
+
+            if (alreadyFreed)
+                return true;
+
             if (queue.Peek().Equals(leaseId))
                 queue.Dequeue();
         }
+
+        return false;
     }
 
-    private static void HandleLeaseRequest(IDictionary<string, Queue<LeaseId>> leaseQueue, LeaseRequest leaseRequest)
+    private bool HandleLeaseRequest(IDictionary<string, Queue<LeaseId>> leaseQueues, LeaseRequest leaseRequest)
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseRequest.LeaseId);
 
         foreach (var leaseKey in leaseRequest.Set)
         {
-            if (!leaseQueue.ContainsKey(leaseKey))
-                leaseQueue.Add(leaseKey, new Queue<LeaseId>());
+            if (!leaseQueues.ContainsKey(leaseKey))
+                leaseQueues.Add(leaseKey, new Queue<LeaseId>());
 
-            //TODO: ignore request? send not okay to transaction manager?
-            if (!leaseQueue[leaseKey].Contains(leaseId))
-                leaseQueue[leaseKey].Enqueue(leaseId);
+            if (_consensusState.Values.Any(consensusValue => consensusValue.LeaseQueues[leaseKey].Contains(leaseId)))
+                return true;
+
+            leaseQueues[leaseKey].Enqueue(leaseId);
         }
+
+        return false;
     }
 }

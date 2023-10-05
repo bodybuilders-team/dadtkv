@@ -38,10 +38,7 @@ public static class ConsensusValueDtoConverter
                 }
             ));
 
-        foreach (var (key, value) in map)
-        {
-            mapDto.Add(key, value);
-        }
+        foreach (var (key, value) in map) mapDto.Add(key, value);
 
         return new ConsensusValueDto { LeaseQueues = { mapDto } };
     }

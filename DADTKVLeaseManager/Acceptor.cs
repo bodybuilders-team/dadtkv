@@ -4,10 +4,10 @@ namespace DADTKV;
 
 internal class Acceptor : AcceptorService.AcceptorServiceBase
 {
-    private readonly AcceptorState _acceptorState = new();
-    private readonly object _lockObject;
-    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
+    private readonly AcceptorState _acceptorState = new();
+    private readonly List<LearnerService.LearnerServiceClient> _learnerServiceClients;
+    private readonly object _lockObject;
 
     public Acceptor(
         object lockObject,
@@ -34,17 +34,16 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                 });
 
             _acceptorState.ReadTimestamp = request.ProposalNumber;
-            
+
             /*
              * If the acceptor has not yet accepted any proposal (that is, it responded with a PROMISE to a past proposal
              * but not an ACCEPTED, it will simply respond back to the proposer with a PROMISE. However, if the acceptor
              * has already accepted an earlier message it responds to the proposer with a PROMISE that contains the
              * accepted ID and its corresponding value.
              */
-            
+
             // Previously didn't respond with ACCEPTED
             if (_acceptorState.Value == null)
-            {
                 return Task.FromResult(new PrepareResponse
                     {
                         Promise = true,
@@ -52,8 +51,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                         Value = null
                     }
                 );
-            }
-            
+
             // Previously responded with ACCEPTED
             return Task.FromResult(new PrepareResponse
             {

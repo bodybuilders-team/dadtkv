@@ -2,7 +2,6 @@ namespace DADTKV;
 
 public class SystemConfiguration
 {
-    public List<ProcessInfo> Processes { get; } = new();
     private int _serverProcessesCount;
 
     private SystemConfiguration()
@@ -11,12 +10,14 @@ public class SystemConfiguration
 
     protected SystemConfiguration(SystemConfiguration systemConfiguration)
     {
-        this._serverProcessesCount = systemConfiguration._serverProcessesCount;
-        this.Processes = systemConfiguration.Processes;
-        this.Duration = systemConfiguration.Duration;
-        this.Slots = systemConfiguration.Slots;
-        this.WallTime = systemConfiguration.WallTime;
+        _serverProcessesCount = systemConfiguration._serverProcessesCount;
+        Processes = systemConfiguration.Processes;
+        Duration = systemConfiguration.Duration;
+        Slots = systemConfiguration.Slots;
+        WallTime = systemConfiguration.WallTime;
     }
+
+    protected List<ProcessInfo> Processes { get; } = new();
 
     public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
 
@@ -24,21 +25,26 @@ public class SystemConfiguration
 
     public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
 
+    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
+
     private int Slots { get; set; }
     private int Duration { get; set; }
     private DateTime WallTime { get; set; }
 
     private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
-    public int GetLeaseManagerIdNum(string id) => LeaseManagers.FindIndex((proc) => proc.Id == id) + 1;
-
     public IEnumerable<Tuple<string, string>> CurrentSuspicions
     {
         get
         {
-            var currentTimeSlot = ((int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration)) + 1;
+            var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration) + 1;
             return Suspicions[currentTimeSlot];
         }
+    }
+
+    public int GetLeaseManagerIdNum(string id)
+    {
+        return LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
     }
 
     public static SystemConfiguration? ReadSystemConfiguration(string filePath)
@@ -73,7 +79,7 @@ public class SystemConfiguration
 
                             if (parameters.Length > 2)
                             {
-                                process.URL = parameters[2];
+                                process.Url = parameters[2];
                                 systemConfig._serverProcessesCount++;
                             }
 
@@ -96,9 +102,7 @@ public class SystemConfiguration
                             var slotNumber = int.Parse(parameters[0]);
                             serverProcesses ??= systemConfig.ServerProcesses;
                             for (var i = 0; i < serverProcesses.Count; i++)
-                            {
                                 serverProcesses[i].SlotStatus[slotNumber] = parameters[1 + i];
-                            }
 
                             var suspicions = parameters.Skip(1 + serverProcesses.Count).ToList();
 

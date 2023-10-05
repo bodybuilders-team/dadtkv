@@ -1,5 +1,3 @@
-using Grpc.Core;
-
 namespace DADTKV;
 
 public static class DADTKVUtils
@@ -16,10 +14,7 @@ public static class DADTKVUtils
 
     public static void ForEach<T>(this IEnumerable<T> iEnumerable, Action<T> action)
     {
-        foreach (var element in iEnumerable)
-        {
-            action.Invoke(element);
-        }
+        foreach (var element in iEnumerable) action.Invoke(element);
     }
 
     public static bool WaitForMajority<TResponse>(

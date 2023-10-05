@@ -17,6 +17,6 @@ public static class LeaseIdDtoConverter
         {
             ServerId = leaseId.ServerId,
             SequenceNum = leaseId.SequenceNum
-        }; 
+        };
     }
 }

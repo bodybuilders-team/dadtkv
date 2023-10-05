@@ -9,40 +9,66 @@ internal static class SystemManager
     private static void Main(string[] args)
     {
         // Read the system configuration file
-        var configurationFile = Path.Combine(Environment.CurrentDirectory, args[0]);
+        var configurationFilePath = args[0];
+        var configurationFile = Path.Combine(Environment.CurrentDirectory, configurationFilePath);
         var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
+        if (configuration == null)
+        {
+            Console.WriteLine($"Failed to read system configuration file at {configurationFile}");
+            return;
+        }
+
         // Start DADTKV servers (Transaction Managers, Lease Managers)
-        StartServers(configuration);
+        StartServers(configuration, configurationFilePath);
+
+        // Start DADTKV clients
+        StartClients(configuration);
 
         // Wait for user input to shut down the system
         Console.WriteLine("Press Enter to shut down the DADTKV system.");
         Console.ReadLine();
 
-        // Stop DADTKV servers gracefully
-        StopServers();
+        // TODO: Stop DADTKV processes gracefully?
     }
 
-    private static void StartServers(SystemConfiguration? config)
+    private static void StartServers(SystemConfiguration config, string configurationFilePath)
     {
-        // Start server processes based on configuration
-        foreach (var process in config?.Processes.Where(process => process.Role is "T" or "L")!)
+        foreach (var process in config.ServerProcesses)
         {
-            // Start the server process using process.ID and process.URL
-            Console.WriteLine($"Starting {process.Role} {process.Id} at {process.URL}");
-            // Implement the logic to start server processes
+            Console.WriteLine($"Starting {process.Role} {process.Id} at {process.Url}");
+
+            var fileName = process.Role switch
+            {
+                "T" => "DADTKVTransactionManager.exe",
+                "L" => "DADTKVLeaseManager.exe",
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
             Process.Start(new ProcessStartInfo
             {
-                FileName = "",
-                ArgumentList = { }
+                FileName = fileName,
+                ArgumentList = { process.Id, configurationFilePath }
             });
         }
     }
 
-    private static void StopServers()
+    private static void StartClients(SystemConfiguration config)
     {
-        // Implement logic to gracefully stop server processes
-        Console.WriteLine("Shutting down servers gracefully...");
-        // You can send shutdown signals or terminate server processes here
+        foreach (var client in config.Clients)
+        {
+            Console.WriteLine($"Starting client {client.Id} at {client.Url}");
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "DADTKVClient.exe",
+                ArgumentList =
+                {
+                    config.TransactionManagers[0].Url!, // TODO: Ip lookup? Load balancing?
+                    client.Id
+                    // TODO: client.ScriptFilePath
+                }
+            });
+        }
     }
 }

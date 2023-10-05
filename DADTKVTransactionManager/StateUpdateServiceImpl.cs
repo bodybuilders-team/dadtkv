@@ -1,14 +1,12 @@
 ﻿using DADTKVTransactionManager;
-using Grpc.Core;
 using Grpc.Net.Client;
-using Google.Protobuf.Collections;
 
 namespace DADTKV;
 
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
-    private readonly object _lockObject;
     private readonly DataStore _dataStore;
+    private readonly object _lockObject;
     private readonly ProcessConfiguration _processConfiguration;
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients;
 
@@ -21,11 +19,10 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _processConfiguration = processConfiguration;
 
         _stateUpdateServiceClients = processConfiguration.OtherTransactionManagers
-            .Select(tm => GrpcChannel.ForAddress(tm.URL))
+            .Select(tm => GrpcChannel.ForAddress(tm.Url))
             .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
             .ToList();
     }
-
 
 
     private void UrbDeliver(UpdateRequest request)

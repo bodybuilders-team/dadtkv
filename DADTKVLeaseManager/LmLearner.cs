@@ -7,9 +7,9 @@ namespace DADTKV;
 
 public class LmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly object _lockObject;
     private readonly ConsensusState _consensusState;
     private readonly List<ILeaseRequest> _leaseRequests;
+    private readonly object _lockObject;
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(object lockObject, ProcessConfiguration processConfiguration, ConsensusState consensusState,
@@ -21,14 +21,14 @@ public class LmLearner : LearnerService.LearnerServiceBase
 
         var learnerServiceClients =
             processConfiguration.OtherServerProcesses
-                .Select(process => GrpcChannel.ForAddress(process.URL))
+                .Select(process => GrpcChannel.ForAddress(process.Url))
                 .Select(channel => new LearnerService.LearnerServiceClient(channel))
                 .ToList();
 
-        this._urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             LearnUrbDeliver,
-            (req) => req.ServerId + req.SequenceNum,
+            req => req.ServerId + req.SequenceNum,
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }
@@ -49,11 +49,10 @@ public class LmLearner : LearnerService.LearnerServiceBase
     private void LearnUrbDeliver(LearnRequest request)
     {
         if (_consensusState.Values[(int)request.RoundNumber] != null)
-        {
             Debug.WriteLine($"Value for the round already exists." +
-                            $"Previous: {_consensusState.Values[(int) request.RoundNumber]}, " +
+                            $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
                             $"Current: {ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue)}");
-        }
-        _consensusState.Values[(int) request.RoundNumber] = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
+        _consensusState.Values[(int)request.RoundNumber] =
+            ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
     }
 }

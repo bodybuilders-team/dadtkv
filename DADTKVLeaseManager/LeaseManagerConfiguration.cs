@@ -9,12 +9,16 @@ public class LeaseManagerConfiguration : ProcessConfiguration
 
     public IEnumerable<ProcessInfo> OtherLeaseManagers
     {
-        get { return LeaseManagers.Where((info => info.Id != ProcessInfo.Id)).ToList(); }
+        get { return LeaseManagers.Where(info => info.Id != ProcessInfo.Id).ToList(); }
     }
 
     //TODO: Check if we should choose minimum id to be leader or a rotating leader based on epoch
-    public string GetLeaderId(ulong proposalNumber)
+    public string? GetLeaderId()
     {
-        return LeaseManagers[(int)(proposalNumber % (ulong)LeaseManagers.Count) - 1].Id;
+        return LeaseManagers
+            .Where(lm => !MyCurrentSuspicions.Contains(lm.Id))
+            .Min()?.Id;
     }
+
+    public bool IsLeader() => GetLeaderId() == ProcessInfo.Id;
 }

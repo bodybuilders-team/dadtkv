@@ -7,21 +7,21 @@ namespace DADTKV;
 internal static class Program
 {
     // Entry point for the server application
-    // Arguments: port, hostname, serverId
+    // Arguments: serverId systemConfigFilePath
     public static void Main(string[] args)
     {
-        if (args.Length != 1)
+        if (args.Length != 2)
             throw new ArgumentException("Invalid arguments.");
 
         var serverId = args[0];
 
-        var configurationFile = Path.Combine(Environment.CurrentDirectory, args[2]);
+        var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
         var consensusState = new ConsensusState();
         var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
-        var serverProcessPort = new Uri(processConfiguration.ProcessInfo.URL).Port;
-        var hostname = new Uri(processConfiguration.ProcessInfo.URL).Host;
+        var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
+        var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
         var lockObject = new object();
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);

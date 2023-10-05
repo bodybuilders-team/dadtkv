@@ -8,10 +8,7 @@ public class DataStore
 
     public void ExecuteTransaction(IEnumerable<DadInt> writeSet)
     {
-        foreach (var dadInt in writeSet)
-        {
-            _dataStore[dadInt.Key] = dadInt.Value;
-        }
+        foreach (var dadInt in writeSet) _dataStore[dadInt.Key] = dadInt.Value;
     }
 
     public List<DadInt> ExecuteTransaction(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
@@ -19,13 +16,11 @@ public class DataStore
         var readData = new List<DadInt>();
 
         foreach (var key in readSet)
-        {
             readData.Add(new DadInt
             {
                 Key = key,
                 Value = _dataStore[key]
             });
-        }
 
         ExecuteTransaction(writeSet);
 

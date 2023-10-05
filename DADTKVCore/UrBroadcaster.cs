@@ -25,7 +25,7 @@ public class UrBroadcaster<TR, TA, TC>
                 getResponse(client, request)
             ).ToList();
 
-        var majority = DADTKVUtils.WaitForMajority(resTasks, (res) => true);
+        var majority = DADTKVUtils.WaitForMajority(resTasks, res => true);
 
         if (majority)
             urbDeliver(request);
