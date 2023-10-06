@@ -80,8 +80,10 @@ public class SystemConfiguration
                             if (parameters.Length > 2)
                             {
                                 process.Url = parameters[2];
-                                systemConfig._serverProcessesCount++;
                             }
+                            
+                            if(process.Role is "T" or "L")
+                                systemConfig._serverProcessesCount++;
 
                             systemConfig.Processes.Add(process);
                             break;

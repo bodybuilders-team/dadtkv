@@ -12,8 +12,8 @@ internal static class Program
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         // Client configuration
-        var clientId = args[1];
         var serverUrl = args[0];
+        var clientId = args[1];
         var clientLogic = new ClientLogic(clientId, serverUrl);
 
         // Script configuration

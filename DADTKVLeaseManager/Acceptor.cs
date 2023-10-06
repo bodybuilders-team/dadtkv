@@ -23,7 +23,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
         lock (_acceptorStateLock)
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
-            
+                
             if (request.ProposalNumber <= currentRoundAcceptorState.ReadTimestamp)
                 return Task.FromResult(new PrepareResponse
                 {

@@ -16,6 +16,7 @@ internal static class Program
         var serverId = args[0];
 
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
+        
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
         var consensusState = new ConsensusState();
@@ -23,6 +24,7 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
+        
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var datastore = new DataStore();

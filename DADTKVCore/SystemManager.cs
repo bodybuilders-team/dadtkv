@@ -9,8 +9,12 @@ internal static class SystemManager
     private static void Main(string[] args)
     {
         // Read the system configuration file
-        var configurationFilePath = args[0];
+        /*var configurationFilePath = "Configuration/configuration_sample.txt";//args[0];
         var configurationFile = Path.Combine(Environment.CurrentDirectory, configurationFilePath);
+        var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);*/
+        var configurationFilePath = "Configuration/configuration_sample.txt";
+        var projectDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName;
+        var configurationFile = Path.Combine(projectDirectory, configurationFilePath);
         var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
         if (configuration == null)
@@ -18,10 +22,10 @@ internal static class SystemManager
             Console.WriteLine($"Failed to read system configuration file at {configurationFile}");
             return;
         }
-
-        // Start DADTKV servers (Transaction Managers, Lease Managers)
-        StartServers(configuration, configurationFilePath);
         
+        // Start DADTKV servers (Transaction Managers, Lease Managers)
+        StartServers(configuration, configurationFile);
+        return;
         Thread.Sleep(5000);
 
         // Start DADTKV clients
@@ -34,24 +38,26 @@ internal static class SystemManager
         // TODO: Stop DADTKV processes gracefully?
     }
 
-    private static void StartServers(SystemConfiguration config, string configurationFilePath)
+    private static void StartServers(SystemConfiguration config, string configurationFile)
     {
+        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName;
+        var leaseManagerExePath = Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
+        var transactionManagerExePath = Path.Combine(solutionDirectory, "DADTKVTransactionManager/bin/Debug/net6.0/DADTKVTransactionManager.exe");
+        Console.WriteLine(configurationFile);
+        
         foreach (var process in config.ServerProcesses)
         {
             Console.WriteLine($"Starting {process.Role} {process.Id} at {process.Url}");
 
-            var fileName = process.Role switch
-            {
-                "T" => "DADTKVTransactionManager.exe",
-                "L" => "DADTKVLeaseManager.exe",
-                _ => throw new ArgumentOutOfRangeException()
-            };
+            var fileName = process.Role == "L" ? leaseManagerExePath : transactionManagerExePath;
+            Console.WriteLine(fileName);
 
             Process.Start(new ProcessStartInfo
             {
                 FileName = fileName,
-                ArgumentList = { process.Id, configurationFilePath }
+                ArgumentList = { process.Id, configurationFile }
             });
+            return;
         }
     }
 

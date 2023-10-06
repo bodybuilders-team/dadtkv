@@ -11,6 +11,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<ILeaseRequest> _leaseRequests = new();
     private readonly object _leaseRequestsLockObject = new();
 
+    private readonly ulong _initialProposalNumber;
+
     private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
 
     public Proposer(
@@ -25,6 +27,8 @@ public class Proposer : LeaseService.LeaseServiceBase
         _leaseManagerConfiguration = leaseManagerConfiguration;
         _urBroadcaster =
             new UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(learnerServiceClients);
+        _initialProposalNumber =
+            (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
     }
 
     /**
@@ -73,19 +77,24 @@ public class Proposer : LeaseService.LeaseServiceBase
                 return;
             }
 
-            while (!updateConsensusValues())
+            while (!UpdateConsensusValues())
                 Thread.Sleep(100);
 
             var roundNumber = (ulong)_consensusState.Values.Count;
 
             var myProposalValue = GetMyProposalValue();
 
-            var initialProposalNumber =
-                (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
+            var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
 
-            Propose(myProposalValue, initialProposalNumber, roundNumber);
-
-            while ((ulong)_consensusState.Values.Count <= roundNumber || _consensusState.Values[(int)roundNumber] == null)
+            if (!decided)
+            {
+                timer.Start();
+                return;
+            }
+            
+            // TODO Add lock?... :(
+            while ((ulong)_consensusState.Values.Count <= roundNumber ||
+                   _consensusState.Values[(int)roundNumber] == null)
                 Thread.Sleep(100);
 
             timer.Start();
@@ -101,7 +110,7 @@ public class Proposer : LeaseService.LeaseServiceBase
      *
      * @return True if the consensus values were already updated, false otherwise.
      */
-    private bool updateConsensusValues()
+    private bool UpdateConsensusValues()
     {
         var isUpdated = true;
         for (var i = 0; i < _consensusState.Values.Count; i++)
@@ -110,7 +119,7 @@ public class Proposer : LeaseService.LeaseServiceBase
                 continue;
 
             isUpdated = false;
-            Propose(new ConsensusValue(), 1, (ulong)i);
+            Propose(new ConsensusValue(), _initialProposalNumber, (ulong)i);
         }
 
         return isUpdated;
@@ -126,7 +135,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var myProposalValue = _consensusState.Values.Count == 0
             ? new ConsensusValue()
-            : _consensusState.Values[^1].DeepCopy();
+            : _consensusState.Values[^1]!.DeepCopy();
 
         var leaseQueue = myProposalValue.LeaseQueues;
 
@@ -163,10 +172,10 @@ public class Proposer : LeaseService.LeaseServiceBase
      * @param proposalNumber The proposal number.
      * @param roundNumber The round number.
      */
-    private void Propose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
+    private bool Propose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
     {
         if (!_leaseManagerConfiguration.IsLeader())
-            return;
+            return false;
 
         // Step 1 - Prepare
         ConsensusValueDto? adoptedValue = null;
@@ -175,7 +184,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         if (!majorityPromised)
         {
             RePropose(myProposalValue, proposalNumber, roundNumber);
-            return;
+            return true;
         }
 
         var proposalValue = adoptedValue == null
@@ -189,6 +198,8 @@ public class Proposer : LeaseService.LeaseServiceBase
             Decide(proposalValue, roundNumber);
         else
             RePropose(myProposalValue, proposalNumber, roundNumber);
+
+        return true;
     }
 
     /**
@@ -333,7 +344,7 @@ public class Proposer : LeaseService.LeaseServiceBase
                 if (existed && !consensusValue.LeaseQueues[key].Contains(leaseId))
                     alreadyFreed = true;
             }
-            
+
             if (alreadyFreed) // If one key was freed, all others have been freed too
                 return true;
 

@@ -11,16 +11,16 @@
 # A P command for a server has a string identifying the server e.g. "TM1"
 # a character indicating whether it's a (T)ransaction or (L)ease manager
 # and a URL for g-RPC calls.
-P TM1 T http://1.2.3.4:10000
-P TM2 T http://1.2.3.4:10002
-P TM3 T http://1.2.3.4:10003
-P LeaseManager1 L http://1.2.3.5:10004
-P LM2 L http://1.2.3.5:10008
-P lease3 L http://1.2.3.5:10009
+P TM1 T http://localhost:10000
+P TM2 T http://localhost:10002
+P TM3 T http://localhost:10003
+P LM1 L http://localhost:10004
+P LM2 L http://localhost:10008
+P LM3 L http://localhost:10009
 #
 # A client (indicated by the 'C' process code) does not have a g-RPC URL,
 # but has a path to the client script it is running.
-P client1 C client-script-1
+P c1 C client-script-1
 P c2 C another-script
 P c3 C one_more_script
 P c4 C cs4
