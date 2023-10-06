@@ -180,36 +180,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
 
         foreach (var lease in leaseReq.Set)
-            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) ||
+            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) || consensusStateValue.LeaseQueues[lease].Count == 0 ||
                 !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId)
                )
                 return false;
 
         return true;
-    }
-
-    private bool CheckLeases(ConsensusValue consensusStateValue, HashSet<string> leases)
-    {
-        var queues = consensusStateValue.LeaseQueues;
-
-        var leaseIds = new HashSet<LeaseId>();
-
-        foreach (var lease in leases)
-        {
-            var leaseId = queues[lease].Peek();
-
-            if (leaseId.ServerId != _processConfiguration.ProcessInfo.Id)
-                return false;
-
-            leaseIds.Add(leaseId);
-        }
-
-        return checkForFreeLeaseReq(leaseIds);
-    }
-
-    private bool checkForFreeLeaseReq(HashSet<LeaseId> leaseIds)
-    {
-        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -225,7 +201,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         lock (this)
         {
             status.Add(_dataStore.ToString());
-            status.Add(_consensusState.ToString());
+            // status.Add(_consensusState.ToString());
 
             return Task.FromResult(new StatusResponse { Status = { status } });
         }

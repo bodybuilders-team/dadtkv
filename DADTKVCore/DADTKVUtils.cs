@@ -58,12 +58,12 @@ public static class DADTKVUtils
                 asyncTask.Wait();
                 var res = asyncTask.Result;
                 var signal = predicate.Invoke(res);
-                if (signal)
-                    lock (cde)
-                    {
-                        if (!cde.IsSet)
-                            cde.Signal();
-                    }
+                if (!signal) return;
+                lock (cde)
+                {
+                    if (!cde.IsSet)
+                        cde.Signal();
+                }
             }).Start();
         });
 
