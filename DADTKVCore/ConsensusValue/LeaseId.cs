@@ -1,5 +1,8 @@
 namespace DADTKV;
 
+/// <summary>
+/// LeaseId is a unique identifier for a lease.
+/// </summary>
 public class LeaseId
 {
     public ulong SequenceNum = 0;

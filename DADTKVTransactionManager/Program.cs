@@ -1,13 +1,15 @@
 ﻿using DADTKVT;
-using DADTKVTransactionManager;
 using Grpc.Core;
 
 namespace DADTKV;
 
 internal static class Program
 {
-    // Entry point for the server application
-    // Arguments: serverId systemConfigFilePath
+    /// <summary>
+    /// Entry point for the lease manager server application.
+    /// </summary>
+    /// <param name="args">Arguments: serverId systemConfigFilePath</param>
+    /// <exception cref="ArgumentException">Invalid arguments.</exception>
     public static void Main(string[] args)
     {
         if (args.Length != 2)
@@ -16,7 +18,7 @@ internal static class Program
         var serverId = args[0];
 
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
-        
+
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
         var consensusState = new ConsensusState();
@@ -24,7 +26,6 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
-        
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var datastore = new DataStore();

@@ -1,9 +1,13 @@
-using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
 
 namespace DADTKV;
 
+// TODO: Rename to Learner? Is inside the LearnerManager project.
+
+/// <summary>
+/// The learner is responsible for learning the decided value for a Paxos round.
+/// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
@@ -42,6 +46,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
         );
     }
 
+    /// <summary>
+    /// Resize the consensus state list to fit the round number.
+    /// </summary>
+    /// <param name="roundNumber">The round number.</param>
     private void ResizeConsensusStateList(int roundNumber)
     {
         lock (_consensusStateLockObject)
@@ -51,12 +59,23 @@ public class TmLearner : LearnerService.LearnerServiceBase
         }
     }
 
+    /// <summary>
+    /// Receive a learn request from the proposer, which has decided on a value for the round.
+    /// </summary>
+    /// <param name="request">The learn request.</param>
+    /// <param name="context">The server call context.</param>
+    /// <returns>The learn response.</returns>
     public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
     {
-            _urbReceiver.UrbProcessRequest(request);
-            return Task.FromResult(new LearnResponse { Ok = true });
+        _urbReceiver.UrbProcessRequest(request);
+        return Task.FromResult(new LearnResponse { Ok = true });
     }
 
+    /// <summary>
+    /// Deliver the value to the consensus state.
+    /// </summary>
+    /// <param name="request">The learn request.</param>
+    /// <exception cref="Exception">If the value for the round already exists.</exception>
     private void LearnUrbDeliver(LearnRequest request)
     {
         lock (_consensusStateLockObject)
@@ -72,7 +91,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 var leaseId = queue.Peek();
 
                 if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
-                    _executedTrans[leaseId])
+                    _executedTrans[leaseId]
+                   )
                     leasesToBeFreed.Add(leaseId);
             }
 

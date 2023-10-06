@@ -1,8 +1,23 @@
 namespace DADTKV;
 
+/// <summary>
+/// Configuration of the system.
+/// </summary>
 public class SystemConfiguration
 {
     private int _serverProcessesCount;
+
+    protected List<ProcessInfo> Processes { get; } = new();
+    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
+    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
+    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
+    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
+
+    private int Slots { get; set; }
+    private int Duration { get; set; }
+    private DateTime WallTime { get; set; }
+
+    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
     private SystemConfiguration()
     {
@@ -17,29 +32,13 @@ public class SystemConfiguration
         WallTime = systemConfiguration.WallTime;
     }
 
-    protected List<ProcessInfo> Processes { get; } = new();
-
-    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
-
-    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
-
-    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
-
-    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
-
-    private int Slots { get; set; }
-    private int Duration { get; set; }
-    private DateTime WallTime { get; set; }
-
-    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
-
-    public IEnumerable<Tuple<string, string>> CurrentSuspicions
+    protected IEnumerable<Tuple<string, string>> CurrentSuspicions
     {
         get
         {
             var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration) + 1;
             var suspicion = Suspicions.ContainsKey(currentTimeSlot) ? Suspicions[currentTimeSlot] : null;
-            
+
             // Get previous non null timeslot
             // TODO: Improve
             while (suspicion == null && currentTimeSlot > 0)
@@ -52,11 +51,20 @@ public class SystemConfiguration
         }
     }
 
-    public int GetLeaseManagerIdNum(string id)
-    {
-        return LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
-    }
+    /// <summary>
+    /// Gets the lease manager Id number.
+    /// </summary>
+    /// <param name="id">The id of the lease manager.</param>
+    /// <returns>The lease manager Id number.</returns>
+    public int GetLeaseManagerIdNum(string id) =>
+        LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
 
+
+    /// <summary>
+    /// Reads the system configuration from a file and returns a <see cref="SystemConfiguration"/> object.
+    /// </summary>
+    /// <param name="filePath">Path to the configuration file.</param>
+    /// <returns>A <see cref="SystemConfiguration"/> object.</returns>
     public static SystemConfiguration? ReadSystemConfiguration(string filePath)
     {
         try
@@ -78,7 +86,7 @@ public class SystemConfiguration
                     // Process different commands from the configuration file
                     switch (command)
                     {
-                        case "#":
+                        case "#": // Comment
                             continue;
                         case "P": // Process identifier and role (Server or Client)
                             var process = new ProcessInfo
@@ -88,9 +96,7 @@ public class SystemConfiguration
                             };
 
                             if (parameters.Length > 2)
-                            {
                                 process.Url = parameters[2];
-                            }
 
                             if (process.Role is "T" or "L")
                                 systemConfig._serverProcessesCount++;
@@ -118,8 +124,12 @@ public class SystemConfiguration
 
                             var suspicions = parameters.Skip(1 + serverProcesses.Count).ToList();
 
-                            systemConfig.Suspicions[slotNumber] = suspicions.Select(s => s.Trim('(', ')'))
-                                .Select(s => new Tuple<string, string>(s.Split(',')[0], s.Split(',')[1])).ToList();
+                            systemConfig.Suspicions[slotNumber] = suspicions
+                                .Select(s => s.Trim('(', ')'))
+                                .Select(s => new Tuple<string, string>(
+                                    s.Split(',')[0],
+                                    s.Split(',')[1])
+                                ).ToList();
                             break;
                     }
                 }

@@ -1,10 +1,12 @@
 ﻿using DADTKV;
-using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
 
 namespace DADTKVT;
 
+/// <summary>
+/// Implementation of the DADTKVService.
+/// </summary>
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly ConsensusState _consensusState;
@@ -36,6 +38,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             .ForEach(client => _stateUpdateServiceClients.Add(client));
     }
 
+    /// <summary>
+    /// Submit a transaction to be executed.
+    /// </summary>
+    /// <param name="request">The transaction to be executed.</param>
+    /// <param name="context">The call context.</param>
+    /// <returns>The result of the transaction.</returns>
     public override Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request, ServerCallContext context)
     {
         lock (this) // One transaction at a time
@@ -44,6 +52,11 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         }
     }
 
+    /// <summary>
+    /// Submit a transaction to be executed.
+    /// </summary>
+    /// <param name="request">The transaction to be executed.</param>
+    /// <returns>The result of the transaction.</returns>
     private Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request)
     {
         var leases = ExtractLeases(request);
@@ -105,13 +118,15 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
         _executedTrans[leaseId] = true;
 
-        return Task.FromResult(new TxSubmitResponse
-        {
-            ReadSet = { readData }
-        });
+        return Task.FromResult(new TxSubmitResponse { ReadSet = { readData } });
     }
 
-
+    /// <summary>
+    /// Execute a transaction.
+    /// </summary>
+    /// <param name="readSet">The keys to read.</param>
+    /// <param name="writeSet">The keys and values to write.</param>
+    /// <returns>The values read.</returns>
     private IEnumerable<DadInt> ExecuteTransaction(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
     {
         var resTasks = new List<Task<UpdateResponse>>();
@@ -124,7 +139,8 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
                 WriteSet = { writeSet }
             };
 
-            var res = susClient.UpdateAsync(updateReq); //TODO: Check if throws exception when timeout
+            //TODO: Check if throws exception when timeout
+            var res = susClient.UpdateAsync(updateReq);
             resTasks.Add(res.ResponseAsync);
         }
 
@@ -136,22 +152,37 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         }
     }
 
+    /// <summary>
+    /// Extract the leases from a transaction.
+    /// </summary>
+    /// <param name="request">The transaction.</param>
+    /// <returns>The leases.</returns>
     private static HashSet<string> ExtractLeases(TxSubmitRequest request)
     {
         var leases = new HashSet<string>();
-        foreach (var lease in request.WriteSet.Select(x => x.Key)) leases.Add(lease);
+        foreach (var lease in request.WriteSet.Select(x => x.Key))
+            leases.Add(lease);
 
-        foreach (var lease in request.ReadSet) leases.Add(lease);
+        foreach (var lease in request.ReadSet)
+            leases.Add(lease);
 
         return leases;
     }
 
+    /// <summary>
+    /// Checks if the leases of a request are on the top of the queue.
+    /// </summary>
+    /// <param name="consensusStateValue">The consensus value.</param>
+    /// <param name="leaseReq">The lease request.</param>
+    /// <returns>True if the leases are on the top of the queue, false otherwise.</returns>
     private static bool CheckLeases(ConsensusValue consensusStateValue, LeaseRequest leaseReq)
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
 
         foreach (var lease in leaseReq.Set)
-            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) || !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId))
+            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) ||
+                !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId)
+               )
                 return false;
 
         return true;
@@ -181,6 +212,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Get the status of the service.
+    /// </summary>
+    /// <param name="request">The status request.</param>
+    /// <param name="context">The call context.</param>
+    /// <returns>The status response.</returns>
     public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)
     {
         // ...

@@ -3,12 +3,13 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
-using ServerProcessChannels = Dictionary<string, ServerProcessChannel>;
-
 internal static class Program
 {
-    // Entry point for the server application
-    // Arguments: serverId systemConfigFilePath
+    /// <summary>
+    /// Entry point for the lease manager server application.
+    /// </summary>
+    /// <param name="args">Arguments: serverId systemConfigFilePath</param>
+    /// <exception cref="ArgumentException">Invalid arguments.</exception>
     private static void Main(string[] args)
     {
         if (args.Length != 2)
@@ -37,8 +38,7 @@ internal static class Program
 
         var transactionManagersChannels =
             leaseManagerConfiguration
-                .TransactionManagers
-                .ToDictionary(
+                .TransactionManagers.ToDictionary(
                     processInfo => processInfo.Id,
                     processInfo => new ServerProcessChannel
                     {
@@ -59,8 +59,7 @@ internal static class Program
 
         var consensusState = new ConsensusState();
 
-        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients,
-            leaseManagerConfiguration);
+        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients, leaseManagerConfiguration);
         var acceptor = new Acceptor();
         var learner = new LmLearner(processConfiguration, consensusState);
 

@@ -2,10 +2,15 @@
 
 namespace DADTKV;
 
+/// <summary>
+/// The system manager is responsible for starting the DADTKV system.
+/// </summary>
 internal static class SystemManager
 {
-    // Entry point for the DADTKV system
-    // Arguments: systemConfigFilePath
+    /// <summary>
+    /// Entry point for the DADTKV system.
+    /// </summary>
+    /// <param name="args">Arguments: systemConfigFilePath</param>
     private static void Main(string[] args)
     {
         // Read the system configuration file
@@ -22,7 +27,7 @@ internal static class SystemManager
             Console.WriteLine($"Failed to read system configuration file at {configurationFile}");
             return;
         }
-        
+
         // Start DADTKV servers (Transaction Managers, Lease Managers)
         StartServers(configuration, configurationFile);
         return;
@@ -38,13 +43,20 @@ internal static class SystemManager
         // TODO: Stop DADTKV processes gracefully?
     }
 
+    /// <summary>
+    /// Starts the DADTKV servers (Transaction Managers, Lease Managers).
+    /// </summary>
+    /// <param name="config">The system configuration.</param>
+    /// <param name="configurationFile">The system configuration file.</param>
     private static void StartServers(SystemConfiguration config, string configurationFile)
     {
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName;
-        var leaseManagerExePath = Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
-        var transactionManagerExePath = Path.Combine(solutionDirectory, "DADTKVTransactionManager/bin/Debug/net6.0/DADTKVTransactionManager.exe");
+        var leaseManagerExePath =
+            Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
+        var transactionManagerExePath = Path.Combine(solutionDirectory,
+            "DADTKVTransactionManager/bin/Debug/net6.0/DADTKVTransactionManager.exe");
         Console.WriteLine(configurationFile);
-        
+
         foreach (var process in config.ServerProcesses)
         {
             Console.WriteLine($"Starting {process.Role} {process.Id} at {process.Url}");
@@ -57,10 +69,13 @@ internal static class SystemManager
                 FileName = fileName,
                 ArgumentList = { process.Id, configurationFile }
             });
-            return;
         }
     }
 
+    /// <summary>
+    /// Starts the DADTKV clients.
+    /// </summary>
+    /// <param name="config">The system configuration.</param>
     private static void StartClients(SystemConfiguration config)
     {
         foreach (var client in config.Clients)
