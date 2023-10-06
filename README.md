@@ -49,15 +49,15 @@ The solution to the project is divided into 4 projects:
 
 ### Current issues
 
-- The consensus value is the full current hashmap of lease queues. This makes the code to prevent resubmit of lease
-  requests more complex, as we have to both check if in a consensus value one lease queue had the lease, and if in a
-  later consensus value that lease is not present anymore (it was freed). A more efficient approach is changing the
-  consensus value to be a list of lease requests to be applied, and then we only have to check if the lease request
-  itself was in a previous consensus value.
+- The consensus value is the full current hashmap of lease queues.
+- Freeing of leases requires a new consensus round: this means that it's common that only one transaction is executed
+  per consensus round.
 
 ### What needs to be done
 
 - Change the consensus value to be a list of lease requests to be applied instead of being the full hashmap of queues.
+- Consensus should only be reached on the order of lease requests. Notion of freeing of lease requests only happens
+  among transaction managers.
 - Improve locking mechanisms.
 - Liveness.
 - Improve time outs and failure detector logic.
