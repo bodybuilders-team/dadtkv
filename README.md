@@ -56,10 +56,10 @@ The solution to the project is divided into 4 projects:
 ### What needs to be done
 
 - Change the consensus value to be a list of lease requests to be applied instead of being the full hashmap of queues.
-- Consensus should only be reached on the order of lease requests. Notion of freeing of lease requests only happens
+- Consensus should only be reached on the order of lease requests. Notion of freeing of lease requests should only happen
   among transaction managers.
 - Improve locking mechanisms.
 - Liveness.
 - Improve time outs and failure detector logic.
 - Implement multi-paxos.
-- Implement Status operation in Client.
+- Fix bug that prevents some transactions from being executed when using multiple clients.
