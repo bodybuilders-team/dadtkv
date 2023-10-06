@@ -36,7 +36,7 @@ internal static class Program
             {
                 DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration, consensusState,
                     datastore, executedTrans)),
-                StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore)),
+                StateUpdateService.BindService(new StateUpdateServiceImpl(datastore)),
                 LearnerService.BindService(new TmLearner(processConfiguration, consensusState,
                     executedTrans))
             },

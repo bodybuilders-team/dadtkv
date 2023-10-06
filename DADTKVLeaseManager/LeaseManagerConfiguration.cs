@@ -17,7 +17,7 @@ public class LeaseManagerConfiguration : ProcessConfiguration
     {
         return LeaseManagers
             .Where(lm => !MyCurrentSuspicions.Contains(lm.Id))
-            .Min()?.Id;
+            .MinBy((info => GetLeaseManagerIdNum(info.Id) ))?.Id;
     }
 
     public bool IsLeader() => GetLeaderId() == ProcessInfo.Id;

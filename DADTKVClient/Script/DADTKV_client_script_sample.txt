@@ -13,6 +13,7 @@
 # the write set contains keys and values
 T () (<"b",10>,<"a",20>)
 # wait command (in milliseconds)
-W 5000
+# W 1000
 # both the read set and write set can be empty but the parenthesis will still be in the command
 T ("a","b") (<"c",456>)
+T ("c") (<"c",457>)

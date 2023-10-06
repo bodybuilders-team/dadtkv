@@ -34,7 +34,13 @@ public static class DADTKVUtils
                 var res = asyncTask.Result;
                 var signal = predicate.Invoke(res);
                 if (signal)
-                    cde.Signal();
+                {
+                    lock (cde)
+                    {
+                        if (!cde.IsSet)
+                            cde.Signal();
+                    }
+                }
             });
             thread.Start();
         });
@@ -42,7 +48,7 @@ public static class DADTKVUtils
         // TODO: use the failure detector for each 
         return cde.Wait(timeout);
     }
-    
+
     public static TV GetValueOrNull<TK, TV>(this IDictionary<TK, TV> dict, TK key, TV defaultValue = default(TV))
     {
         TV value;

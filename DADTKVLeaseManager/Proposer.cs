@@ -335,7 +335,6 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(freeLeaseRequest.LeaseId);
 
-
         foreach (var (key, queue) in leaseQueues)
         {
             var existed = false;
