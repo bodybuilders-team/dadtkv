@@ -13,26 +13,26 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
     private ulong _leaseSequenceNumCounter;
     private ulong _susSequenceNumCounter;
 
-    public DADTKVServiceImpl(ServerProcessConfiguration serverProcessConfiguration,
+    public DADTKVServiceImpl(ProcessConfiguration processConfiguration,
         ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans)
     {
-        _serverProcessConfiguration = serverProcessConfiguration;
+        _processConfiguration = processConfiguration;
         _consensusState = consensusState;
         _dataStore = dataStore;
         _executedTrans = executedTrans;
         _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
-        foreach (var leaseManager in _serverProcessConfiguration.LeaseManagers)
+        foreach (var leaseManager in _processConfiguration.LeaseManagers)
         {
             var channel = GrpcChannel.ForAddress(leaseManager.Url);
             _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
         }
 
-        _serverProcessConfiguration.OtherTransactionManagers
+        _processConfiguration.OtherTransactionManagers
             .Select(tm => GrpcChannel.ForAddress(tm.Url))
             .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
             .ForEach(client => _stateUpdateServiceClients.Add(client));
@@ -73,7 +73,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
         var leaseId = new LeaseId
         {
-            ServerId = _serverProcessConfiguration.ProcessInfo.Id,
+            ServerId = _processConfiguration.ProcessInfo.Id,
             SequenceNum = _leaseSequenceNumCounter++
         };
 
@@ -134,7 +134,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         {
             var updateReq = new UpdateRequest
             {
-                ServerId = _serverProcessConfiguration.ProcessInfo.Id,
+                ServerId = _processConfiguration.ProcessInfo.Id,
                 SequenceNum = _susSequenceNumCounter++,
                 WriteSet = { writeSet }
             };
@@ -198,7 +198,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         {
             var leaseId = queues[lease].Peek();
 
-            if (leaseId.ServerId != _serverProcessConfiguration.ProcessInfo.Id)
+            if (leaseId.ServerId != _processConfiguration.ProcessInfo.Id)
                 return false;
 
             leaseIds.Add(leaseId);

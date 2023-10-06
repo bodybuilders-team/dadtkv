@@ -4,6 +4,8 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
+// TODO: Rename to Learner? Is inside the LearnerManager project.
+
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>
@@ -13,11 +15,11 @@ public class LmLearner : LearnerService.LearnerServiceBase
     private readonly object _consensusStateLockObject = new();
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public LmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState)
+    public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
     {
         _consensusState = consensusState;
 
-        var learnerServiceClients = serverProcessConfiguration.OtherServerProcesses
+        var learnerServiceClients = processConfiguration.OtherServerProcesses
             .Select(process => GrpcChannel.ForAddress(process.Url))
             .Select(channel => new LearnerService.LearnerServiceClient(channel))
             .ToList();

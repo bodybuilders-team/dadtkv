@@ -62,3 +62,4 @@ The solution to the project is divided into 4 projects:
 - Liveness.
 - Improve time outs and failure detector logic.
 - Implement multi-paxos.
+- Implement Status operation in Client.

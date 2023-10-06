@@ -3,14 +3,14 @@ namespace DADTKV;
 /// <summary>
 ///     Configuration of a lease manager process.
 /// </summary>
-public class LeaseManagerConfiguration : ServerProcessConfiguration
+public class LeaseManagerConfiguration : ProcessConfiguration
 {
-    public LeaseManagerConfiguration(ServerProcessConfiguration serverProcessConfiguration) : base(
-        serverProcessConfiguration, serverProcessConfiguration.ProcessInfo.Id)
+    public LeaseManagerConfiguration(ProcessConfiguration processConfiguration) : base(
+        processConfiguration, processConfiguration.ProcessInfo.Id)
     {
     }
 
-    public IEnumerable<ServerProcessInfo> OtherLeaseManagers =>
+    public IEnumerable<ProcessInfo> OtherLeaseManagers =>
         LeaseManagers.Where(info => info.Id != ProcessInfo.Id).ToList();
 
     /// <summary>

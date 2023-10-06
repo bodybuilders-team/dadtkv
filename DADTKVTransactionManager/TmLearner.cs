@@ -3,6 +3,8 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
+// TODO: Rename to Learner? Is inside the LearnerManager project.
+
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>
@@ -12,25 +14,25 @@ public class TmLearner : LearnerService.LearnerServiceBase
     private readonly object _consensusStateLockObject = new();
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public TmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState,
+    public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
         Dictionary<LeaseId, bool> executedTrans)
     {
-        _serverProcessConfiguration = serverProcessConfiguration;
+        _processConfiguration = processConfiguration;
         _consensusState = consensusState;
         _executedTrans = executedTrans;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
-        foreach (var process in serverProcessConfiguration.OtherServerProcesses)
+        foreach (var process in processConfiguration.OtherServerProcesses)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
         }
 
         _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
-        foreach (var process in serverProcessConfiguration.LeaseManagers)
+        foreach (var process in processConfiguration.LeaseManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
@@ -88,7 +90,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             {
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId == _serverProcessConfiguration.ProcessInfo.Id && queue.Count > 1 &&
+                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
                     _executedTrans[leaseId]
                    )
                     leasesToBeFreed.Add(leaseId);
