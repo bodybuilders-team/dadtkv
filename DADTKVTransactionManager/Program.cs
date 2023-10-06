@@ -22,7 +22,7 @@ internal static class Program
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
         var consensusState = new ConsensusState();
-        var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
+        var processConfiguration = new ServerProcessConfiguration(systemConfiguration, serverId);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 

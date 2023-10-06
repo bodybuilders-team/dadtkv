@@ -10,5 +10,5 @@ namespace DADTKV;
 public class ServerProcessChannel
 {
     public GrpcChannel GrpcChannel;
-    public ProcessInfo ProcessInfo;
+    public ServerProcessInfo ProcessInfo;
 }

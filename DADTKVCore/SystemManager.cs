@@ -80,7 +80,7 @@ internal static class SystemManager
     {
         foreach (var client in config.Clients)
         {
-            Console.WriteLine($"Starting client {client.Id} at {client.Url}");
+            Console.WriteLine($"Starting client {client.Id}");
 
             Process.Start(new ProcessStartInfo
             {

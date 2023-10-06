@@ -20,7 +20,7 @@ internal static class Program
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
-        var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
+        var processConfiguration = new ServerProcessConfiguration(systemConfiguration, serverId);
         var leaseManagerConfiguration = new LeaseManagerConfiguration(processConfiguration);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;

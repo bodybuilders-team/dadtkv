@@ -21,10 +21,18 @@ public class SystemConfiguration
     }
 
     protected List<ProcessInfo> Processes { get; } = new();
-    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
-    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
-    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
-    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
+
+    public List<ServerProcessInfo> ServerProcesses =>
+        Processes.GetRange(0, _serverProcessesCount).Cast<ServerProcessInfo>().ToList();
+
+    public List<ServerProcessInfo> LeaseManagers =>
+        Processes.FindAll(p => p.Role is "L").Cast<ServerProcessInfo>().ToList();
+
+    public List<ServerProcessInfo> TransactionManagers =>
+        Processes.FindAll(p => p.Role is "T").Cast<ServerProcessInfo>().ToList();
+
+    public List<ClientProcessInfo> Clients =>
+        Processes.FindAll(p => p.Role is "C").Cast<ClientProcessInfo>().ToList();
 
     private int Slots { get; set; }
     private int Duration { get; set; }
@@ -83,7 +91,7 @@ public class SystemConfiguration
                     var command = parts[0];
                     var parameters = parts.Skip(1).ToArray();
 
-                    List<ProcessInfo>? serverProcesses = null;
+                    List<ServerProcessInfo>? serverProcesses = null;
 
                     // Process different commands from the configuration file
                     switch (command)
@@ -91,20 +99,30 @@ public class SystemConfiguration
                         case "#": // Comment
                             continue;
                         case "P": // Process identifier and role (Server or Client)
-                            var process = new ProcessInfo
-                            {
-                                Id = parameters[0],
-                                Role = parameters[1]
-                            };
-
                             if (parameters.Length > 2)
-                                process.Url = parameters[2];
+                            {
+                                var process = new ServerProcessInfo
+                                {
+                                    Id = parameters[0],
+                                    Role = parameters[1],
+                                    Url = parameters[2]
+                                };
 
-                            if (process.Role is "T" or "L")
                                 systemConfig._serverProcessesCount++;
+                                systemConfig.Processes.Add(process);
+                                break;
+                            }
+                            else
+                            {
+                                var process = new ClientProcessInfo
+                                {
+                                    Id = parameters[0],
+                                    Role = parameters[1]
+                                };
 
-                            systemConfig.Processes.Add(process);
-                            break;
+                                systemConfig.Processes.Add(process);
+                                break;
+                            }
 
                         case "S": // Number of time slots
                             systemConfig.Slots = int.Parse(parameters[0]);
