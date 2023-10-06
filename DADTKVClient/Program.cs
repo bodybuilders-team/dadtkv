@@ -2,8 +2,11 @@
 
 internal static class Program
 {
-    // Entry point for the client application
-    // Arguments: serverUrl clientID scriptFilePath
+    /// <summary>
+    /// Entry point for the client application.
+    /// </summary>
+    /// <param name="args">Arguments: serverUrl clientID scriptFilePath</param>
+    /// <exception cref="ArgumentException">Invalid arguments.</exception>
     public static void Main(string[] args)
     {
         if (args.Length != 3)
@@ -23,7 +26,6 @@ internal static class Program
         while (scriptReader.HasNextCommand())
         {
             var command = scriptReader.NextCommand();
-
             lock (clientLogic)
             {
                 switch (command)
@@ -40,10 +42,12 @@ internal static class Program
                             .Result;
                         Console.WriteLine("Read set: " + readSet);
                         break;
+
                     case WaitCommand waitCommand:
                         Console.WriteLine("Waiting " + waitCommand.Milliseconds + " milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
                         break;
+
                     default:
                         Console.WriteLine("Unknown command");
                         break;

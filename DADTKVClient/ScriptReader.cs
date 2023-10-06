@@ -1,5 +1,8 @@
 ﻿namespace DADTKV;
 
+/// <summary>
+/// A class that reads a script and has methods to obtain the next command in the script.
+/// </summary>
 internal class ScriptReader
 {
     private readonly string[] _lines;
@@ -11,8 +14,11 @@ internal class ScriptReader
         _currentLine = 0;
     }
 
-    // Returns the next command in the script
-    // Returns null if there is no more command
+    /// <summary>
+    /// Obtains the next command in the script.
+    /// </summary>
+    /// <returns>The next command in the script, or null if there is no more command.</returns>
+    /// <exception cref="Exception">If the command is not recognized.</exception>
     public ICommand? NextCommand()
     {
         while (true)
@@ -43,14 +49,14 @@ internal class ScriptReader
                 case "W":
                     return new WaitCommand(int.Parse(args[1]));
                 default:
-                    throw new Exception("Invalid command");
+                    throw new Exception($"Unknown command: {line}"); // TODO: Custom exception
             }
         }
     }
 
-    // Returns true if there is more command in the script
-    public bool HasNextCommand()
-    {
-        return _currentLine < _lines.Length;
-    }
+    /// <summary>
+    /// Checks if there is more command in the script.
+    /// </summary>
+    /// <returns>True if there is more command, false otherwise.</returns>
+    public bool HasNextCommand() => _currentLine < _lines.Length;
 }

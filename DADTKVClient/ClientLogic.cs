@@ -3,6 +3,9 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
+/// <summary>
+/// Implements the client logic for the DADTKV service.
+/// </summary>
 internal class ClientLogic
 {
     private readonly DADTKVService.DADTKVServiceClient _client;
@@ -11,11 +14,15 @@ internal class ClientLogic
     public ClientLogic(string clientId, string serverUrl)
     {
         _clientId = clientId;
-
-        var channel = GrpcChannel.ForAddress(serverUrl);
-        _client = new DADTKVService.DADTKVServiceClient(channel);
+        _client = new DADTKVService.DADTKVServiceClient(GrpcChannel.ForAddress(serverUrl));
     }
 
+    /// <summary>
+    /// Submits a transaction to the server.
+    /// </summary>
+    /// <param name="readSet">The keys to read from the server.</param>
+    /// <param name="writeSet">The keys and values to write to the server.</param>
+    /// <returns>The values read from the server.</returns>
     public async Task<List<DadInt>> TxSubmit(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
     {
         var request = new TxSubmitRequest
@@ -29,7 +36,10 @@ internal class ClientLogic
         return response.ReadSet.ToList();
     }
 
-    public async Task<RepeatedField<string>> Status()
+    /// <summary>
+    /// Gets the status of the system.
+    /// </summary>
+    public async Task<RepeatedField<string>> Status() // TODO: To be implemented
     {
         var request = new StatusRequest();
         var response = await _client.StatusAsync(request);
