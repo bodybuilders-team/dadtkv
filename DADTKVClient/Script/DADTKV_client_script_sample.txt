@@ -17,3 +17,6 @@ T () (<"b",10>,<"a",20>)
 # both the read set and write set can be empty but the parenthesis will still be in the command
 T ("a","b") (<"c",456>)
 T ("c") (<"c",457>)
+# A status request from all the processes in the system
+# is issued via a S command
+# S

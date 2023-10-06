@@ -39,7 +39,7 @@ internal class ClientLogic
     /// <summary>
     /// Gets the status of the system.
     /// </summary>
-    public async Task<RepeatedField<string>> Status() // TODO: To be implemented
+    public async Task<RepeatedField<string>> Status()
     {
         var request = new StatusRequest();
         var response = await _client.StatusAsync(request);

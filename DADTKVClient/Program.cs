@@ -40,16 +40,20 @@ internal static class Program
 
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
-                        
+
                         Console.WriteLine("Read set:");
                         foreach (var dadInt in readSet)
                             Console.WriteLine(dadInt.Key + " " + dadInt.Value);
-                        
+
                         break;
 
                     case WaitCommand waitCommand:
                         Console.WriteLine("Waiting " + waitCommand.Milliseconds + " milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
+                        break;
+
+                    case StatusCommand:
+                        Console.WriteLine("Status: " + clientLogic.Status().Result);
                         break;
 
                     default:
