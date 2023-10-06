@@ -42,4 +42,10 @@ public static class DADTKVUtils
         // TODO: use the failure detector for each 
         return cde.Wait(timeout);
     }
+    
+    public static TV GetValueOrNull<TK, TV>(this IDictionary<TK, TV> dict, TK key, TV defaultValue = default(TV))
+    {
+        TV value;
+        return dict.TryGetValue(key, out value) ? value : defaultValue;
+    }
 }

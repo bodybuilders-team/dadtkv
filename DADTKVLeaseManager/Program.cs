@@ -24,6 +24,8 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+        
         var leaseManagersChannels =
             leaseManagerConfiguration.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
@@ -74,12 +76,12 @@ internal static class Program
         };
 
         server.Start();
+        proposer.Start();
 
         Console.WriteLine($"Lease Manager server listening on port {serverProcessPort}");
+        
         Console.WriteLine("Press Enter to stop the server.");
-        Console.ReadLine();
-
-        proposer.Start();
+        Console.ReadLine(); 
 
         server.ShutdownAsync().Wait();
     }

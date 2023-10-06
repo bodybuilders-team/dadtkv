@@ -24,10 +24,13 @@ public class UrbReceiver<TR, TA, TC>
     {
         var msgId = _getMessageId(request);
 
-        if (_msgIdLookup.Contains(msgId))
-            return;
+        lock (_msgIdLookup)
+        {
+            if (_msgIdLookup.Contains(msgId))
+                return;
 
-        _msgIdLookup.Add(msgId);
+            _msgIdLookup.Add(msgId);
+        }
 
         var resTasks = _clients
             .Select(client =>

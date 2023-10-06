@@ -103,7 +103,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         // Check conflicts in our lease request
         // Immediately free the lease request if there is conflict in any of the leases
 
-        _executedTrans.Add(leaseId, true);
+        _executedTrans[leaseId] = true;
 
         return Task.FromResult(new TxSubmitResponse
         {
@@ -151,7 +151,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
 
         foreach (var lease in leaseReq.Set)
-            if (consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId))
+            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) || !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId))
                 return false;
 
         return true;

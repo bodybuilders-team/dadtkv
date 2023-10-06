@@ -28,10 +28,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
         }
 
         _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
-        foreach (var process in processConfiguration.OtherServerProcesses)
+        foreach (var process in processConfiguration.LeaseManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
-            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
+            _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
         }
 
         _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
@@ -53,8 +53,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
     public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(request);
-        return Task.FromResult(new LearnResponse { Ok = true });
+            _urbReceiver.UrbProcessRequest(request);
+            return Task.FromResult(new LearnResponse { Ok = true });
     }
 
     private void LearnUrbDeliver(LearnRequest request)
@@ -80,7 +80,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             {
                 foreach (var leaseServiceClient in _leaseServiceClients)
                 {
-                    leaseServiceClient.FreeLease(new FreeLeaseRequest
+                    leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
                     {
                         LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
                     });

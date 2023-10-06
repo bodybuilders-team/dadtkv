@@ -84,6 +84,12 @@ public class Proposer : LeaseService.LeaseServiceBase
 
             var myProposalValue = GetMyProposalValue();
 
+            if (_leaseRequests.Count == 0)
+            {
+                timer.Start();
+                return;
+            }
+
             var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
 
             if (!decided)
@@ -91,7 +97,7 @@ public class Proposer : LeaseService.LeaseServiceBase
                 timer.Start();
                 return;
             }
-            
+
             // TODO Add lock?... :(
             while ((ulong)_consensusState.Values.Count <= roundNumber ||
                    _consensusState.Values[(int)roundNumber] == null)
@@ -304,6 +310,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             (req, seqNum) => req.SequenceNum = seqNum,
             req =>
             {
+                var a = 1;
                 /* TODO Update the consensus round value here too? */
             },
             (client, req) => client.LearnAsync(req).ResponseAsync
@@ -328,20 +335,22 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(freeLeaseRequest.LeaseId);
 
-        var existed = false;
-        var alreadyFreed = false;
 
         foreach (var (key, queue) in leaseQueues)
         {
+            var existed = false;
+            var alreadyFreed = false;
+
             foreach (var consensusValue in _consensusState.Values)
             {
                 if (consensusValue == null)
                     continue;
 
-                if (consensusValue.LeaseQueues[key].Contains(leaseId))
+                if (consensusValue.LeaseQueues.ContainsKey(key) && consensusValue.LeaseQueues[key].Contains(leaseId))
                     existed = true;
 
-                if (existed && !consensusValue.LeaseQueues[key].Contains(leaseId))
+                if (existed && consensusValue.LeaseQueues.ContainsKey(key) &&
+                    !consensusValue.LeaseQueues[key].Contains(leaseId))
                     alreadyFreed = true;
             }
 
@@ -377,7 +386,8 @@ public class Proposer : LeaseService.LeaseServiceBase
                 leaseQueues.Add(leaseKey, new Queue<LeaseId>());
 
             if (_consensusState.Values.Any(consensusValue =>
-                    consensusValue != null && consensusValue.LeaseQueues[leaseKey].Contains(leaseId)))
+                    consensusValue != null && consensusValue.LeaseQueues.ContainsKey(leaseKey) &&
+                    consensusValue.LeaseQueues[leaseKey].Contains(leaseId)))
                 return true;
 
             leaseQueues[leaseKey].Enqueue(leaseId);

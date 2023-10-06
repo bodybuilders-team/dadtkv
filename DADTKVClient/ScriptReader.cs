@@ -36,9 +36,10 @@ internal class ScriptReader
                     var readSet = args[1]
                         .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
                         .Split(',')
+                        .Where((data)=> !data.Equals(""))
                         .Select(x => x.Trim('"'))
                         .ToList();
-
+                    
                     var writeSet = args[2]
                         .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
                         .Split(">,")

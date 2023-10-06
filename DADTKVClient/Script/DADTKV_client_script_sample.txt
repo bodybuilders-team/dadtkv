@@ -11,8 +11,8 @@
 # a T command includes a read set and a write set
 # the read set is just a list of string keys
 # the write set contains keys and values
-T ("a","b") (<"b",10>,<"a",20>)
-# both the read set and write set can be empty but the parenthesis will still be in the command
-T () (<"c",456>)
+T () (<"b",10>,<"a",20>)
 # wait command (in milliseconds)
 W 5000
+# both the read set and write set can be empty but the parenthesis will still be in the command
+T ("a","b") (<"c",456>)

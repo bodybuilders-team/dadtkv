@@ -38,7 +38,17 @@ public class SystemConfiguration
         get
         {
             var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration) + 1;
-            return Suspicions[currentTimeSlot];
+            var suspicion = Suspicions.ContainsKey(currentTimeSlot) ? Suspicions[currentTimeSlot] : null;
+            
+            // Get previous non null timeslot
+            // TODO: Improve
+            while (suspicion == null && currentTimeSlot > 0)
+            {
+                currentTimeSlot--;
+                suspicion = Suspicions.ContainsKey(currentTimeSlot) ? Suspicions[currentTimeSlot] : null;
+            }
+
+            return suspicion ?? new List<Tuple<string, string>>();
         }
     }
 
@@ -81,8 +91,8 @@ public class SystemConfiguration
                             {
                                 process.Url = parameters[2];
                             }
-                            
-                            if(process.Role is "T" or "L")
+
+                            if (process.Role is "T" or "L")
                                 systemConfig._serverProcessesCount++;
 
                             systemConfig.Processes.Add(process);

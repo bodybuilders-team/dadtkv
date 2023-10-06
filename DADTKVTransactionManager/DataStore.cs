@@ -15,11 +15,12 @@ public class DataStore
     {
         var readData = new List<DadInt>();
 
+        //TODO: Change DadInt to include null value
         foreach (var key in readSet)
             readData.Add(new DadInt
             {
                 Key = key,
-                Value = _dataStore[key]
+                Value = _dataStore.GetValueOrNull(key)
             });
 
         ExecuteTransaction(writeSet);
