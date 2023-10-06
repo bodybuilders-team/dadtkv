@@ -25,8 +25,43 @@ The solution to the project is divided into 4 projects:
   interface.
 * **DADTKVTransactionManager**: Transaction Manager application that communicates with the Lease Managers, using the
   LeaseService interface.
-* **DADTKVLeaseManager**: Lease Manager application.7
+* **DADTKVLeaseManager**: Lease Manager application.
 * **DADTKVCore**: Contains the interfaces and classes that are common to all the other projects, including the
   configuration of the system.
+
+## Project Situation at the Checkpoint
+
+### What has been done
+
+- Clients implemented:
+    * Reads script file and sends transaction requests to a transaction manager.
+- Transaction managers:
+    * Receives transaction requests from clients and asks lease managers for the leases of that transaction.
+    * Upon receiving the leases, executes the transaction, and broadcasts updates to other transaction managers.
+    * Sends the read data to the client.
+    * Frees the acquired leases in the case there are other conflicting lease requests.
+- Lease managers:
+    * Receives lease requests and stores them in a list until the next round of consensus in which it is the proposer.
+    * If it is, or thinks it is, the leader, it acts as the proposer, starting the round of consensus.
+    * Since the lease manager is a learner, it also keeps track of all previous consensus values.
+    * Before starting a new round of consensus, it makes sure it has knowledge of all previous consensus values.
+    * Lease requests already applied in previous consensus values are removed from the list of lease requests.
+
+### Current issues
+
+- The consensus value is the full current hashmap of lease queues. This makes the code to prevent resubmit of lease
+  requests more complex, as we have to both check if in a consensus value one lease queue had the lease, and if in a
+  later consensus value that lease is not present anymore (it was freed). A more efficient approach is changing the
+  consensus value to be a list of lease requests to be applied, and then we only have to check if the lease request
+  itself was in a previous consensus value.
+
+### What needs to be done
+
+- Change the consensus value to be a list of lease requests to be applied instead of being the full hashmap of queues.
+- Improve locking mechanisms.
+- Liveness.
+- Improve time outs and failure detector logic.
+- Implement multi-paxos.
+- Implement Status operation in Client.
 
 ...
