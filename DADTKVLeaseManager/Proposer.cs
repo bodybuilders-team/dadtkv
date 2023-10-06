@@ -1,20 +1,21 @@
 using Grpc.Core;
+using Timer = System.Timers.Timer;
 
 namespace DADTKV;
 
 /// <summary>
-/// The proposer is responsible for proposing values to the acceptors, and deciding on a value for a round, in the
-/// Paxos consensus algorithm.
+///     The proposer is responsible for proposing values to the acceptors, and deciding on a value for a round, in the
+///     Paxos consensus algorithm.
 /// </summary>
 public class Proposer : LeaseService.LeaseServiceBase
 {
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
     private readonly ConsensusState _consensusState;
+
+    private readonly ulong _initialProposalNumber;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
     private readonly List<ILeaseRequest> _leaseRequests = new();
     private readonly object _leaseRequestsLockObject = new();
-
-    private readonly ulong _initialProposalNumber;
 
     private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
 
@@ -35,7 +36,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Receive a lease request, adding it to the list of lease requests.
+    ///     Receive a lease request, adding it to the list of lease requests.
     /// </summary>
     /// <param name="request">The lease request.</param>
     /// <param name="context">The server call context.</param>
@@ -50,7 +51,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Receive a free lease request, adding it to the list of lease requests.
+    ///     Receive a free lease request, adding it to the list of lease requests.
     /// </summary>
     /// <param name="request">The free lease request.</param>
     /// <param name="context">The server call context.</param>
@@ -65,17 +66,16 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Start the proposer and its timer.
-    ///
-    /// The proposer logic includes triggering the update of the list of consensus values, being dependent on the
-    /// learner to update the consensus state object. This is needed to filter out lease requests that have already been
-    /// applied, therefore preventing the duplication of lease requests.
-    /// A new consensus round is only started if previous ones have already been decided.
+    ///     Start the proposer and its timer.
+    ///     The proposer logic includes triggering the update of the list of consensus values, being dependent on the
+    ///     learner to update the consensus state object. This is needed to filter out lease requests that have already been
+    ///     applied, therefore preventing the duplication of lease requests.
+    ///     A new consensus round is only started if previous ones have already been decided.
     /// </summary>
     public void Start()
     {
         const int timeDelta = 1000;
-        var timer = new System.Timers.Timer(timeDelta);
+        var timer = new Timer(timeDelta);
 
         // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
         timer.Elapsed += (source, e) =>
@@ -120,8 +120,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Update the consensus values to have a value for each previous round. These values are useful to filter out
-    /// lease requests that have already been applied.
+    ///     Update the consensus values to have a value for each previous round. These values are useful to filter out
+    ///     lease requests that have already been applied.
     /// </summary>
     /// <returns>True if the consensus values were already updated, false otherwise.</returns>
     private bool UpdateConsensusValues()
@@ -140,8 +140,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Get the proposal value for the current round. Applies the lease requests to the previous round's value, removing
-    /// from the lease requests the ones that were already applied.
+    ///     Get the proposal value for the current round. Applies the lease requests to the previous round's value, removing
+    ///     from the lease requests the ones that were already applied.
     /// </summary>
     /// <returns>The proposal value for the current round.</returns>
     private ConsensusValue GetMyProposalValue()
@@ -177,9 +177,9 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Propose a value for a round.
-    /// This method only returns when the value is decided for the round, having potentially needed to recursively
-    /// re-propose multiple times with higher proposal numbers.
+    ///     Propose a value for a round.
+    ///     This method only returns when the value is decided for the round, having potentially needed to recursively
+    ///     re-propose multiple times with higher proposal numbers.
     /// </summary>
     /// <param name="myProposalValue">myProposalValue The value to propose.</param>
     /// <param name="proposalNumber">The proposal number.</param>
@@ -192,7 +192,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         // Step 1 - Prepare
         ConsensusValueDto? adoptedValue = null;
-        var majorityPromised = SendPrepares(proposalNumber, roundNumber, (v) => adoptedValue = v);
+        var majorityPromised = SendPrepares(proposalNumber, roundNumber, v => adoptedValue = v);
 
         if (!majorityPromised)
         {
@@ -216,7 +216,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Re-propose with a higher proposal number.
+    ///     Re-propose with a higher proposal number.
     /// </summary>
     /// <param name="myProposalValue">The value to propose.</param>
     /// <param name="proposalNumber">The proposal number.</param>
@@ -231,12 +231,15 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Send prepare requests to the acceptors.
+    ///     Send prepare requests to the acceptors.
     /// </summary>
     /// <param name="proposalNumber">The proposal number.</param>
     /// <param name="roundNumber">The round number.</param>
     /// <param name="updateAdoptedValue">The function to update the adopted value.</param>
-    /// <returns>True if a majority of acceptors promised to not accept a proposal with a higher proposal number, false otherwise.</returns>
+    /// <returns>
+    ///     True if a majority of acceptors promised to not accept a proposal with a higher proposal number, false
+    ///     otherwise.
+    /// </returns>
     private bool SendPrepares(ulong proposalNumber, ulong roundNumber, Action<ConsensusValueDto?> updateAdoptedValue)
     {
         var asyncTasks = new List<Task<PrepareResponse>>();
@@ -276,7 +279,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Send accept requests to the acceptors.
+    ///     Send accept requests to the acceptors.
     /// </summary>
     /// <param name="proposalValue">The value to propose.</param>
     /// <param name="proposalNumber">The proposal number.</param>
@@ -302,7 +305,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Decide on a value for a round, broadcasting it to the learners.
+    ///     Decide on a value for a round, broadcasting it to the learners.
     /// </summary>
     /// <param name="newConsensusValue">The value to decide on.</param>
     /// <param name="roundNumber">The round number.</param>
@@ -326,12 +329,11 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Handle a free lease request.
-    ///
-    /// This method checks if the lease request has already been applied in previous rounds, returning true if that is
-    /// the case.
-    /// If the lease request has not been applied, it is applied to the lease queues (removing the lease id from the
-    /// queue).
+    ///     Handle a free lease request.
+    ///     This method checks if the lease request has already been applied in previous rounds, returning true if that is
+    ///     the case.
+    ///     If the lease request has not been applied, it is applied to the lease queues (removing the lease id from the
+    ///     queue).
     /// </summary>
     /// <param name="leaseQueues">The lease queues to apply to.</param>
     /// <param name="freeLeaseRequest">The free lease request to handle.</param>
@@ -370,11 +372,10 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    /// Handle a lease request.
-    ///
-    /// This method checks if the lease request has already been applied in previous rounds, returning true if that is
-    /// the case.
-    /// If the lease request has not been applied, it is applied to the lease queues (adding the lease id to the queue).
+    ///     Handle a lease request.
+    ///     This method checks if the lease request has already been applied in previous rounds, returning true if that is
+    ///     the case.
+    ///     If the lease request has not been applied, it is applied to the lease queues (adding the lease id to the queue).
     /// </summary>
     /// <param name="leaseQueues">The lease queues to apply to.</param>
     /// <param name="leaseRequest">The lease request to handle.</param>

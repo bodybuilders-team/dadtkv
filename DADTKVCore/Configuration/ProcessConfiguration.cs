@@ -1,7 +1,7 @@
 namespace DADTKV;
 
 /// <summary>
-/// Configuration of a process.
+///     Configuration of a process.
 /// </summary>
 public class ProcessConfiguration : SystemConfiguration
 {

@@ -1,7 +1,7 @@
 namespace DADTKV;
 
 /// <summary>
-/// Information about a process in the system.
+///     Information about a process in the system.
 /// </summary>
 public class ProcessInfo
 {

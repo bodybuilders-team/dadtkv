@@ -6,7 +6,7 @@ namespace DADTKV;
 internal static class Program
 {
     /// <summary>
-    /// Entry point for the lease manager server application.
+    ///     Entry point for the lease manager server application.
     /// </summary>
     /// <param name="args">Arguments: serverId systemConfigFilePath</param>
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
@@ -26,7 +26,7 @@ internal static class Program
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        
+
         var leaseManagersChannels =
             leaseManagerConfiguration.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
@@ -59,7 +59,8 @@ internal static class Program
 
         var consensusState = new ConsensusState();
 
-        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients, leaseManagerConfiguration);
+        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients,
+            leaseManagerConfiguration);
         var acceptor = new Acceptor();
         var learner = new LmLearner(processConfiguration, consensusState);
 
@@ -78,9 +79,9 @@ internal static class Program
         proposer.Start();
 
         Console.WriteLine($"Lease Manager server listening on port {serverProcessPort}");
-        
+
         Console.WriteLine("Press Enter to stop the server.");
-        Console.ReadLine(); 
+        Console.ReadLine();
 
         server.ShutdownAsync().Wait();
     }

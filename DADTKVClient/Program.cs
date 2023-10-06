@@ -3,7 +3,7 @@
 internal static class Program
 {
     /// <summary>
-    /// Entry point for the client application.
+    ///     Entry point for the client application.
     /// </summary>
     /// <param name="args">Arguments: serverUrl clientID scriptFilePath</param>
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
@@ -23,6 +23,8 @@ internal static class Program
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
 
+        Console.WriteLine("Client started");
+
         while (scriptReader.HasNextCommand())
         {
             var command = scriptReader.NextCommand();
@@ -41,23 +43,28 @@ internal static class Program
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 
+                        Console.WriteLine("\n### Transaction ###");
+                        if (readSet.Count == 0)
+                        {
+                            Console.WriteLine("No read set");
+                            break;
+                        }
+
                         Console.WriteLine("Read set:");
                         foreach (var dadInt in readSet)
                             Console.WriteLine(dadInt.Key + " " + dadInt.Value);
-
                         break;
 
                     case WaitCommand waitCommand:
-                        Console.WriteLine("Waiting " + waitCommand.Milliseconds + " milliseconds");
+                        Console.WriteLine("\nWaiting " + waitCommand.Milliseconds + " milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
                         break;
 
                     case StatusCommand:
-                        Console.WriteLine("Status: " + clientLogic.Status().Result);
-                        break;
-
-                    default:
-                        Console.WriteLine("Unknown command");
+                        var status = clientLogic.Status().Result;
+                        Console.WriteLine("\n### Status ###");
+                        foreach (var statusEntry in status)
+                            Console.WriteLine(statusEntry);
                         break;
                 }
             }

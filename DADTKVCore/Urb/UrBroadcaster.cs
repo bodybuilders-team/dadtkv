@@ -1,8 +1,8 @@
 namespace DADTKV;
 
 /// <summary>
-/// Broadcaster for the Uniform Reliable Broadcast protocol.
-/// Broadcasts a request to all clients.
+///     Broadcaster for the Uniform Reliable Broadcast protocol.
+///     Broadcasts a request to all clients.
 /// </summary>
 /// <typeparam name="TR">Type of the request.</typeparam>
 /// <typeparam name="TA">Type of the response.</typeparam>
@@ -19,8 +19,8 @@ public class UrBroadcaster<TR, TA, TC>
     }
 
     /// <summary>
-    /// Broadcasts a request to all clients.
-    /// If a majority of clients respond, the request is delivered.
+    ///     Broadcasts a request to all clients.
+    ///     If a majority of clients respond, the request is delivered.
     /// </summary>
     /// <param name="request">Request to broadcast.</param>
     /// <param name="updateSequenceNumber">Function to update the sequence number of the request.</param>

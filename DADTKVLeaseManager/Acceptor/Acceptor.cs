@@ -3,9 +3,9 @@ using Grpc.Core;
 namespace DADTKV;
 
 /// <summary>
-/// Acceptor in the Paxos algorithm.
-/// Acceptors are the nodes that receive the prepare and accept requests from the proposers and respond with a
-/// promise or accepted response.
+///     Acceptor in the Paxos algorithm.
+///     Acceptors are the nodes that receive the prepare and accept requests from the proposers and respond with a
+///     promise or accepted response.
 /// </summary>
 internal class Acceptor : AcceptorService.AcceptorServiceBase
 {
@@ -13,7 +13,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     private readonly object _acceptorStateLock = new();
 
     /// <summary>
-    /// Get the acceptor state for the given round number.
+    ///     Get the acceptor state for the given round number.
     /// </summary>
     /// <param name="roundNumber">The round number to get the acceptor state for.</param>
     /// <returns>The acceptor state for the given round number.</returns>
@@ -26,7 +26,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     }
 
     /// <summary>
-    /// Receive a prepare request from a proposer.
+    ///     Receive a prepare request from a proposer.
     /// </summary>
     /// <param name="request">The prepare request.</param>
     /// <param name="context">The server call context.</param>
@@ -80,7 +80,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     }
 
     /// <summary>
-    /// Receive an accept request from a proposer.
+    ///     Receive an accept request from a proposer.
     /// </summary>
     /// <param name="request">The accept request.</param>
     /// <param name="context">The server call context.</param>

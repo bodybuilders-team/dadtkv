@@ -1,7 +1,7 @@
 ﻿namespace DADTKV;
 
 /// <summary>
-/// A class that reads a script and has methods to obtain the next command in the script.
+///     A class that reads a script and has methods to obtain the next command in the script.
 /// </summary>
 internal class ScriptReader
 {
@@ -15,7 +15,7 @@ internal class ScriptReader
     }
 
     /// <summary>
-    /// Obtains the next command in the script.
+    ///     Obtains the next command in the script.
     /// </summary>
     /// <returns>The next command in the script, or null if there is no more command.</returns>
     /// <exception cref="Exception">If the command is not recognized.</exception>
@@ -36,7 +36,7 @@ internal class ScriptReader
                     var readSet = args[1]
                         .Split(new[] { "(", ")" }, StringSplitOptions.None)[1]
                         .Split(',')
-                        .Where((data) => !data.Equals(""))
+                        .Where(data => !data.Equals(""))
                         .Select(x => x.Trim('"'))
                         .ToList();
 
@@ -52,14 +52,17 @@ internal class ScriptReader
                 case "S":
                     return new StatusCommand();
                 default:
-                    throw new Exception($"Unknown command: {line}"); // TODO: Custom exception
+                    throw new UnknownCommandException($"Unknown command: {line}");
             }
         }
     }
 
     /// <summary>
-    /// Checks if there is more command in the script.
+    ///     Checks if there is more command in the script.
     /// </summary>
     /// <returns>True if there is more command, false otherwise.</returns>
-    public bool HasNextCommand() => _currentLine < _lines.Length;
+    public bool HasNextCommand()
+    {
+        return _currentLine < _lines.Length;
+    }
 }

@@ -3,12 +3,12 @@
 namespace DADTKV;
 
 /// <summary>
-/// The system manager is responsible for starting the DADTKV system.
+///     The system manager is responsible for starting the DADTKV system.
 /// </summary>
 internal static class SystemManager
 {
     /// <summary>
-    /// Entry point for the DADTKV system.
+    ///     Entry point for the DADTKV system.
     /// </summary>
     /// <param name="args">Arguments: systemConfigFilePath</param>
     private static void Main(string[] args)
@@ -44,7 +44,7 @@ internal static class SystemManager
     }
 
     /// <summary>
-    /// Starts the DADTKV servers (Transaction Managers, Lease Managers).
+    ///     Starts the DADTKV servers (Transaction Managers, Lease Managers).
     /// </summary>
     /// <param name="config">The system configuration.</param>
     /// <param name="configurationFile">The system configuration file.</param>
@@ -73,7 +73,7 @@ internal static class SystemManager
     }
 
     /// <summary>
-    /// Starts the DADTKV clients.
+    ///     Starts the DADTKV clients.
     /// </summary>
     /// <param name="config">The system configuration.</param>
     private static void StartClients(SystemConfiguration config)

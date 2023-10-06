@@ -1,8 +1,8 @@
 namespace DADTKV;
 
 /// <summary>
-/// Receiver for the Uniform Reliable Broadcast protocol.
-/// Receives a request and sends it to all clients.
+///     Receiver for the Uniform Reliable Broadcast protocol.
+///     Receives a request and sends it to all clients.
 /// </summary>
 /// <typeparam name="TR">Type of the request.</typeparam>
 /// <typeparam name="TA">Type of the response.</typeparam>
@@ -26,10 +26,10 @@ public class UrbReceiver<TR, TA, TC>
     }
 
     /// <summary>
-    /// Process a request.
-    /// If the request has not been processed yet, it is sent to all clients.
-    /// If the request has been processed, it is ignored.
-    /// If a majority of clients respond with a response, the request is delivered.
+    ///     Process a request.
+    ///     If the request has not been processed yet, it is sent to all clients.
+    ///     If the request has been processed, it is ignored.
+    ///     If a majority of clients respond with a response, the request is delivered.
     /// </summary>
     /// <param name="request">Request to be processed.</param>
     public void UrbProcessRequest(TR request)

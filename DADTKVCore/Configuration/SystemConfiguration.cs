@@ -1,23 +1,11 @@
 namespace DADTKV;
 
 /// <summary>
-/// Configuration of the system.
+///     Configuration of the system.
 /// </summary>
 public class SystemConfiguration
 {
     private int _serverProcessesCount;
-
-    protected List<ProcessInfo> Processes { get; } = new();
-    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
-    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
-    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
-    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
-
-    private int Slots { get; set; }
-    private int Duration { get; set; }
-    private DateTime WallTime { get; set; }
-
-    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
     private SystemConfiguration()
     {
@@ -31,6 +19,18 @@ public class SystemConfiguration
         Slots = systemConfiguration.Slots;
         WallTime = systemConfiguration.WallTime;
     }
+
+    protected List<ProcessInfo> Processes { get; } = new();
+    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
+    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
+    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
+    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
+
+    private int Slots { get; set; }
+    private int Duration { get; set; }
+    private DateTime WallTime { get; set; }
+
+    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
 
     protected IEnumerable<Tuple<string, string>> CurrentSuspicions
     {
@@ -52,19 +52,21 @@ public class SystemConfiguration
     }
 
     /// <summary>
-    /// Gets the lease manager Id number.
+    ///     Gets the lease manager Id number.
     /// </summary>
     /// <param name="id">The id of the lease manager.</param>
     /// <returns>The lease manager Id number.</returns>
-    public int GetLeaseManagerIdNum(string id) =>
-        LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
+    public int GetLeaseManagerIdNum(string id)
+    {
+        return LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
+    }
 
 
     /// <summary>
-    /// Reads the system configuration from a file and returns a <see cref="SystemConfiguration"/> object.
+    ///     Reads the system configuration from a file and returns a <see cref="SystemConfiguration" /> object.
     /// </summary>
     /// <param name="filePath">Path to the configuration file.</param>
-    /// <returns>A <see cref="SystemConfiguration"/> object.</returns>
+    /// <returns>A <see cref="SystemConfiguration" /> object.</returns>
     public static SystemConfiguration? ReadSystemConfiguration(string filePath)
     {
         try

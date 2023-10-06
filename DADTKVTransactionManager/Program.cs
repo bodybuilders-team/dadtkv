@@ -6,7 +6,7 @@ namespace DADTKV;
 internal static class Program
 {
     /// <summary>
-    /// Entry point for the lease manager server application.
+    ///     Entry point for the lease manager server application.
     /// </summary>
     /// <param name="args">Arguments: serverId systemConfigFilePath</param>
     /// <exception cref="ArgumentException">Invalid arguments.</exception>

@@ -1,14 +1,14 @@
 namespace DADTKV;
 
 /// <summary>
-/// Utilities for the DADTKV project.
+///     Utilities for the DADTKV project.
 /// </summary>
 public static class DADTKVUtils
 {
     private const int DefaultTimeout = 1000;
 
     /// <summary>
-    /// Selects a random element from the list.
+    ///     Selects a random element from the list.
     /// </summary>
     /// <param name="list">The list to select from.</param>
     /// <typeparam name="T">The type of the list.</typeparam>
@@ -22,7 +22,7 @@ public static class DADTKVUtils
     }
 
     /// <summary>
-    /// Invokes an action for each element in the IEnumerable.
+    ///     Invokes an action for each element in the IEnumerable.
     /// </summary>
     /// <param name="iEnumerable">The IEnumerable to iterate over.</param>
     /// <param name="action">The action to invoke.</param>
@@ -35,7 +35,7 @@ public static class DADTKVUtils
     }
 
     /// <summary>
-    /// Waits for a majority of the async tasks to complete.
+    ///     Waits for a majority of the async tasks to complete.
     /// </summary>
     /// <param name="asyncTasks">The async tasks to wait for.</param>
     /// <param name="predicate">The predicate to check for.</param>
@@ -59,13 +59,11 @@ public static class DADTKVUtils
                 var res = asyncTask.Result;
                 var signal = predicate.Invoke(res);
                 if (signal)
-                {
                     lock (cde)
                     {
                         if (!cde.IsSet)
                             cde.Signal();
                     }
-                }
             }).Start();
         });
 
@@ -73,7 +71,7 @@ public static class DADTKVUtils
         return cde.Wait(timeout);
     }
 
-    public static TV GetValueOrNull<TK, TV>(this IDictionary<TK, TV> dict, TK key, TV defaultValue = default(TV))
+    public static TV GetValueOrNull<TK, TV>(this IDictionary<TK, TV> dict, TK key, TV defaultValue = default)
     {
         TV value;
         return dict.TryGetValue(key, out value) ? value : defaultValue;

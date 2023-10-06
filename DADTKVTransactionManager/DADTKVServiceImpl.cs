@@ -5,7 +5,7 @@ using Grpc.Net.Client;
 namespace DADTKVT;
 
 /// <summary>
-/// Implementation of the DADTKVService.
+///     Implementation of the DADTKVService.
 /// </summary>
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
@@ -39,7 +39,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Submit a transaction to be executed.
+    ///     Submit a transaction to be executed.
     /// </summary>
     /// <param name="request">The transaction to be executed.</param>
     /// <param name="context">The call context.</param>
@@ -53,7 +53,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Submit a transaction to be executed.
+    ///     Submit a transaction to be executed.
     /// </summary>
     /// <param name="request">The transaction to be executed.</param>
     /// <returns>The result of the transaction.</returns>
@@ -122,7 +122,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Execute a transaction.
+    ///     Execute a transaction.
     /// </summary>
     /// <param name="readSet">The keys to read.</param>
     /// <param name="writeSet">The keys and values to write.</param>
@@ -153,7 +153,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Extract the leases from a transaction.
+    ///     Extract the leases from a transaction.
     /// </summary>
     /// <param name="request">The transaction.</param>
     /// <returns>The leases.</returns>
@@ -170,7 +170,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Checks if the leases of a request are on the top of the queue.
+    ///     Checks if the leases of a request are on the top of the queue.
     /// </summary>
     /// <param name="consensusStateValue">The consensus value.</param>
     /// <param name="leaseReq">The lease request.</param>
@@ -213,14 +213,21 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     }
 
     /// <summary>
-    /// Get the status of the service.
+    ///     Get the status of the service.
+    ///     The status includes the data store and the consensus state.
     /// </summary>
     /// <param name="request">The status request.</param>
     /// <param name="context">The call context.</param>
     /// <returns>The status response.</returns>
     public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)
     {
-        // ...
-        return null;
+        var status = new List<string>();
+        lock (this)
+        {
+            status.Add(_dataStore.ToString());
+            status.Add(_consensusState.ToString());
+
+            return Task.FromResult(new StatusResponse { Status = { status } });
+        }
     }
 }

@@ -4,7 +4,7 @@ using Grpc.Net.Client;
 namespace DADTKV;
 
 /// <summary>
-/// Implements the client logic for the DADTKV service.
+///     Implements the client logic for the DADTKV service.
 /// </summary>
 internal class ClientLogic
 {
@@ -18,7 +18,7 @@ internal class ClientLogic
     }
 
     /// <summary>
-    /// Submits a transaction to the server.
+    ///     Submits a transaction to the server.
     /// </summary>
     /// <param name="readSet">The keys to read from the server.</param>
     /// <param name="writeSet">The keys and values to write to the server.</param>
@@ -37,7 +37,7 @@ internal class ClientLogic
     }
 
     /// <summary>
-    /// Gets the status of the system.
+    ///     Gets the status of the system.
     /// </summary>
     public async Task<RepeatedField<string>> Status()
     {

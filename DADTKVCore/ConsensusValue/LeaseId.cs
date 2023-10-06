@@ -1,7 +1,7 @@
 namespace DADTKV;
 
 /// <summary>
-/// LeaseId is a unique identifier for a lease.
+///     LeaseId is a unique identifier for a lease.
 /// </summary>
 public class LeaseId
 {
@@ -23,5 +23,10 @@ public class LeaseId
     public override int GetHashCode()
     {
         return HashCode.Combine(ServerId, SequenceNum);
+    }
+
+    public override string ToString()
+    {
+        return $"(SequenceNum: {SequenceNum}, ServerId: '{ServerId}')";
     }
 }

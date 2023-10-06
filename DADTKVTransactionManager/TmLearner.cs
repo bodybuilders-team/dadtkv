@@ -6,7 +6,7 @@ namespace DADTKV;
 // TODO: Rename to Learner? Is inside the LearnerManager project.
 
 /// <summary>
-/// The learner is responsible for learning the decided value for a Paxos round.
+///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
@@ -47,7 +47,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     }
 
     /// <summary>
-    /// Resize the consensus state list to fit the round number.
+    ///     Resize the consensus state list to fit the round number.
     /// </summary>
     /// <param name="roundNumber">The round number.</param>
     private void ResizeConsensusStateList(int roundNumber)
@@ -60,7 +60,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     }
 
     /// <summary>
-    /// Receive a learn request from the proposer, which has decided on a value for the round.
+    ///     Receive a learn request from the proposer, which has decided on a value for the round.
     /// </summary>
     /// <param name="request">The learn request.</param>
     /// <param name="context">The server call context.</param>
@@ -72,7 +72,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     }
 
     /// <summary>
-    /// Deliver the value to the consensus state.
+    ///     Deliver the value to the consensus state.
     /// </summary>
     /// <param name="request">The learn request.</param>
     /// <exception cref="Exception">If the value for the round already exists.</exception>
@@ -97,15 +97,11 @@ public class TmLearner : LearnerService.LearnerServiceBase
             }
 
             foreach (var leaseId in leasesToBeFreed)
-            {
-                foreach (var leaseServiceClient in _leaseServiceClients)
+            foreach (var leaseServiceClient in _leaseServiceClients)
+                leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
                 {
-                    leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                    {
-                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                    });
-                }
-            }
+                    LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
+                });
         }
     }
 }

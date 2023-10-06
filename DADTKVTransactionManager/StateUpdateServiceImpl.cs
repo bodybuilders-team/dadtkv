@@ -1,10 +1,9 @@
 ﻿using Grpc.Core;
-using Grpc.Net.Client;
 
 namespace DADTKV;
 
 /// <summary>
-/// Implementation of the StateUpdateService.
+///     Implementation of the StateUpdateService.
 /// </summary>
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
@@ -16,7 +15,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     }
 
     /// <summary>
-    /// Propagates the update to all other transaction managers.
+    ///     Propagates the update to all other transaction managers.
     /// </summary>
     /// <param name="request">The update request.</param>
     /// <param name="context">The server call context.</param>
@@ -26,7 +25,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         lock (_dataStore)
         {
             _dataStore.ExecuteTransaction(request.WriteSet);
-            return Task.FromResult(new UpdateResponse()
+            return Task.FromResult(new UpdateResponse
             {
                 Ok = true
             });

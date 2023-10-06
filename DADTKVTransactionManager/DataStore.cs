@@ -1,25 +1,27 @@
+using System.Text;
+
 namespace DADTKV;
 
 /// <summary>
-/// A simple in-memory data store that stores key-value pairs.
+///     A simple in-memory data store that stores key-value pairs.
 /// </summary>
 public class DataStore
 {
-    private readonly Dictionary<string, int> _dataStore = new();
+    private readonly Dictionary<string, int> _dataStorage = new();
 
     /// <summary>
-    /// Executes a transaction by writing the values in the write set to the data store.
+    ///     Executes a transaction by writing the values in the write set to the data store.
     /// </summary>
     /// <param name="writeSet">The write set of the transaction.</param>
     public void ExecuteTransaction(IEnumerable<DadInt> writeSet)
     {
         foreach (var dadInt in writeSet)
-            _dataStore[dadInt.Key] = dadInt.Value;
+            _dataStorage[dadInt.Key] = dadInt.Value;
     }
 
     /// <summary>
-    /// Executes a transaction by reading the values in the read set from the data store, and then
-    /// writing the values in the write set to the data store.
+    ///     Executes a transaction by reading the values in the read set from the data store, and then
+    ///     writing the values in the write set to the data store.
     /// </summary>
     /// <param name="readSet">The read set of the transaction.</param>
     /// <param name="writeSet">The write set of the transaction.</param>
@@ -33,11 +35,26 @@ public class DataStore
             readData.Add(new DadInt
             {
                 Key = key,
-                Value = _dataStore.GetValueOrNull(key)
+                Value = _dataStorage.GetValueOrNull(key)
             });
 
         ExecuteTransaction(writeSet);
 
         return readData;
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append("DataStore: {");
+
+        foreach (var kvp in _dataStorage)
+            sb.Append($"'{kvp.Key}': {kvp.Value}, ");
+
+        if (_dataStorage.Count > 0)
+            sb.Length -= 2; // Remove the trailing comma and space
+
+        sb.Append('}');
+        return sb.ToString();
     }
 }
