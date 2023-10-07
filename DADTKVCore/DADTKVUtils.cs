@@ -71,9 +71,17 @@ public static class DADTKVUtils
         return cde.Wait(timeout);
     }
 
-    public static TV GetValueOrNull<TK, TV>(this IDictionary<TK, TV> dict, TK key, TV defaultValue = default)
+    /// <summary>
+    ///     Gets the value associated with the specified key, or the default value if the key does not exist.
+    /// </summary>
+    /// <param name="dict">The dictionary to get the value from.</param>
+    /// <param name="key">The key to get the value for.</param>
+    /// <param name="defaultValue">The default value to return if the key does not exist.</param>
+    /// <typeparam name="TK">The type of the key.</typeparam>
+    /// <typeparam name="TV">The type of the value.</typeparam>
+    /// <returns>The value associated with the specified key, or the default value if the key does not exist.</returns>
+    public static TV? GetValueOrNull<TK, TV>(this IDictionary<TK, TV?> dict, TK key, TV? defaultValue = default)
     {
-        TV value;
-        return dict.TryGetValue(key, out value) ? value : defaultValue;
+        return dict.TryGetValue(key, out var value) ? value : defaultValue;
     }
 }

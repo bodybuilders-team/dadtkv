@@ -82,16 +82,16 @@ public class TmLearner : LearnerService.LearnerServiceBase
         lock (_consensusStateLockObject)
         {
             ResizeConsensusStateList((int)request.RoundNumber);
-            
+
             var consensusValue = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
             _consensusState.Values[(int)request.RoundNumber] = consensusValue;
 
             var leasesToBeFreed = new HashSet<LeaseId>();
             foreach (var (key, queue) in consensusValue.LeaseQueues)
             {
-                if(queue.Count == 0)
+                if (queue.Count == 0)
                     continue;
-                
+
                 var leaseId = queue.Peek();
 
                 if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
@@ -99,7 +99,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
                    )
                     leasesToBeFreed.Add(leaseId);
             }
-            
+
             // Create string with list of leases to be freed
             var sb = new StringBuilder();
             foreach (var leaseId in leasesToBeFreed)
@@ -108,14 +108,19 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 sb.Append(", ");
             }
 
-            Console.Write($"Received instance: {consensusValue} from {request.ServerId} with seq number {request.SequenceNum} and round number {request.RoundNumber} and will free the following leases: [{sb}] \n\n");
-            
+            Console.Write(
+                $"Received instance: {consensusValue} from {request.ServerId} with seq number " +
+                $"{request.SequenceNum} and round number {request.RoundNumber} and will free the " +
+                $"following leases: [{sb}] \n\n"
+            );
+
             foreach (var leaseId in leasesToBeFreed)
             foreach (var leaseServiceClient in _leaseServiceClients)
                 leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                {
-                    LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                });
+                    {
+                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
+                    }
+                );
         }
     }
 }
