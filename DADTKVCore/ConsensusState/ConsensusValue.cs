@@ -8,7 +8,7 @@ namespace DADTKV;
 /// </summary>
 public class ConsensusValue
 {
-    public Dictionary<string, Queue<LeaseId>> LeaseQueues = new();
+    public List<LeaseRequest> LeaseRequests = new();
 
     /// <summary>
     ///     Deep copies the ConsensusValue.
@@ -18,14 +18,15 @@ public class ConsensusValue
     {
         return new ConsensusValue
         {
-            LeaseQueues = LeaseQueues.ToDictionary(
-                pair => pair.Key,
-                pair => new Queue<LeaseId>(pair.Value)
-            )
+            LeaseRequests = LeaseRequests.Select(leaseRequest => new LeaseRequest
+            {
+                leaseId = leaseRequest.leaseId,
+                set = leaseRequest.set.ToList()
+            }).ToList()
         };
     }
 
-    public override string ToString()
+    /*public override string ToString()
     {
         var sb = new StringBuilder();
         sb.Append("ConsensusValue: {");
@@ -46,5 +47,5 @@ public class ConsensusValue
 
         sb.Append('}');
         return sb.ToString();
-    }
+    }*/
 }

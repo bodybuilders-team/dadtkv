@@ -14,7 +14,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
     private readonly ulong _initialProposalNumber;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
-    private readonly List<ILeaseRequest> _leaseRequests = new();
+    private readonly List<LeaseRequest> _leaseRequests = new();
     private readonly object _leaseRequestsLockObject = new();
 
     private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
@@ -41,27 +41,12 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <param name="request">The lease request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>A lease response.</returns>
-    public override Task<LeaseResponse> RequestLease(LeaseRequest request, ServerCallContext context)
+    public override Task<LeaseResponse> RequestLease(LeaseRequestDto request, ServerCallContext context)
     {
         lock (_leaseRequestsLockObject)
         {
-            _leaseRequests.Add(request);
+            _leaseRequests.Add(LeaseRequestDtoConverter.ConvertFromDto(request));
             return Task.FromResult(new LeaseResponse { Ok = true });
-        }
-    }
-
-    /// <summary>
-    ///     Receive a free lease request, adding it to the list of lease requests.
-    /// </summary>
-    /// <param name="request">The free lease request.</param>
-    /// <param name="context">The server call context.</param>
-    /// <returns>A free lease response.</returns>
-    public override Task<FreeLeaseResponse> FreeLease(FreeLeaseRequest request, ServerCallContext context)
-    {
-        lock (_leaseRequestsLockObject)
-        {
-            _leaseRequests.Add(request);
-            return Task.FromResult(new FreeLeaseResponse { Ok = true });
         }
     }
 
@@ -146,28 +131,21 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>The proposal value for the current round.</returns>
     private ConsensusValue GetMyProposalValue()
     {
-        var myProposalValue = _consensusState.Values.Count == 0
-            ? new ConsensusValue()
-            : _consensusState.Values[^1]!.DeepCopy();
-
-        var leaseQueue = myProposalValue.LeaseQueues;
+        var myProposalValue = new ConsensusValue();
 
         lock (_leaseRequestsLockObject)
         {
-            var toRemove = new List<ILeaseRequest>();
+            var toRemove = new List<LeaseRequest>();
 
             // Update the lease queues in the proposal value
             foreach (var currentRequest in _leaseRequests)
-                switch (currentRequest)
+                if (_consensusState.Values.Any(consensusValue => consensusValue.LeaseRequests.Contains(currentRequest)))
                 {
-                    case LeaseRequest leaseRequest:
-                        if (HandleLeaseRequest(leaseQueue, leaseRequest))
-                            toRemove.Add(currentRequest);
-                        break;
-                    case FreeLeaseRequest freeLeaseRequest:
-                        if (HandleFreeLeaseRequest(leaseQueue, freeLeaseRequest))
-                            toRemove.Add(currentRequest);
-                        break;
+                    toRemove.Add(currentRequest);
+                }
+                else
+                {
+                    myProposalValue.LeaseRequests.Add(currentRequest);
                 }
 
             toRemove.ForEach(request => _leaseRequests.Remove(request));
@@ -326,78 +304,5 @@ public class Proposer : LeaseService.LeaseServiceBase
             },
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
-    }
-
-    /// <summary>
-    ///     Handle a free lease request.
-    ///     This method checks if the lease request has already been applied in previous rounds, returning true if that is
-    ///     the case.
-    ///     If the lease request has not been applied, it is applied to the lease queues (removing the lease id from the
-    ///     queue).
-    /// </summary>
-    /// <param name="leaseQueues">The lease queues to apply to.</param>
-    /// <param name="freeLeaseRequest">The free lease request to handle.</param>
-    /// <returns>True if the lease request has already been applied, false otherwise.</returns>
-    private bool HandleFreeLeaseRequest(IReadOnlyDictionary<string, Queue<LeaseId>> leaseQueues,
-        FreeLeaseRequest freeLeaseRequest)
-    {
-        var leaseId = LeaseIdDtoConverter.ConvertFromDto(freeLeaseRequest.LeaseId);
-
-        foreach (var (key, queue) in leaseQueues)
-        {
-            var existed = false;
-            var alreadyFreed = false;
-
-            foreach (var consensusValue in _consensusState.Values)
-            {
-                if (consensusValue == null)
-                    continue;
-
-                if (consensusValue.LeaseQueues.ContainsKey(key) && consensusValue.LeaseQueues[key].Contains(leaseId))
-                    existed = true;
-
-                if (existed && consensusValue.LeaseQueues.ContainsKey(key) &&
-                    !consensusValue.LeaseQueues[key].Contains(leaseId))
-                    alreadyFreed = true;
-            }
-
-            if (alreadyFreed) // If one key was freed, all others have been freed too
-                return true;
-
-            if (queue.Count > 0 && queue.Peek().Equals(leaseId))
-                queue.Dequeue();
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    ///     Handle a lease request.
-    ///     This method checks if the lease request has already been applied in previous rounds, returning true if that is
-    ///     the case.
-    ///     If the lease request has not been applied, it is applied to the lease queues (adding the lease id to the queue).
-    /// </summary>
-    /// <param name="leaseQueues">The lease queues to apply to.</param>
-    /// <param name="leaseRequest">The lease request to handle.</param>
-    /// <returns>True if the lease request has already been applied, false otherwise.</returns>
-    private bool HandleLeaseRequest(IDictionary<string, Queue<LeaseId>> leaseQueues, LeaseRequest leaseRequest)
-    {
-        var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseRequest.LeaseId);
-
-        foreach (var leaseKey in leaseRequest.Set)
-        {
-            if (!leaseQueues.ContainsKey(leaseKey))
-                leaseQueues.Add(leaseKey, new Queue<LeaseId>());
-
-            if (_consensusState.Values.Any(consensusValue =>
-                    consensusValue != null && consensusValue.LeaseQueues.ContainsKey(leaseKey) &&
-                    consensusValue.LeaseQueues[leaseKey].Contains(leaseId))
-               )
-                return true;
-
-            leaseQueues[leaseKey].Enqueue(leaseId);
-        }
-
-        return false;
     }
 }

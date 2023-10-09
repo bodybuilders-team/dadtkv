@@ -4,8 +4,6 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
-// TODO: Rename to Learner? Is inside the LearnerManager project.
-
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>

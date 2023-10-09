@@ -196,12 +196,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     {
         var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
 
-        foreach (var lease in leaseReq.Set)
+        /*foreach (var lease in leaseReq.Set)
             if (!consensusStateValue.LeaseQueues.ContainsKey(lease) ||
                 consensusStateValue.LeaseQueues[lease].Count == 0 ||
                 !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId)
                )
-                return false;
+                return false;*/
 
         return true;
     }

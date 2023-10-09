@@ -39,8 +39,6 @@ internal static class SystemManager
         // Wait for user input to shut down the system
         Console.WriteLine("Press Enter to shut down the DADTKV system.");
         Console.ReadLine();
-
-        // TODO: Stop DADTKV processes gracefully?
     }
 
     /// <summary>

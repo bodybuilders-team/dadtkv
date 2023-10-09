@@ -4,8 +4,6 @@ using Grpc.Net.Client;
 
 namespace DADTKV;
 
-// TODO: Rename to Learner? Is inside the LearnerManager project.
-
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>
@@ -89,7 +87,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             _consensusState.Values[(int)request.RoundNumber] = consensusValue;
 
             var leasesToBeFreed = new HashSet<LeaseId>();
-            foreach (var (key, queue) in consensusValue.LeaseQueues)
+            /*foreach (var (key, queue) in consensusValue.LeaseQueues)
             {
                 if (queue.Count == 0)
                     continue;
@@ -100,7 +98,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
                     _executedTrans[leaseId] && !_freedLeases.Contains(leaseId)
                    )
                     leasesToBeFreed.Add(leaseId);
-            }
+            }*/
 
             // Create string with list of leases to be freed
             var sb = new StringBuilder();

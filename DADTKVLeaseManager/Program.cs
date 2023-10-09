@@ -30,32 +30,26 @@ internal static class Program
         var leaseManagersChannels =
             leaseManagerConfiguration.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
-                processInfo => new ServerProcessChannel
-                {
-                    ProcessInfo = processInfo,
-                    GrpcChannel = GrpcChannel.ForAddress(processInfo.Url)
-                });
+                processInfo => GrpcChannel.ForAddress(processInfo.Url)
+            );
 
         var transactionManagersChannels =
             leaseManagerConfiguration
                 .TransactionManagers.ToDictionary(
                     processInfo => processInfo.Id,
-                    processInfo => new ServerProcessChannel
-                    {
-                        ProcessInfo = processInfo,
-                        GrpcChannel = GrpcChannel.ForAddress(processInfo.Url)
-                    });
+                    processInfo => GrpcChannel.ForAddress(processInfo.Url)
+                );
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
         foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
-            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel.GrpcChannel));
+            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel));
 
         foreach (var (_, leaseManagersChannel) in leaseManagersChannels)
-            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagersChannel.GrpcChannel));
+            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagersChannel));
 
         var acceptorServiceClients = new List<AcceptorService.AcceptorServiceClient>();
         foreach (var (_, leaseManagerChannel) in leaseManagersChannels)
-            acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel.GrpcChannel));
+            acceptorServiceClients.Add(new AcceptorService.AcceptorServiceClient(leaseManagerChannel));
 
         var consensusState = new ConsensusState();
 

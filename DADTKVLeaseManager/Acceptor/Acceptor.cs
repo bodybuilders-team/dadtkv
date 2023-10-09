@@ -66,7 +66,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                     }
                 );
 
-            // Previously responded with ACCEPTED
+            /*// Previously responded with ACCEPTED
             return Task.FromResult(new PrepareResponse
             {
                 Promise = true,
@@ -75,7 +75,8 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                 Value = currentRoundAcceptorState.Value != null
                     ? ConsensusValueDtoConverter.ConvertToDto(currentRoundAcceptorState.Value)
                     : null
-            });
+            });*/
+            return null;
         }
     }
 
