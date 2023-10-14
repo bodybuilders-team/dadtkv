@@ -12,6 +12,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     private readonly ConsensusState _consensusState;
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
+    private readonly HashSet<LeaseId> _freedLeases;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
     private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
@@ -19,12 +20,14 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     private ulong _susSequenceNumCounter;
 
     public DADTKVServiceImpl(ProcessConfiguration processConfiguration,
-        ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans)
+        ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans,
+        HashSet<LeaseId> freedLeases)
     {
         _processConfiguration = processConfiguration;
         _consensusState = consensusState;
         _dataStore = dataStore;
         _executedTrans = executedTrans;
+        _freedLeases = freedLeases;
         _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
         foreach (var leaseManager in _processConfiguration.LeaseManagers)
         {
@@ -112,11 +115,25 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         // Commit transaction
         var readData = ExecuteTransaction(request.ReadSet, request.WriteSet);
 
-        // TODO: Optimization
+        _executedTrans[leaseId] = true;
+
+        // Optimization
         // Check conflicts in our lease request
         // Immediately free the lease request if there is conflict in any of the leases
+        foreach (var (key, queue) in _consensusState.Values[^1]?.LeaseQueues)
+        {
+            if (queue.Count <= 1 || !queue.Peek().Equals(leaseId)) continue;
+            
+            foreach (var leaseServiceClient in _leaseServiceClients)
+                leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
+                    {
+                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
+                    }
+                );
 
-        _executedTrans[leaseId] = true;
+            _freedLeases.Add(leaseId);
+            break;
+        }
 
         return Task.FromResult(new TxSubmitResponse { ReadSet = { readData } });
     }

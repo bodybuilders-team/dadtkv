@@ -23,3 +23,7 @@ T ("c") (<"c",457>)
 # A status request from all the processes in the system
 # is issued via a S command
 S
+W 1000
+S
+W 1000
+S

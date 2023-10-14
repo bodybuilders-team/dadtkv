@@ -364,7 +364,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (alreadyFreed) // If one key was freed, all others have been freed too
                 return true;
 
-            if (queue.Peek().Equals(leaseId))
+            if (queue.Count > 0 && queue.Peek().Equals(leaseId))
                 queue.Dequeue();
         }
 

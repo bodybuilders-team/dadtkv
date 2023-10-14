@@ -14,16 +14,18 @@ public class TmLearner : LearnerService.LearnerServiceBase
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
     private readonly Dictionary<LeaseId, bool> _executedTrans;
+    private readonly HashSet<LeaseId> _freedLeases;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
-        Dictionary<LeaseId, bool> executedTrans)
+        Dictionary<LeaseId, bool> executedTrans, HashSet<LeaseId> freedLeases)
     {
         _processConfiguration = processConfiguration;
         _consensusState = consensusState;
         _executedTrans = executedTrans;
+        _freedLeases = freedLeases;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
         foreach (var process in processConfiguration.OtherServerProcesses)
@@ -95,7 +97,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 var leaseId = queue.Peek();
 
                 if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
-                    _executedTrans[leaseId]
+                    _executedTrans[leaseId] && !_freedLeases.Contains(leaseId)
                    )
                     leasesToBeFreed.Add(leaseId);
             }
@@ -115,12 +117,16 @@ public class TmLearner : LearnerService.LearnerServiceBase
             );
 
             foreach (var leaseId in leasesToBeFreed)
-            foreach (var leaseServiceClient in _leaseServiceClients)
-                leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                    {
-                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                    }
-                );
+            {
+                foreach (var leaseServiceClient in _leaseServiceClients)
+                    leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
+                        {
+                            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
+                        }
+                    );
+
+                _freedLeases.Add(leaseId);
+            }
         }
     }
 }

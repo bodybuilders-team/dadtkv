@@ -5,11 +5,8 @@ namespace DADTKV;
 
 internal static class Program
 {
-    /// <summary>
-    ///     Entry point for the lease manager server application.
-    /// </summary>
-    /// <param name="args">Arguments: serverId systemConfigFilePath</param>
-    /// <exception cref="ArgumentException">Invalid arguments.</exception>
+    // Entry point for the server application
+    // Arguments: serverId systemConfigFilePath
     public static void Main(string[] args)
     {
         if (args.Length != 2)
@@ -26,20 +23,22 @@ internal static class Program
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
+
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
+        var freedLeases = new HashSet<LeaseId>();
 
         var server = new Server
         {
             Services =
             {
                 DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration, consensusState,
-                    datastore, executedTrans)),
+                    datastore, executedTrans, freedLeases)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(datastore)),
                 LearnerService.BindService(new TmLearner(processConfiguration, consensusState,
-                    executedTrans))
+                    executedTrans, freedLeases))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
