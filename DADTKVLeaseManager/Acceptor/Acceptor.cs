@@ -10,7 +10,6 @@ namespace DADTKV;
 internal class Acceptor : AcceptorService.AcceptorServiceBase
 {
     private readonly List<AcceptorState> _acceptorState = new();
-    private readonly object _acceptorStateLock = new();
 
     /// <summary>
     ///     Get the acceptor state for the given round number.
@@ -33,7 +32,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The prepare response.</returns>
     public override Task<PrepareResponse> Prepare(PrepareRequest request, ServerCallContext context)
     {
-        lock (_acceptorStateLock)
+        lock (_acceptorState)
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
 
@@ -88,7 +87,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The accept response.</returns>
     public override Task<AcceptResponse> Accept(AcceptRequest request, ServerCallContext context)
     {
-        lock (_acceptorStateLock)
+        lock (_acceptorState)
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
 

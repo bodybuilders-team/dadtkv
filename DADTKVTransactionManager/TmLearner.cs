@@ -10,15 +10,21 @@ namespace DADTKV;
 /// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly ConsensusState _consensusState;
-    private readonly object _consensusStateLockObject = new();
-    private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
+    private readonly ProcessConfiguration _processConfiguration;
+    private readonly Dictionary<LeaseId, bool> _executedTrans;
+    private readonly LeaseQueues _leaseQueues;
     private readonly TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _tobReceiver;
 
-    public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
-        Dictionary<LeaseId, bool> executedTrans, HashSet<LeaseId> freedLeases)
+    private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponse, StateUpdateService.StateUpdateServiceClient>
+        _urBroadcaster;
+
+    public TmLearner(ProcessConfiguration processConfiguration,
+        Dictionary<LeaseId, bool> executedTrans,
+        LeaseQueues leaseQueues)
     {
-        _consensusState = consensusState;
+        _processConfiguration = processConfiguration;
+        _executedTrans = executedTrans;
+        _leaseQueues = leaseQueues;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
         foreach (var process in processConfiguration.OtherServerProcesses)
@@ -27,11 +33,11 @@ public class TmLearner : LearnerService.LearnerServiceBase
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
         }
 
-        _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
-        foreach (var process in processConfiguration.LeaseManagers)
+        var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
+        foreach (var process in processConfiguration.OtherTransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
-            _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
+            stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
         _tobReceiver = new TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
@@ -40,19 +46,11 @@ public class TmLearner : LearnerService.LearnerServiceBase
             req => req.RoundNumber,
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
-    }
 
-    /// <summary>
-    ///     Resize the consensus state list to fit the round number.
-    /// </summary>
-    /// <param name="roundNumber">The round number.</param>
-    private void ResizeConsensusStateList(int roundNumber)
-    {
-        lock (_consensusStateLockObject)
-        {
-            for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
-                _consensusState.Values.Add(null);
-        }
+        _urBroadcaster =
+            new UrBroadcaster<FreeLeaseRequest, FreeLeaseResponse, StateUpdateService.StateUpdateServiceClient>(
+                stateUpdateServiceClients
+            );
     }
 
     /// <summary>
@@ -74,17 +72,46 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <exception cref="Exception">If the value for the round already exists.</exception>
     private void TobDeliver(LearnRequest request)
     {
-        lock (_consensusStateLockObject)
+        lock (_leaseQueues)
         {
-            ResizeConsensusStateList((int)request.RoundNumber);
+            request.ConsensusValue.LeaseRequests.ForEach(leaseRequest =>
+            {
+                leaseRequest.Set.ForEach(key =>
+                {
+                    if (!_leaseQueues.ContainsKey(key))
+                    {
+                        _leaseQueues.Add(key, new Queue<LeaseId>());
+                    }
 
-            var consensusValue = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
-            _consensusState.Values[(int)request.RoundNumber] = consensusValue;
+                    _leaseQueues[key].Enqueue(LeaseIdDtoConverter.ConvertFromDto(leaseRequest.LeaseId));
+                });
+            });
 
-            Console.Write(
-                $"Received instance: {consensusValue} from {request.ServerId} with seq number " +
-                $"{request.SequenceNum} and round number {request.RoundNumber}"
-            );
+            var leasesToBeFreed = new HashSet<LeaseId>();
+
+            foreach (var (key, queue) in _leaseQueues)
+            {
+                if (queue.Count == 0)
+                    continue;
+
+                var leaseId = queue.Peek();
+
+                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
+                    _executedTrans[leaseId]
+                   )
+                    leasesToBeFreed.Add(leaseId);
+            }
+
+            foreach (var leaseId in leasesToBeFreed)
+            {
+                // TODO abstract FreeLeaseRequest to remove updateSequenceNumber
+                _urBroadcaster.UrBroadcast(
+                    new FreeLeaseRequest { LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId) },
+                    (req, seq) => req.SequenceNum = seq,
+                    req => { },
+                    (client, req) => client.FreeLeaseAsync(req).ResponseAsync
+                );
+            }
         }
     }
 }

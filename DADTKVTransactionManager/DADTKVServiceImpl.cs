@@ -1,4 +1,5 @@
 ﻿using DADTKV;
+using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
 
@@ -9,26 +10,23 @@ namespace DADTKVT;
 /// </summary>
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
-    private readonly ConsensusState _consensusState;
-    private readonly 
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
-    private readonly HashSet<LeaseId> _freedLeases;
+    private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
-    private readonly List<StateUpdateService.StateUpdateServiceClient> _stateUpdateServiceClients = new();
     private ulong _leaseSequenceNumCounter;
-    private ulong _susSequenceNumCounter;
 
-    public DADTKVServiceImpl(ProcessConfiguration processConfiguration,
-        ConsensusState consensusState, DataStore dataStore, Dictionary<LeaseId, bool> executedTrans,
-        HashSet<LeaseId> freedLeases)
+    private readonly UrBroadcaster<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient>
+        _urBroadcaster;
+
+    public DADTKVServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
+        Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues)
     {
         _processConfiguration = processConfiguration;
-        _consensusState = consensusState;
         _dataStore = dataStore;
         _executedTrans = executedTrans;
-        _freedLeases = freedLeases;
+        _leaseQueues = leaseQueues;
         _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
         foreach (var leaseManager in _processConfiguration.LeaseManagers)
         {
@@ -36,10 +34,22 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
         }
 
+        var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
+        foreach (var process in processConfiguration.OtherTransactionManagers)
+        {
+            var channel = GrpcChannel.ForAddress(process.Url);
+            stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
+        }
+
+        _urBroadcaster =
+            new UrBroadcaster<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient>(
+                stateUpdateServiceClients
+            );
+
         _processConfiguration.OtherTransactionManagers
             .Select(tm => GrpcChannel.ForAddress(tm.Url))
             .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
-            .ForEach(client => _stateUpdateServiceClients.Add(client));
+            .ForEach(client => stateUpdateServiceClients.Add(client));
     }
 
     /// <summary>
@@ -92,50 +102,24 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
         _executedTrans.Add(leaseId, false);
 
-        // TODO: Optimization
-        // Verify if we need to check leases of this leaseReq.leaseId or just the lease keys
-
-        // Waiting for consensus value where lease id are on the top of the queue
-        var reachedConsensus = false;
-        while (!reachedConsensus)
-        {
-            for (var i = _consensusState.Values.Count - 1; i >= 0; i--)
-            {
-                var consensusValue = _consensusState.Values[i];
-
-                if (consensusValue == null || !CheckLeases(consensusValue, leaseReq))
-                    continue;
-
-                reachedConsensus = true;
-            }
-
-            if (reachedConsensus) break;
-
+        while (!_leaseQueues.ObtainedLeases(leaseReq))
             Thread.Sleep(100);
+
+        var conflict = false;
+        foreach (var (key, queue) in _leaseQueues)
+        {
+            if (queue.Peek().Equals(leaseId) && queue.Count > 1)
+            {
+                conflict = true;
+                break;
+            }
         }
 
         // Commit transaction
-        var readData = ExecuteTransaction(request.ReadSet, request.WriteSet);
+        var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet, conflict);
 
         _executedTrans[leaseId] = true;
 
-        // Optimization
-        // Check conflicts in our lease request
-        // Immediately free the lease request if there is conflict in any of the leases
-        foreach (var (key, queue) in _consensusState.Values[^1]?.LeaseQueues)
-        {
-            if (queue.Count <= 1 || !queue.Peek().Equals(leaseId)) continue;
-
-            foreach (var leaseServiceClient in _leaseServiceClients)
-                leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                    {
-                        LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                    }
-                );
-
-            _freedLeases.Add(leaseId);
-            break;
-        }
 
         return Task.FromResult(new TxSubmitResponse { ReadSet = { readData } });
     }
@@ -146,29 +130,31 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// <param name="readSet">The keys to read.</param>
     /// <param name="writeSet">The keys and values to write.</param>
     /// <returns>The values read.</returns>
-    private IEnumerable<DadInt> ExecuteTransaction(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
+    private IEnumerable<DadInt> ExecuteTransaction(LeaseId leaseId, IEnumerable<string> readSet,
+        IEnumerable<DadInt> writeSet,
+        bool freeLease)
     {
-        var resTasks = new List<Task<UpdateResponse>>();
-        foreach (var susClient in _stateUpdateServiceClients)
-        {
-            var updateReq = new UpdateRequest
-            {
-                ServerId = _processConfiguration.ProcessInfo.Id,
-                SequenceNum = _susSequenceNumCounter++,
-                WriteSet = { writeSet }
-            };
-
-            //TODO: Check if throws exception when timeout
-            var res = susClient.UpdateAsync(updateReq);
-            resTasks.Add(res.ResponseAsync);
-        }
-
-        Task.WaitAll(resTasks.ToArray());
+        List<DadInt> returnReadSet;
 
         lock (_dataStore)
         {
-            return _dataStore.ExecuteTransaction(readSet, writeSet);
+            returnReadSet = _dataStore.ExecuteTransaction(readSet, writeSet);
         }
+
+        _urBroadcaster.UrBroadcast(
+            new UpdateRequest
+            {
+                ServerId = _processConfiguration.ProcessInfo.Id,
+                LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId),
+                WriteSet = { writeSet },
+                FreeLease = freeLease
+            },
+            (req, seq) => req.SequenceNum = seq,
+            req => { },
+            (client, req) => client.UpdateAsync(req).ResponseAsync
+        );
+
+        return returnReadSet;
     }
 
     /// <summary>
@@ -186,26 +172,6 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             leases.Add(lease);
 
         return leases;
-    }
-
-    /// <summary>
-    ///     Checks if the leases of a request are on the top of the queue.
-    /// </summary>
-    /// <param name="consensusStateValue">The consensus value.</param>
-    /// <param name="leaseReq">The lease request.</param>
-    /// <returns>True if the leases are on the top of the queue, false otherwise.</returns>
-    private static bool CheckLeases(ConsensusValue consensusStateValue, LeaseRequest leaseReq)
-    {
-        var leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseReq.LeaseId);
-
-        /*foreach (var lease in leaseReq.Set)
-            if (!consensusStateValue.LeaseQueues.ContainsKey(lease) ||
-                consensusStateValue.LeaseQueues[lease].Count == 0 ||
-                !consensusStateValue.LeaseQueues[lease].Peek().Equals(leaseId)
-               )
-                return false;*/
-
-        return true;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 ﻿using DADTKVT;
+using DADTKVTransactionManager;
 using Grpc.Core;
 
 namespace DADTKV;
@@ -19,6 +20,7 @@ internal static class Program
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
         var consensusState = new ConsensusState();
+
         var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
@@ -26,6 +28,7 @@ internal static class Program
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+        LeaseQueues leaseQueues = new();
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
         var freedLeases = new HashSet<LeaseId>();
@@ -34,11 +37,10 @@ internal static class Program
         {
             Services =
             {
-                DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration, consensusState,
-                    datastore, executedTrans, freedLeases)),
-                StateUpdateService.BindService(new StateUpdateServiceImpl(datastore)),
-                LearnerService.BindService(new TmLearner(processConfiguration, consensusState,
-                    executedTrans, freedLeases))
+                DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration,
+                    datastore, executedTrans, leaseQueues)),
+                StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore, leaseQueues)),
+                LearnerService.BindService(new TmLearner(processConfiguration, executedTrans, leaseQueues))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };

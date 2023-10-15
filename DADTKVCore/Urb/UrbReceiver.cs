@@ -7,18 +7,18 @@ namespace DADTKV;
 /// <typeparam name="TR">Type of the request.</typeparam>
 /// <typeparam name="TA">Type of the response.</typeparam>
 /// <typeparam name="TC">Type of the client.</typeparam>
-public class UrbReceiver<TR, TA, TC>
+public class UrbReceiver<TR, TA, TC, V>
 {
     private readonly List<TC> _clients;
-    private readonly Func<TR, ulong> _getMessageId;
+    private readonly Func<TR, V> _getMessageId;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
-    private readonly HashSet<ulong> _msgIdLookup;
+    private readonly HashSet<V> _msgIdLookup;
     private readonly Action<TR> _urbDeliver;
 
-    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TR, ulong> getMessageId,
+    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TR, V> getMessageId,
         Func<TC, TR, Task<TA>> getResponse)
     {
-        _msgIdLookup = new HashSet<ulong>();
+        _msgIdLookup = new HashSet<V>();
         _clients = clients;
         _urbDeliver = urbDeliver;
         _getMessageId = getMessageId;

@@ -11,7 +11,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
-    private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
+    private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient, ulong> _urbReceiver;
 
     public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
     {
@@ -22,7 +22,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
             .Select(channel => new LearnerService.LearnerServiceClient(channel))
             .ToList();
 
-        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient, ulong>(
             learnerServiceClients,
             LearnUrbDeliver,
             req => req.RoundNumber,

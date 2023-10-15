@@ -4,7 +4,7 @@ namespace DADTKVTransactionManager;
 
 public class TobReceiver<TR, TA, TC>
 {
-    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
+    private readonly UrbReceiver<TR, TA, TC, ulong> _urbReceiver;
     private readonly Action<TR> _tobDeliver;
     private readonly Func<TR, ulong> _getMessageId;
     private long _lastProcessedMessageId = -1;
@@ -33,7 +33,7 @@ public class TobReceiver<TR, TA, TC>
     {
         _tobDeliver = tobDeliver;
         _getMessageId = getMessageId;
-        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getMessageId, getResponse);
+        _urbReceiver = new UrbReceiver<TR, TA, TC, ulong>(clients, UrbDeliver, getMessageId, getResponse);
     }
     
     public void TobProcessRequest(TR request)
