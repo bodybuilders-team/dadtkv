@@ -99,16 +99,18 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
                     _executedTrans[leaseId]
                    )
+                {
                     leasesToBeFreed.Add(leaseId);
+                    queue.Dequeue();
+                }
             }
-
+            
             foreach (var leaseId in leasesToBeFreed)
             {
                 // TODO abstract FreeLeaseRequest to remove updateSequenceNumber
                 _urBroadcaster.UrBroadcast(
                     new FreeLeaseRequest { LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId) },
                     (req, seq) => req.SequenceNum = seq,
-                    req => { },
                     (client, req) => client.FreeLeaseAsync(req).ResponseAsync
                 );
             }

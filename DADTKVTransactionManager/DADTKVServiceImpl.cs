@@ -105,7 +105,8 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         while (!_leaseQueues.ObtainedLeases(leaseReq))
             Thread.Sleep(100);
 
-        var conflict = false;
+        // TODO put to false and add free lease request handler
+        var conflict = true;
         foreach (var (key, queue) in _leaseQueues)
         {
             if (queue.Peek().Equals(leaseId) && queue.Count > 1)
@@ -139,6 +140,11 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         lock (_dataStore)
         {
             returnReadSet = _dataStore.ExecuteTransaction(readSet, writeSet);
+        }
+
+        if (freeLease)
+        {
+            _leaseQueues.FreeLeases(leaseId);
         }
 
         _urBroadcaster.UrBroadcast(

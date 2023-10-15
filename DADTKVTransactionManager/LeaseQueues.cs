@@ -32,4 +32,13 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
     {
         return ObtainedLeases(leaseReq.Set, leaseReq.LeaseId);
     }
+
+    public void FreeLeases(LeaseId leaseId)
+    {
+        foreach (var (key, queue) in this)
+        {
+            if (queue.Count > 0 && queue.Peek().Equals(leaseId))
+                queue.Dequeue();
+        }
+    }
 }

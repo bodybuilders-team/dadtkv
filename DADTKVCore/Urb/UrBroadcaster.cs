@@ -44,4 +44,21 @@ public class UrBroadcaster<TR, TA, TC>
         if (majority)
             urbDeliver(request);
     }
+    
+    /// <summary>
+    ///     Broadcasts a request to all clients.
+    /// </summary>
+    /// <param name="request">Request to broadcast.</param>
+    /// <param name="updateSequenceNumber">Function to update the sequence number of the request.</param>
+    /// <param name="getResponse">Function to get the response from a client.</param>
+    public void UrBroadcast(
+        TR request,
+        Action<TR, ulong> updateSequenceNumber,
+        Func<TC, TR, Task<TA>> getResponse
+    )
+    {
+        updateSequenceNumber(request, _sequenceNumCounter++);
+
+        _clients.ForEach(client => getResponse(client, request));
+    }
 }

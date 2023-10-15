@@ -11,11 +11,10 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 {
     private readonly DataStore _dataStore;
     private readonly LeaseQueues _leaseQueues;
-
-    private readonly List<UpdateRequest> pendingUpdates = new();
+    
 
     private readonly UrbReceiver<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient, string>
-        _urbReceiver;
+        _tobReceiver;
 
     public StateUpdateServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
@@ -30,13 +29,15 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
-        _urbReceiver =
-            new UrbReceiver<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient, string>(
+        _tobReceiver =
+            new TobReceiver<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient, string>(
                 stateUpdateServiceClients,
                 UrbDeliver,
                 req => req.ServerId + "-" + req.SequenceNum,
                 (client, req) => client.UpdateAsync(req).ResponseAsync
             );
+        
+        
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponse> Update(UpdateRequest request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(request);
+        _tobReceiver.UrbProcessRequest(request);
 
         return Task.FromResult(new UpdateResponse
         {
