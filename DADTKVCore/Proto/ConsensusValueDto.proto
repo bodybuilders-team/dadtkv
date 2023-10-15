@@ -3,7 +3,7 @@ package dadtkv;
 
 option csharp_namespace = "DADTKV";
 
-import "LeaseService.proto";
+import "LeaseRequestDto.proto";
 
 message ConsensusValueDto {
   repeated dadtkv.LeaseRequestDto leaseRequests = 1;

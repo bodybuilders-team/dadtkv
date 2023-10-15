@@ -15,7 +15,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     }
 
     /// <summary>
-    ///     Propagates the update to all other transaction managers.
+    ///     Executes a transaction associated with an update.
     /// </summary>
     /// <param name="request">The update request.</param>
     /// <param name="context">The server call context.</param>

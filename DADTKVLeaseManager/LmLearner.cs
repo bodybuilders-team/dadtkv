@@ -25,7 +25,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
         _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             LearnUrbDeliver,
-            req => req.ServerId + req.SequenceNum,
+            req => req.RoundNumber,
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }

@@ -4,17 +4,31 @@ package dadtkv;
 option csharp_namespace = "DADTKV";
 
 import "DadInt.proto";
+import "LeaseIdDto.proto";
 
 service StateUpdateService {
   rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc FreeLease(FreeLeaseRequest) returns (FreeLeaseResponse);
 }
 
 message UpdateRequest {
   string serverId = 1;
   uint64 sequenceNum = 2;
-  repeated dadtkv.DadInt writeSet = 3;
+  LeaseIdDto leaseId = 3;
+  repeated dadtkv.DadInt writeSet = 4;
+  bool freeLease = 5;
 }
 
 message UpdateResponse {
+  bool ok = 1;
+}
+
+message FreeLeaseRequest {
+  string serverId = 1;
+  uint64 sequenceNum = 2;
+  LeaseIdDto leaseId = 3;
+}
+
+message FreeLeaseResponse {
   bool ok = 1;
 }

@@ -2,7 +2,7 @@ syntax = "proto3";
 package dadtkv;
 
 option csharp_namespace = "DADTKV";
-import "ConsensusValue.proto";
+import "ConsensusValueDto.proto";
 
 service AcceptorService {
   rpc Prepare(PrepareRequest) returns (PrepareResponse);

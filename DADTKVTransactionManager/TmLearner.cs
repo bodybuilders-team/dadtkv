@@ -1,4 +1,5 @@
 using System.Text;
+using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
 
@@ -11,19 +12,13 @@ public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
-    private readonly Dictionary<LeaseId, bool> _executedTrans;
-    private readonly HashSet<LeaseId> _freedLeases;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly ProcessConfiguration _processConfiguration;
-    private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
+    private readonly TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _tobReceiver;
 
     public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
         Dictionary<LeaseId, bool> executedTrans, HashSet<LeaseId> freedLeases)
     {
-        _processConfiguration = processConfiguration;
         _consensusState = consensusState;
-        _executedTrans = executedTrans;
-        _freedLeases = freedLeases;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
         foreach (var process in processConfiguration.OtherServerProcesses)
@@ -39,10 +34,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
             _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
         }
 
-        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _tobReceiver = new TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
-            LearnUrbDeliver,
-            req => req.ServerId + req.SequenceNum,
+            TobDeliver,
+            req => req.RoundNumber,
             (client, req) => client.LearnAsync(req).ResponseAsync
         );
     }
@@ -68,7 +63,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(request);
+        _tobReceiver.TobProcessRequest(request);
         return Task.FromResult(new LearnResponse { Ok = true });
     }
 
@@ -77,7 +72,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// </summary>
     /// <param name="request">The learn request.</param>
     /// <exception cref="Exception">If the value for the round already exists.</exception>
-    private void LearnUrbDeliver(LearnRequest request)
+    private void TobDeliver(LearnRequest request)
     {
         lock (_consensusStateLockObject)
         {
@@ -86,45 +81,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
             var consensusValue = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
             _consensusState.Values[(int)request.RoundNumber] = consensusValue;
 
-            var leasesToBeFreed = new HashSet<LeaseId>();
-            /*foreach (var (key, queue) in consensusValue.LeaseQueues)
-            {
-                if (queue.Count == 0)
-                    continue;
-
-                var leaseId = queue.Peek();
-
-                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
-                    _executedTrans[leaseId] && !_freedLeases.Contains(leaseId)
-                   )
-                    leasesToBeFreed.Add(leaseId);
-            }*/
-
-            // Create string with list of leases to be freed
-            var sb = new StringBuilder();
-            foreach (var leaseId in leasesToBeFreed)
-            {
-                sb.Append(leaseId);
-                sb.Append(", ");
-            }
-
             Console.Write(
                 $"Received instance: {consensusValue} from {request.ServerId} with seq number " +
-                $"{request.SequenceNum} and round number {request.RoundNumber} and will free the " +
-                $"following leases: [{sb}] \n\n"
+                $"{request.SequenceNum} and round number {request.RoundNumber}"
             );
-
-            foreach (var leaseId in leasesToBeFreed)
-            {
-                foreach (var leaseServiceClient in _leaseServiceClients)
-                    leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                        {
-                            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                        }
-                    );
-
-                _freedLeases.Add(leaseId);
-            }
         }
     }
 }

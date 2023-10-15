@@ -8,8 +8,8 @@ public static class LeaseRequestDtoConverter
     {
         return new LeaseRequest
         {
-            leaseId = LeaseIdDtoConverter.ConvertFromDto(leaseRequestDto.LeaseId),
-            set = leaseRequestDto.Set.Select(s => s).ToList()
+            LeaseId = LeaseIdDtoConverter.ConvertFromDto(leaseRequestDto.LeaseId),
+            Set = leaseRequestDto.Set.Select(s => s).ToList()
         };
     }
 
@@ -17,8 +17,8 @@ public static class LeaseRequestDtoConverter
     {
         return new LeaseRequestDto
         {
-            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseRequest.leaseId),
-            Set = { leaseRequest.set }
+            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseRequest.LeaseId),
+            Set = { leaseRequest.Set }
         };
     }
 }

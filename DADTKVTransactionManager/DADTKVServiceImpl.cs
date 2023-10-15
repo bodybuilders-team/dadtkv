@@ -10,6 +10,7 @@ namespace DADTKVT;
 public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly ConsensusState _consensusState;
+    private readonly 
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
     private readonly HashSet<LeaseId> _freedLeases;
@@ -82,11 +83,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
 
         var leaseReq = new LeaseRequest
         {
-            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId),
-            Set = { leases }
+            LeaseId = leaseId,
+            Set = leases.ToList()
         };
 
-        foreach (var leaseServiceClient in _leaseServiceClients) leaseServiceClient.RequestLeaseAsync(leaseReq);
+        foreach (var leaseServiceClient in _leaseServiceClients)
+            leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
 
         _executedTrans.Add(leaseId, false);
 
@@ -123,7 +125,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         foreach (var (key, queue) in _consensusState.Values[^1]?.LeaseQueues)
         {
             if (queue.Count <= 1 || !queue.Peek().Equals(leaseId)) continue;
-            
+
             foreach (var leaseServiceClient in _leaseServiceClients)
                 leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
                     {

@@ -10,15 +10,15 @@ namespace DADTKV;
 public class UrbReceiver<TR, TA, TC>
 {
     private readonly List<TC> _clients;
-    private readonly Func<TR, string> _getMessageId;
+    private readonly Func<TR, ulong> _getMessageId;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
-    private readonly HashSet<string> _msgIdLookup;
+    private readonly HashSet<ulong> _msgIdLookup;
     private readonly Action<TR> _urbDeliver;
 
-    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TR, string> getMessageId,
+    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TR, ulong> getMessageId,
         Func<TC, TR, Task<TA>> getResponse)
     {
-        _msgIdLookup = new HashSet<string>();
+        _msgIdLookup = new HashSet<ulong>();
         _clients = clients;
         _urbDeliver = urbDeliver;
         _getMessageId = getMessageId;
