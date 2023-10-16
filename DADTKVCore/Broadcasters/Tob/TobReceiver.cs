@@ -1,18 +1,15 @@
 namespace DADTKV;
 
-public class TobReceiver<TR, TA, TC> where TR : IFifoUrbRequest<TR>
+public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 {
-    private readonly Func<TR, ulong> _getMessageId;
     private readonly List<TR> _pendingRequests = new();
     private readonly Action<TR> _tobDeliver;
     private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
     private long _lastProcessedMessageId = -1;
 
-    public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TR, ulong> getMessageId,
-        Func<TC, TR, Task<TA>> getResponse)
+    public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse)
     {
         _tobDeliver = tobDeliver;
-        _getMessageId = getMessageId;
         _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse);
     }
 
@@ -25,7 +22,7 @@ public class TobReceiver<TR, TA, TC> where TR : IFifoUrbRequest<TR>
     {
         lock (this)
         {
-            var messageId = (long)_getMessageId(request);
+            var messageId = (long)request.MessageId;
 
             if (messageId > _lastProcessedMessageId + 1)
             {

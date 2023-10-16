@@ -1,6 +1,6 @@
 namespace DADTKV;
 
-public class LearnRequest : IFifoUrbRequest<LearnRequest>
+public class LearnRequest : ITobRequest<LearnRequest>
 {
     private readonly ProcessConfiguration _processConfiguration;
     public ulong RoundNumber { get; }
@@ -21,7 +21,6 @@ public class LearnRequest : IFifoUrbRequest<LearnRequest>
 
     public int CompareTo(LearnRequest? other)
     {
-        // TODO: Implement this
-        return -1;
+        return RoundNumber.CompareTo(other?.RoundNumber);
     }
 }

@@ -15,7 +15,6 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly ulong _initialProposalNumber;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
     private readonly List<LeaseRequest> _leaseRequests = new();
-    private readonly object _leaseRequestsLockObject = new();
 
     private readonly UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urBroadcaster;
 
@@ -44,7 +43,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>A lease response.</returns>
     public override Task<LeaseResponseDto> RequestLease(LeaseRequestDto request, ServerCallContext context)
     {
-        lock (_leaseRequestsLockObject)
+        lock (_leaseRequests)
         {
             _leaseRequests.Add(LeaseRequestDtoConverter.ConvertFromDto(request));
             return Task.FromResult(new LeaseResponseDto { Ok = true });
@@ -94,7 +93,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
 
             // TODO Add lock?... :(
-            while ((ulong)_consensusState.Values.Count <= roundNumber ||
+            while ((ulong)_consensusState.Values.Count <= roundNumber || 
                    _consensusState.Values[(int)roundNumber] == null)
                 Thread.Sleep(100);
 
@@ -134,7 +133,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var myProposalValue = new ConsensusValue();
 
-        lock (_leaseRequestsLockObject)
+        lock (_leaseRequests)
         {
             var toRemove = new List<LeaseRequest>();
 

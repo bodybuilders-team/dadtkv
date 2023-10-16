@@ -49,20 +49,22 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _fifoUrbReceiver.FifoUrbProcessRequest(
             UpdateRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
 
-        return Task.FromResult(new UpdateResponseDto
-        {
-            Ok = true
-        });
+        return Task.FromResult(new UpdateResponseDto { Ok = true });
     }
 
-    public void UrbDeliver(UpdateRequest request)
+    private void UrbDeliver(UpdateRequest request)
     {
         lock (_leaseQueues)
         {
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
 
             // TODO what if we never obtain the leases
-            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId)) Thread.Sleep(100);
+            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
+            {
+                Monitor.Exit(_leaseQueues);
+                Thread.Sleep(100);
+                Monitor.Enter(_leaseQueues);
+            }
 
             lock (_dataStore)
             {

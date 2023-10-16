@@ -1,11 +1,10 @@
 namespace DADTKV;
 
-public class FreeLeaseRequest : IUrbRequest<FreeLeaseRequest>
+public class FreeLeaseRequest : IUrbRequest<FreeLeaseRequest> // TODO: Just URB? or FIFO URB? or TOB?
 {
     private readonly ProcessConfiguration _processConfiguration;
     public readonly LeaseId LeaseId;
-    public readonly ulong ServerId;
-
+    public ulong ServerId { get; }
     public ulong SequenceNum { get; set; }
     public ulong MessageId => ServerId + SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
 

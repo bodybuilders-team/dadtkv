@@ -29,7 +29,6 @@ internal static class Program
         LeaseQueues leaseQueues = new();
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
-        var freedLeases = new HashSet<LeaseId>();
 
         var server = new Server
         {

@@ -9,7 +9,7 @@ namespace DADTKV;
 public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly DataStore _dataStore;
-    private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
+    private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
@@ -72,52 +72,45 @@ public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
     /// <returns>The result of the transaction.</returns>
     private Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto request)
     {
-        var leases = ExtractLeases(request);
+        lock (_leaseQueues)
+        {
+            var leases = ExtractLeases(request);
 
-        //TODO: Validate if we already have lease and there is no conflict
-        // Waiting for consensus value where lease id are on the top of the queue
+            // TODO: Optimization: Fast path
 
-        //TODO: Optimization
-        // Fast path, can only execute if all the lease ids we are using have not been sent free lease req
-        // if (_consensusState.Value != null && CheckLeases(_consensusState.Value, leases))
-        // {
-        //     ExecuteTransaction(request.ReadSet, request.WriteSet);
-        // }
+            var leaseId = new LeaseId(
+                sequenceNum: _leaseSequenceNumCounter++,
+                serverId: _processConfiguration.ServerId
+            );
 
-        var leaseId = new LeaseId(
-            _processConfiguration.ServerId,
-            _leaseSequenceNumCounter++
-        );
+            var leaseReq = new LeaseRequest(leaseId, leases.ToList());
 
-        var leaseReq = new LeaseRequest(
-            leaseId,
-            leases.ToList()
-        );
+            foreach (var leaseServiceClient in _leaseServiceClients)
+                leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
 
-        foreach (var leaseServiceClient in _leaseServiceClients)
-            leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
+            _executedTrans.Add(leaseId, false);
 
-        _executedTrans.Add(leaseId, false);
-
-        while (!_leaseQueues.ObtainedLeases(leaseReq))
-            Thread.Sleep(100);
-
-        // TODO put to false and add free lease request handler
-        var conflict = true;
-        foreach (var (key, queue) in _leaseQueues)
-            if (queue.Peek().Equals(leaseId) && queue.Count > 1)
+            while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
-                conflict = true;
-                break;
+                Monitor.Exit(_leaseQueues);
+                Thread.Sleep(100);
+                Monitor.Enter(_leaseQueues);
             }
 
-        // Commit transaction
-        var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
+            // TODO put to false and add free lease request handler
+            var conflict = true;
+            foreach (var (key, queue) in _leaseQueues)
+                if (queue.Peek().Equals(leaseId) && queue.Count > 1)
+                {
+                    conflict = true;
+                    break;
+                }
 
-        _executedTrans[leaseId] = true;
+            // Commit transaction
+            var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
 
-
-        return Task.FromResult(new TxSubmitResponseDto { ReadSet = { readData } });
+            return Task.FromResult(new TxSubmitResponseDto { ReadSet = { readData } });
+        }
     }
 
     /// <summary>
@@ -135,6 +128,7 @@ public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
         lock (_dataStore)
         {
             returnReadSet = _dataStore.ExecuteTransaction(readSet, writeSet);
+            _executedTrans[leaseId] = true;
         }
 
         if (freeLease) _leaseQueues.FreeLeases(leaseId);

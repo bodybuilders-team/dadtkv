@@ -41,7 +41,6 @@ public class TmLearner : LearnerService.LearnerServiceBase
         _tobReceiver = new TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             TobDeliver,
-            req => req.RoundNumber,
             (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
@@ -76,7 +75,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
             {
                 leaseRequest.Set.ForEach(key =>
                 {
-                    if (!_leaseQueues.ContainsKey(key)) _leaseQueues.Add(key, new Queue<LeaseId>());
+                    if (!_leaseQueues.ContainsKey(key))
+                        _leaseQueues.Add(key, new Queue<LeaseId>());
 
                     _leaseQueues[key].Enqueue(leaseRequest.LeaseId);
                 });
@@ -91,9 +91,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId == _processConfiguration.ServerId && queue.Count > 1 &&
-                    _executedTrans[leaseId]
-                   )
+                if (leaseId.ServerId == _processConfiguration.ServerId && queue.Count > 1 && _executedTrans[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);
                     queue.Dequeue();
@@ -101,7 +99,6 @@ public class TmLearner : LearnerService.LearnerServiceBase
             }
 
             foreach (var leaseId in leasesToBeFreed)
-                // TODO abstract FreeLeaseRequest to remove updateSequenceNumber
                 _urBroadcaster.UrBroadcast(
                     new FreeLeaseRequest(_processConfiguration, leaseId),
                     (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync

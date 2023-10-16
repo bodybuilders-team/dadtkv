@@ -14,8 +14,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private readonly HashSet<ulong> _msgIdLookup;
     private readonly Action<TR> _urbDeliver;
 
-    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver,
-        Func<TC, TR, Task<TA>> getResponse)
+    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse)
     {
         _msgIdLookup = new HashSet<ulong>();
         _clients = clients;
