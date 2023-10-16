@@ -74,7 +74,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
         {
             request.ConsensusValue.LeaseRequests.ForEach(leaseRequest =>
             {
-                leaseRequest.Set.ForEach(key =>
+                leaseRequest.Keys.ForEach(key =>
                 {
                     if (!_leaseQueues.ContainsKey(key))
                         _leaseQueues.Add(key, new Queue<LeaseId>());

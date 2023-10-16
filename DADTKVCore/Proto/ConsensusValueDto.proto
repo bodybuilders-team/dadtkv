@@ -6,5 +6,5 @@ option csharp_namespace = "Dadtkv";
 import "LeaseRequestDto.proto";
 
 message ConsensusValueDto {
-  repeated dadtkv.LeaseRequestDto leaseRequests = 1;
+  repeated LeaseRequestDto leaseRequests = 1;
 }

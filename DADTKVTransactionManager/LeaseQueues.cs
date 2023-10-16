@@ -27,7 +27,7 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
     /// <returns>True if the leases are on the top of the queue, false otherwise.</returns>
     public bool ObtainedLeases(LeaseRequest leaseReq)
     {
-        return ObtainedLeases(leaseReq.Set, leaseReq.LeaseId);
+        return ObtainedLeases(leaseReq.Keys, leaseReq.LeaseId);
     }
 
     public void FreeLeases(LeaseId leaseId)

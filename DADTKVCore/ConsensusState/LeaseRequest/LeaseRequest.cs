@@ -2,12 +2,12 @@ namespace Dadtkv;
 
 public class LeaseRequest
 {
-    public LeaseRequest(LeaseId leaseId, List<string> set)
+    public LeaseRequest(LeaseId leaseId, List<string> keys)
     {
         LeaseId = leaseId;
-        Set = set;
+        Keys = keys;
     }
 
     public LeaseId LeaseId { get; }
-    public List<string> Set { get; } // TODO: Rename to keys
+    public List<string> Keys { get; }
 }

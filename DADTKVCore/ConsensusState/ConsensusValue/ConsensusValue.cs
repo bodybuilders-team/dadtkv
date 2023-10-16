@@ -18,7 +18,7 @@ public class ConsensusValue
         {
             LeaseRequests = LeaseRequests.Select(leaseRequest => new LeaseRequest(
                 leaseRequest.LeaseId,
-                leaseRequest.Set.ToList()
+                leaseRequest.Keys.ToList()
             )).ToList()
         };
     }

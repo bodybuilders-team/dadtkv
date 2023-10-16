@@ -6,7 +6,7 @@ public static class LeaseRequestDtoConverter
     {
         return new LeaseRequest(
             LeaseIdDtoConverter.ConvertFromDto(leaseRequestDto.LeaseId),
-            leaseRequestDto.Set.Select(s => s).ToList()
+            leaseRequestDto.Keys.Select(s => s).ToList()
         );
     }
 
@@ -15,7 +15,7 @@ public static class LeaseRequestDtoConverter
         return new LeaseRequestDto
         {
             LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseRequest.LeaseId),
-            Set = { leaseRequest.Set }
+            Keys = { leaseRequest.Keys }
         };
     }
 }
