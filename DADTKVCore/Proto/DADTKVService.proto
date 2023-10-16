@@ -6,23 +6,23 @@ option csharp_namespace = "DADTKV";
 import "DadInt.proto";
 
 service DADTKVService {
-  rpc TxSubmit(TxSubmitRequest) returns (TxSubmitResponse);
-  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc TxSubmit(TxSubmitRequestDto) returns (TxSubmitResponseDto);
+  rpc Status(StatusRequestDto) returns (StatusResponseDto);
 }
 
-message TxSubmitRequest {
+message TxSubmitRequestDto {
   string clientID = 1;
   repeated string readSet = 2;
   repeated dadtkv.DadInt writeSet = 3;
 }
 
-message TxSubmitResponse {
+message TxSubmitResponseDto {
   repeated dadtkv.DadInt readSet = 1;
 }
 
-message StatusRequest {
+message StatusRequestDto {
 }
 
-message StatusResponse {
+message StatusResponseDto {
   repeated string status = 1;
 }

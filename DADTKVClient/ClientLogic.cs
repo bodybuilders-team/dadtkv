@@ -25,7 +25,7 @@ internal class ClientLogic
     /// <returns>The values read from the server.</returns>
     public async Task<List<DadInt>> TxSubmit(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
     {
-        var request = new TxSubmitRequest
+        var request = new TxSubmitRequestDto
         {
             ClientID = _clientId,
             ReadSet = { readSet },
@@ -41,7 +41,7 @@ internal class ClientLogic
     /// </summary>
     public async Task<RepeatedField<string>> Status()
     {
-        var request = new StatusRequest();
+        var request = new StatusRequestDto();
         var response = await _client.StatusAsync(request);
         return response.Status;
     }

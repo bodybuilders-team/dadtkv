@@ -9,16 +9,17 @@ namespace DADTKV;
 /// </summary>
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly DataStore _dataStore;
     private readonly LeaseQueues _leaseQueues;
-    
 
-    private readonly UrbReceiver<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient, string>
-        _tobReceiver;
+    private readonly FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
+        _fifoUrbReceiver;
 
     public StateUpdateServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
     {
+        _processConfiguration = processConfiguration;
         _dataStore = dataStore;
         _leaseQueues = leaseQueues;
 
@@ -29,15 +30,12 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
-        _tobReceiver =
-            new TobReceiver<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient, string>(
+        _fifoUrbReceiver =
+            new FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
                 UrbDeliver,
-                req => req.ServerId + "-" + req.SequenceNum,
-                (client, req) => client.UpdateAsync(req).ResponseAsync
+                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.convertToDto(req)).ResponseAsync
             );
-        
-        
     }
 
     /// <summary>
@@ -46,11 +44,11 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <param name="request">The update request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The update response.</returns>
-    public override Task<UpdateResponse> Update(UpdateRequest request, ServerCallContext context)
+    public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
-        _tobReceiver.UrbProcessRequest(request);
+        _fifoUrbReceiver.FifoUrbProcessRequest(UpdateRequestDtoConverter.convertFromDto(request, _processConfiguration));
 
-        return Task.FromResult(new UpdateResponse
+        return Task.FromResult(new UpdateResponseDto
         {
             Ok = true
         });
@@ -61,10 +59,9 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         lock (_leaseQueues)
         {
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
-            var leaseId = LeaseIdDtoConverter.ConvertFromDto(request.LeaseId);
 
             // TODO what if we never obtain the leases
-            while (!_leaseQueues.ObtainedLeases(set, leaseId))
+            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
             {
                 Thread.Sleep(100);
             }
@@ -78,7 +75,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             {
                 foreach (var (key, queue) in _leaseQueues)
                 {
-                    if (queue.Count > 0 && queue.Peek().Equals(leaseId))
+                    if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
                     {
                         queue.Dequeue();
                     }

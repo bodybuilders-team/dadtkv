@@ -15,9 +15,12 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <Protobuf Include="./proto/LearnRequestDto.proto" AdditionalImportDirs="./proto/" GrpcServices="None"/>
         <Protobuf Include="./proto/ConsensusValueDto.proto" AdditionalImportDirs="./proto/" GrpcServices="None"/>
         <Protobuf Include="./proto/LeaseRequestDto.proto" AdditionalImportDirs="./proto/" GrpcServices="None"/>
         <Protobuf Include="./proto/LeaseIdDto.proto" GrpcServices="None"/>
     </ItemGroup>
+
+
 
 </Project>

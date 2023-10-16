@@ -2,40 +2,22 @@ using DADTKV;
 
 namespace DADTKVTransactionManager;
 
-public class TobReceiver<TR, TA, TC>
+public class TobReceiver<TR, TA, TC> where TR : IFifoUrbRequest<TR>
 {
-    private readonly UrbReceiver<TR, TA, TC, ulong> _urbReceiver;
+    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
     private readonly Action<TR> _tobDeliver;
     private readonly Func<TR, ulong> _getMessageId;
     private long _lastProcessedMessageId = -1;
-    private readonly List<TobRequest> _pendingRequests = new();
-
-    class TobRequest : IComparable<TobRequest>
-    {
-        public TobRequest(TR request, long messageId)
-        {
-            this.Request = request;
-            this.MessageId = messageId;
-        }
-
-        public TR Request { get; set; }
-        public long MessageId { get; set; }
-
-        public int CompareTo(TobRequest? other)
-        {
-            return MessageId.CompareTo(other?.MessageId);
-        }
-    }
-
+    private readonly List<TR> _pendingRequests = new();
 
     public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TR, ulong> getMessageId,
         Func<TC, TR, Task<TA>> getResponse)
     {
         _tobDeliver = tobDeliver;
         _getMessageId = getMessageId;
-        _urbReceiver = new UrbReceiver<TR, TA, TC, ulong>(clients, UrbDeliver, getMessageId, getResponse);
+        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse);
     }
-    
+
     public void TobProcessRequest(TR request)
     {
         _urbReceiver.UrbProcessRequest(request);
@@ -49,7 +31,7 @@ public class TobReceiver<TR, TA, TC>
 
             if (messageId > _lastProcessedMessageId + 1)
             {
-                _pendingRequests.AddSorted(new TobRequest(request, messageId));
+                _pendingRequests.AddSorted(request);
                 return;
             }
 
@@ -60,11 +42,11 @@ public class TobReceiver<TR, TA, TC>
             for (var i = 0; i < _pendingRequests.Count; i++)
             {
                 var pendingRequest = _pendingRequests[i];
-                if (pendingRequest.MessageId != _lastProcessedMessageId + 1)
+                if (pendingRequest.MessageId != (ulong)(_lastProcessedMessageId + 1))
                     break;
 
                 _lastProcessedMessageId++;
-                _tobDeliver(pendingRequest.Request);
+                _tobDeliver(pendingRequest);
                 _pendingRequests.RemoveAt(i--);
             }
         }

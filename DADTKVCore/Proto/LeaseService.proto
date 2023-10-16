@@ -6,9 +6,9 @@ option csharp_namespace = "DADTKV";
 import "LeaseRequestDto.proto";
 
 service LeaseService {
-  rpc RequestLease(LeaseRequestDto) returns (LeaseResponse);
+  rpc RequestLease(LeaseRequestDto) returns (LeaseResponseDto);
 }
 
-message LeaseResponse {
+message LeaseResponseDto {
   bool ok = 1;
 }

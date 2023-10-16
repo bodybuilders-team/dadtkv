@@ -13,9 +13,9 @@ public class TmLearner : LearnerService.LearnerServiceBase
     private readonly ProcessConfiguration _processConfiguration;
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
-    private readonly TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _tobReceiver;
-
-    private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponse, StateUpdateService.StateUpdateServiceClient>
+    private readonly TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _tobReceiver;
+    
+    private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
 
     public TmLearner(ProcessConfiguration processConfiguration,
@@ -40,15 +40,15 @@ public class TmLearner : LearnerService.LearnerServiceBase
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
-        _tobReceiver = new TobReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _tobReceiver = new TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             TobDeliver,
             req => req.RoundNumber,
-            (client, req) => client.LearnAsync(req).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.convertToDto(req)).ResponseAsync
         );
 
         _urBroadcaster =
-            new UrBroadcaster<FreeLeaseRequest, FreeLeaseResponse, StateUpdateService.StateUpdateServiceClient>(
+            new UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients
             );
     }
@@ -59,10 +59,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <param name="request">The learn request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The learn response.</returns>
-    public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
+    public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _tobReceiver.TobProcessRequest(request);
-        return Task.FromResult(new LearnResponse { Ok = true });
+        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.convertFromDto(request, _processConfiguration));
+        return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
                         _leaseQueues.Add(key, new Queue<LeaseId>());
                     }
 
-                    _leaseQueues[key].Enqueue(LeaseIdDtoConverter.ConvertFromDto(leaseRequest.LeaseId));
+                    _leaseQueues[key].Enqueue(leaseRequest.LeaseId);
                 });
             });
 
@@ -96,7 +96,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
+                if (leaseId.ServerId == _processConfiguration.ServerId && queue.Count > 1 &&
                     _executedTrans[leaseId]
                    )
                 {
@@ -109,9 +109,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
             {
                 // TODO abstract FreeLeaseRequest to remove updateSequenceNumber
                 _urBroadcaster.UrBroadcast(
-                    new FreeLeaseRequest { LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId) },
-                    (req, seq) => req.SequenceNum = seq,
-                    (client, req) => client.FreeLeaseAsync(req).ResponseAsync
+                    new FreeLeaseRequest(_processConfiguration, leaseId),
+                    (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.convertToDto(req)).ResponseAsync
                 );
             }
         }

@@ -21,4 +21,17 @@ public class ProcessConfiguration : SystemConfiguration
     protected List<string> MyCurrentSuspicions => CurrentSuspicions
         .Where(tuple => tuple.Item1 == ProcessInfo.Id)
         .Select(tuple => tuple.Item2).ToList();
+
+    public ulong ServerId
+    {
+        get
+        {
+            var index = this.Processes.FindIndex((p) => p.Id.Equals(ProcessInfo.Id));
+
+            if (index < 0)
+                throw new Exception("Server not found");
+
+            return (ulong) index;
+        }
+    }
 }

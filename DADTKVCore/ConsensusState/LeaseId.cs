@@ -5,8 +5,14 @@ namespace DADTKV;
 /// </summary>
 public class LeaseId
 {
-    public ulong SequenceNum = 0;
-    public string ServerId = "";
+    public readonly ulong SequenceNum;
+    public readonly ulong ServerId;
+    
+    public LeaseId(ulong sequenceNum, ulong serverId)
+    {
+        SequenceNum = sequenceNum;
+        ServerId = serverId;
+    }
 
     private bool Equals(LeaseId other)
     {
@@ -29,4 +35,5 @@ public class LeaseId
     {
         return $"(SequenceNum: {SequenceNum}, ServerId: '{ServerId}')";
     }
+
 }

@@ -17,7 +17,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<LeaseRequest> _leaseRequests = new();
     private readonly object _leaseRequestsLockObject = new();
 
-    private readonly UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urBroadcaster;
+    private readonly UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urBroadcaster;
 
     public Proposer(
         ConsensusState consensusState,
@@ -30,7 +30,8 @@ public class Proposer : LeaseService.LeaseServiceBase
         _acceptorServiceServiceClients = acceptorServiceClients;
         _leaseManagerConfiguration = leaseManagerConfiguration;
         _urBroadcaster =
-            new UrBroadcaster<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(learnerServiceClients);
+            new UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
+                learnerServiceClients);
         _initialProposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
     }
@@ -41,12 +42,12 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <param name="request">The lease request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>A lease response.</returns>
-    public override Task<LeaseResponse> RequestLease(LeaseRequestDto request, ServerCallContext context)
+    public override Task<LeaseResponseDto> RequestLease(LeaseRequestDto request, ServerCallContext context)
     {
         lock (_leaseRequestsLockObject)
         {
             _leaseRequests.Add(LeaseRequestDtoConverter.ConvertFromDto(request));
-            return Task.FromResult(new LeaseResponse { Ok = true });
+            return Task.FromResult(new LeaseResponseDto { Ok = true });
         }
     }
 
@@ -220,11 +221,11 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// </returns>
     private bool SendPrepares(ulong proposalNumber, ulong roundNumber, Action<ConsensusValueDto?> updateAdoptedValue)
     {
-        var asyncTasks = new List<Task<PrepareResponse>>();
+        var asyncTasks = new List<Task<PrepareResponseDto>>();
         foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
         {
             var res = acceptorServiceServiceClient.PrepareAsync(
-                new PrepareRequest
+                new PrepareRequestDto
                 {
                     ProposalNumber = proposalNumber,
                     RoundNumber = roundNumber
@@ -265,11 +266,11 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>True if a majority of acceptors accepted the proposal, false otherwise.</returns>
     private bool SendAccepts(ConsensusValue proposalValue, ulong proposalNumber, ulong roundNumber)
     {
-        var acceptCalls = new List<Task<AcceptResponse>>();
+        var acceptCalls = new List<Task<AcceptResponseDto>>();
         _acceptorServiceServiceClients.ForEach(client =>
         {
             var res = client.AcceptAsync(
-                new AcceptRequest
+                new AcceptRequestDto
                 {
                     ProposalNumber = proposalNumber,
                     Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
@@ -291,18 +292,17 @@ public class Proposer : LeaseService.LeaseServiceBase
     private void Decide(ConsensusValue newConsensusValue, ulong roundNumber)
     {
         _urBroadcaster.UrBroadcast(
-            new LearnRequest
-            {
-                ServerId = _leaseManagerConfiguration.ProcessInfo.Id,
-                ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(newConsensusValue),
-                RoundNumber = roundNumber
-            },
-            (req, seqNum) => req.SequenceNum = seqNum,
+            new LearnRequest(
+                processConfiguration: _leaseManagerConfiguration,
+                serverId: _leaseManagerConfiguration.ServerId,
+                roundNumber: roundNumber,
+                consensusValue: newConsensusValue
+            ),
             req =>
             {
                 /* TODO Update the consensus round value here too? */
             },
-            (client, req) => client.LearnAsync(req).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.convertToDto(req)).ResponseAsync
         );
     }
 }

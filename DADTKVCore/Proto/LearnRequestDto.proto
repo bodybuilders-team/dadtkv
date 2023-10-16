@@ -1,0 +1,13 @@
+syntax = "proto3";
+package dadtkv;
+
+option csharp_namespace = "DADTKV";
+
+import "ConsensusValueDto.proto";
+
+message LearnRequestDto {
+  uint64 serverId = 1;
+  uint64 sequenceNum = 2;
+  uint64 roundNumber = 3;
+  ConsensusValueDto consensusValue = 4;
+}

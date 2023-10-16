@@ -30,7 +30,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <param name="request">The prepare request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The prepare response.</returns>
-    public override Task<PrepareResponse> Prepare(PrepareRequest request, ServerCallContext context)
+    public override Task<PrepareResponseDto> Prepare(PrepareRequestDto request, ServerCallContext context)
     {
         lock (_acceptorState)
         {
@@ -85,7 +85,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <param name="request">The accept request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The accept response.</returns>
-    public override Task<AcceptResponse> Accept(AcceptRequest request, ServerCallContext context)
+    public override Task<AcceptResponseDto> Accept(AcceptRequestDto request, ServerCallContext context)
     {
         lock (_acceptorState)
         {
@@ -93,12 +93,12 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
 
             // TODO does it need to be exactly the current read timestamp? Just checked, and greater or equal seems fine
             if (request.ProposalNumber != currentRoundAcceptorState.ReadTimestamp)
-                return Task.FromResult(new AcceptResponse { Accepted = false });
+                return Task.FromResult(new AcceptResponseDto { Accepted = false });
 
             currentRoundAcceptorState.WriteTimestamp = request.ProposalNumber;
             currentRoundAcceptorState.Value = ConsensusValueDtoConverter.ConvertFromDto(request.Value);
 
-            return Task.FromResult(new AcceptResponse { Accepted = true });
+            return Task.FromResult(new AcceptResponseDto { Accepted = true });
         }
     }
 }

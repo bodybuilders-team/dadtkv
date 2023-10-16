@@ -17,7 +17,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     private readonly ProcessConfiguration _processConfiguration;
     private ulong _leaseSequenceNumCounter;
 
-    private readonly UrBroadcaster<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient>
+    private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
 
     public DADTKVServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
@@ -42,7 +42,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         }
 
         _urBroadcaster =
-            new UrBroadcaster<UpdateRequest, UpdateResponse, StateUpdateService.StateUpdateServiceClient>(
+            new UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients
             );
 
@@ -58,7 +58,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// <param name="request">The transaction to be executed.</param>
     /// <param name="context">The call context.</param>
     /// <returns>The result of the transaction.</returns>
-    public override Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request, ServerCallContext context)
+    public override Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto request, ServerCallContext context)
     {
         lock (this) // One transaction at a time
         {
@@ -71,7 +71,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// </summary>
     /// <param name="request">The transaction to be executed.</param>
     /// <returns>The result of the transaction.</returns>
-    private Task<TxSubmitResponse> TxSubmit(TxSubmitRequest request)
+    private Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto request)
     {
         var leases = ExtractLeases(request);
 
@@ -85,17 +85,15 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         //     ExecuteTransaction(request.ReadSet, request.WriteSet);
         // }
 
-        var leaseId = new LeaseId
-        {
-            ServerId = _processConfiguration.ProcessInfo.Id,
-            SequenceNum = _leaseSequenceNumCounter++
-        };
+        var leaseId = new LeaseId(
+            _processConfiguration.ServerId,
+            _leaseSequenceNumCounter++
+        );
 
-        var leaseReq = new LeaseRequest
-        {
-            LeaseId = leaseId,
-            Set = leases.ToList()
-        };
+        var leaseReq = new LeaseRequest(
+            leaseId,
+            leases.ToList()
+        );
 
         foreach (var leaseServiceClient in _leaseServiceClients)
             leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
@@ -117,12 +115,12 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         }
 
         // Commit transaction
-        var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet, conflict);
+        var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
 
         _executedTrans[leaseId] = true;
 
 
-        return Task.FromResult(new TxSubmitResponse { ReadSet = { readData } });
+        return Task.FromResult(new TxSubmitResponseDto { ReadSet = { readData } });
     }
 
     /// <summary>
@@ -132,7 +130,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// <param name="writeSet">The keys and values to write.</param>
     /// <returns>The values read.</returns>
     private IEnumerable<DadInt> ExecuteTransaction(LeaseId leaseId, IEnumerable<string> readSet,
-        IEnumerable<DadInt> writeSet,
+        List<DadInt> writeSet,
         bool freeLease)
     {
         List<DadInt> returnReadSet;
@@ -148,16 +146,15 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         }
 
         _urBroadcaster.UrBroadcast(
-            new UpdateRequest
-            {
-                ServerId = _processConfiguration.ProcessInfo.Id,
-                LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId),
-                WriteSet = { writeSet },
-                FreeLease = freeLease
-            },
-            (req, seq) => req.SequenceNum = seq,
+            new UpdateRequest(
+                processConfiguration: _processConfiguration,
+                serverId: _processConfiguration.ServerId,
+                leaseId: leaseId,
+                writeSet: writeSet,
+                freeLease: freeLease
+            ),
             req => { },
-            (client, req) => client.UpdateAsync(req).ResponseAsync
+            (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.convertToDto(req)).ResponseAsync
         );
 
         return returnReadSet;
@@ -168,7 +165,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// </summary>
     /// <param name="request">The transaction.</param>
     /// <returns>The leases.</returns>
-    private static HashSet<string> ExtractLeases(TxSubmitRequest request)
+    private static HashSet<string> ExtractLeases(TxSubmitRequestDto request)
     {
         var leases = new HashSet<string>();
         foreach (var lease in request.WriteSet.Select(x => x.Key))
@@ -187,7 +184,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
     /// <param name="request">The status request.</param>
     /// <param name="context">The call context.</param>
     /// <returns>The status response.</returns>
-    public override Task<StatusResponse> Status(StatusRequest request, ServerCallContext context)
+    public override Task<StatusResponseDto> Status(StatusRequestDto request, ServerCallContext context)
     {
         var status = new List<string>();
         lock (this)
@@ -195,7 +192,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             status.Add(_dataStore.ToString());
             // status.Add(_consensusState.ToString());
 
-            return Task.FromResult(new StatusResponse { Status = { status } });
+            return Task.FromResult(new StatusResponseDto { Status = { status } });
         }
     }
 }

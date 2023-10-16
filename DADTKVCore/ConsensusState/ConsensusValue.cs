@@ -18,11 +18,10 @@ public class ConsensusValue
     {
         return new ConsensusValue
         {
-            LeaseRequests = LeaseRequests.Select(leaseRequest => new LeaseRequest
-            {
-                LeaseId = leaseRequest.LeaseId,
-                Set = leaseRequest.Set.ToList()
-            }).ToList()
+            LeaseRequests = LeaseRequests.Select(leaseRequest => new LeaseRequest(
+                leaseId: leaseRequest.LeaseId,
+                set: leaseRequest.Set.ToList()
+            )).ToList()
         };
     }
 

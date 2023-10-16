@@ -12,11 +12,10 @@ public static class LeaseIdDtoConverter
     /// <returns>The converted <see cref="LeaseId" />.</returns>
     public static LeaseId ConvertFromDto(LeaseIdDto leaseIdDto)
     {
-        return new LeaseId
-        {
-            ServerId = leaseIdDto.ServerId,
-            SequenceNum = leaseIdDto.SequenceNum
-        };
+        return new LeaseId(
+            serverId: leaseIdDto.ServerId,
+            sequenceNum: leaseIdDto.SequenceNum
+        );
     }
 
     /// <summary>
