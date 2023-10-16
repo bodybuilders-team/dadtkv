@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Information about a process in the system.

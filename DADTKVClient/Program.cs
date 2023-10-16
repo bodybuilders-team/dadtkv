@@ -1,4 +1,4 @@
-﻿namespace DADTKV;
+﻿namespace Dadtkv;
 
 internal static class Program
 {

@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 public class UpdateRequest : IUrbRequest<UpdateRequest>
 {

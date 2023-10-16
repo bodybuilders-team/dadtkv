@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 public interface ITobRequest<in TR> : IUrbRequest<TR>
 {

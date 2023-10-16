@@ -1,9 +1,9 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
-///     Utilities for the DADTKV project.
+///     Utilities for the Dadtkv project.
 /// </summary>
-public static class DADTKVUtils
+public static class DadtkvUtils
 {
     private const int DefaultTimeout = 1000;
 

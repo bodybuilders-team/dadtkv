@@ -1,7 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 internal static class Program
 {

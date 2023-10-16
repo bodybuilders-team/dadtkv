@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     A simple in-memory data store that stores key-value pairs.

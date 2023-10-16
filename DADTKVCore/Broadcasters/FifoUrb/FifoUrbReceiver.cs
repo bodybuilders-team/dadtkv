@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 {

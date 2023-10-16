@@ -1,14 +1,14 @@
 ﻿using System.Diagnostics;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
-///     The system manager is responsible for starting the DADTKV system.
+///     The system manager is responsible for starting the Dadtkv system.
 /// </summary>
 internal static class SystemManager
 {
     /// <summary>
-    ///     Entry point for the DADTKV system.
+    ///     Entry point for the Dadtkv system.
     /// </summary>
     /// <param name="args">Arguments: systemConfigFilePath</param>
     private static void Main(string[] args)
@@ -28,21 +28,21 @@ internal static class SystemManager
             return;
         }
 
-        // Start DADTKV servers (Transaction Managers, Lease Managers)
+        // Start Dadtkv servers (Transaction Managers, Lease Managers)
         StartServers(configuration, configurationFile);
         return;
         Thread.Sleep(5000);
 
-        // Start DADTKV clients
+        // Start Dadtkv clients
         StartClients(configuration);
 
         // Wait for user input to shut down the system
-        Console.WriteLine("Press Enter to shut down the DADTKV system.");
+        Console.WriteLine("Press Enter to shut down the Dadtkv system.");
         Console.ReadLine();
     }
 
     /// <summary>
-    ///     Starts the DADTKV servers (Transaction Managers, Lease Managers).
+    ///     Starts the Dadtkv servers (Transaction Managers, Lease Managers).
     /// </summary>
     /// <param name="config">The system configuration.</param>
     /// <param name="configurationFile">The system configuration file.</param>
@@ -50,9 +50,9 @@ internal static class SystemManager
     {
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName;
         var leaseManagerExePath =
-            Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
+            Path.Combine(solutionDirectory, "DadtkvLeaseManager/bin/Debug/net6.0/DadtkvLeaseManager.exe");
         var transactionManagerExePath = Path.Combine(solutionDirectory,
-            "DADTKV/bin/Debug/net6.0/DADTKV.exe");
+            "Dadtkv/bin/Debug/net6.0/Dadtkv.exe");
         Console.WriteLine(configurationFile);
 
         foreach (var process in config.ServerProcesses)
@@ -71,7 +71,7 @@ internal static class SystemManager
     }
 
     /// <summary>
-    ///     Starts the DADTKV clients.
+    ///     Starts the Dadtkv clients.
     /// </summary>
     /// <param name="config">The system configuration.</param>
     private static void StartClients(SystemConfiguration config)
@@ -82,7 +82,7 @@ internal static class SystemManager
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = "DADTKVClient.exe",
+                FileName = "DadtkvClient.exe",
                 ArgumentList =
                 {
                     config.TransactionManagers[0].Url!, // TODO: Ip lookup? Load balancing?

@@ -1,7 +1,7 @@
 using Grpc.Core;
 using Timer = System.Timers.Timer;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     The proposer is responsible for proposing values to the acceptors, and deciding on a value for a round, in the
@@ -231,7 +231,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         var highestWriteTimestamp = 0UL;
 
-        return DADTKVUtils.WaitForMajority(
+        return DadtkvUtils.WaitForMajority(
             asyncTasks,
             res =>
             {
@@ -275,7 +275,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             acceptCalls.Add(res.ResponseAsync);
         });
 
-        return DADTKVUtils.WaitForMajority(acceptCalls, res => res.Accepted);
+        return DadtkvUtils.WaitForMajority(acceptCalls, res => res.Accepted);
     }
 
     /// <summary>

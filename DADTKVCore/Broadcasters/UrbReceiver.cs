@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Receiver for the Uniform Reliable Broadcast protocol.
@@ -48,7 +48,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             .Select(client => _getResponse(client, request))
             .ToList();
 
-        var majority = DADTKVUtils.WaitForMajority(resTasks, res => true);
+        var majority = DadtkvUtils.WaitForMajority(resTasks, res => true);
 
         if (majority)
             _urbDeliver(request);

@@ -1,12 +1,12 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Implementation of the DadtkvService.
 /// </summary>
-public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
+public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 {
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans;

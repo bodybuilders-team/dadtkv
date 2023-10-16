@@ -1,20 +1,20 @@
 ﻿using Google.Protobuf.Collections;
 using Grpc.Net.Client;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
-///     Implements the client logic for the DADTKV service.
+///     Implements the client logic for the Dadtkv service.
 /// </summary>
 internal class ClientLogic
 {
-    private readonly DADTKVService.DADTKVServiceClient _client;
+    private readonly DadtkvService.DadtkvServiceClient _client;
     private readonly string _clientId;
 
     public ClientLogic(string clientId, string serverUrl)
     {
         _clientId = clientId;
-        _client = new DADTKVService.DADTKVServiceClient(GrpcChannel.ForAddress(serverUrl));
+        _client = new DadtkvService.DadtkvServiceClient(GrpcChannel.ForAddress(serverUrl));
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 public class LearnRequest : ITobRequest<LearnRequest>
 {

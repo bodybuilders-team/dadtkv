@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     The state of the consensus algorithm.

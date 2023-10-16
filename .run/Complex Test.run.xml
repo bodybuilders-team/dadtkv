@@ -1,17 +1,17 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Complex Test" type="CompoundRunConfigurationType">
-    <toRun name="11DADTKVLeaseManager" type="DotNetProject" />
-    <toRun name="12DADTKVLeaseManager" type="DotNetProject" />
-    <toRun name="13DADTKVLeaseManager" type="DotNetProject" />
-    <toRun name="21DADTKVTransactionManager" type="DotNetProject" />
-    <toRun name="22DADTKVTransactionManager" type="DotNetProject" />
-    <toRun name="23DADTKVTransactionManager" type="DotNetProject" />
-    <toRun name="31DADTKVClient" type="DotNetProject" />
-    <toRun name="32DADTKVClient" type="DotNetProject" />
-    <toRun name="33DADTKVClient" type="DotNetProject" />
-    <toRun name="34DADTKVClient" type="DotNetProject" />
-    <toRun name="35DADTKVClient" type="DotNetProject" />
-    <toRun name="36DADTKVClient" type="DotNetProject" />
+    <toRun name="11DadtkvLeaseManager" type="DotNetProject" />
+    <toRun name="12DadtkvLeaseManager" type="DotNetProject" />
+    <toRun name="13DadtkvLeaseManager" type="DotNetProject" />
+    <toRun name="21DadtkvTransactionManager" type="DotNetProject" />
+    <toRun name="22DadtkvTransactionManager" type="DotNetProject" />
+    <toRun name="23DadtkvTransactionManager" type="DotNetProject" />
+    <toRun name="31DadtkvClient" type="DotNetProject" />
+    <toRun name="32DadtkvClient" type="DotNetProject" />
+    <toRun name="33DadtkvClient" type="DotNetProject" />
+    <toRun name="34DadtkvClient" type="DotNetProject" />
+    <toRun name="35DadtkvClient" type="DotNetProject" />
+    <toRun name="36DadtkvClient" type="DotNetProject" />
     <method v="2" />
   </configuration>
 </component>

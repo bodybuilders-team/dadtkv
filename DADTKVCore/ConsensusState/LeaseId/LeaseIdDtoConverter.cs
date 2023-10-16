@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Converter class for converting between <see cref="LeaseId" /> and <see cref="LeaseIdDto" />.

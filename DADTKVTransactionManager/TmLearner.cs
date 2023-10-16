@@ -1,7 +1,7 @@
 using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.

@@ -1,6 +1,6 @@
 ﻿using Grpc.Core;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 internal static class Program
 {
@@ -34,7 +34,7 @@ internal static class Program
         {
             Services =
             {
-                DADTKVService.BindService(new DadtkvServiceImpl(processConfiguration,
+                DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration,
                     datastore, executedTrans, leaseQueues)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore,
                     leaseQueues)),

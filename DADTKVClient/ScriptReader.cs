@@ -1,4 +1,4 @@
-﻿namespace DADTKV;
+﻿namespace Dadtkv;
 
 /// <summary>
 ///     A class that reads a script and has methods to obtain the next command in the script.

@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Converts <see cref="ConsensusValue" /> to <see cref="ConsensusValueDto" /> and vice versa.

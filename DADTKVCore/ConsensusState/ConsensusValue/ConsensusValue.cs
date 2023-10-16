@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     ConsensusValue is the value that is being agreed upon by the Paxos algorithm.

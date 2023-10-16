@@ -1,6 +1,6 @@
 using Grpc.Core;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Acceptor in the Paxos algorithm.
