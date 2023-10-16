@@ -72,7 +72,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
 
             while (!UpdateConsensusValues())
-                Thread.Sleep(100);
+                Thread.Sleep(10);
 
             var roundNumber = (ulong)_consensusState.Values.Count;
 
@@ -95,7 +95,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             // TODO Add lock?... :(
             while ((ulong)_consensusState.Values.Count <= roundNumber || 
                    _consensusState.Values[(int)roundNumber] == null)
-                Thread.Sleep(100);
+                Thread.Sleep(10);
 
             timer.Start();
         };

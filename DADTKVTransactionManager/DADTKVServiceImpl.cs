@@ -90,12 +90,16 @@ public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
 
             _executedTrans.Add(leaseId, false);
 
+            
+            var start = DateTime.Now;
             while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
                 Monitor.Exit(_leaseQueues);
-                Thread.Sleep(100);
+                Thread.Sleep(10);
                 Monitor.Enter(_leaseQueues);
             }
+            var end = DateTime.Now;
+            Console.WriteLine("Time taken to obtain leases: " + (end - start).TotalMilliseconds + "ms");
 
             // TODO put to false and add free lease request handler
             var conflict = true;

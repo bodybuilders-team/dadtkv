@@ -1,6 +1,6 @@
 namespace DADTKV;
 
-public class UpdateRequest : IFifoUrbRequest<UpdateRequest>
+public class UpdateRequest : IUrbRequest<UpdateRequest>
 {
     private readonly ProcessConfiguration _processConfiguration;
 

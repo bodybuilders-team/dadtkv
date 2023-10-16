@@ -63,7 +63,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
             {
                 Monitor.Exit(_leaseQueues);
-                Thread.Sleep(100);
+                Thread.Sleep(10);
                 Monitor.Enter(_leaseQueues);
             }
 
