@@ -1,5 +1,3 @@
-using DADTKVTransactionManager;
-
 namespace DADTKV;
 
 /// <summary>
@@ -25,14 +23,9 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
     ///     If a majority of clients respond, the request is delivered.
     /// </summary>
     /// <param name="request">Request to broadcast.</param>
-    /// <param name="updateSequenceNumber">Function to update the sequence number of the request.</param>
     /// <param name="urbDeliver">Function to deliver the request.</param>
     /// <param name="getResponse">Function to get the response from a client.</param>
-    public void UrBroadcast(
-        TR request,
-        Action<TR> urbDeliver,
-        Func<TC, TR, Task<TA>> getResponse
-    )
+    public void UrBroadcast(TR request, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse)
     {
         request.SequenceNum = Interlocked.Increment(ref _sequenceNumCounter);
 
@@ -50,12 +43,8 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
     ///     Broadcasts a request to all clients.
     /// </summary>
     /// <param name="request">Request to broadcast.</param>
-    /// <param name="updateSequenceNumber">Function to update the sequence number of the request.</param>
     /// <param name="getResponse">Function to get the response from a client.</param>
-    public void UrBroadcast(
-        TR request,
-        Func<TC, TR, Task<TA>> getResponse
-    )
+    public void UrBroadcast(TR request, Func<TC, TR, Task<TA>> getResponse)
     {
         request.SequenceNum = Interlocked.Increment(ref _sequenceNumCounter);
         _clients.ForEach(client => getResponse(client, request));

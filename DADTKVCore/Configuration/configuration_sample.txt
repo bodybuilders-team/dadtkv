@@ -12,11 +12,11 @@
 # a character indicating whether it's a (T)ransaction or (L)ease manager
 # and a URL for g-RPC calls.
 P TM1 T http://localhost:10000
-P TM2 T http://localhost:10002
-P TM3 T http://localhost:10003
+# P TM2 T http://localhost:10002
+# P TM3 T http://localhost:10003
 P LM1 L http://localhost:10004
-P LM2 L http://localhost:10008
-P LM3 L http://localhost:10009
+# P LM2 L http://localhost:10008
+# P LM3 L http://localhost:10009
 #
 # A client (indicated by the 'C' process code) does not have a g-RPC URL,
 # but has a path to the client script it is running.
@@ -51,5 +51,5 @@ D 10000
 # e.g. (A,B) means that process A suspects process B
 # F 1 N N N N N N (TM1,TM2) (LM3,LM2)
 # F 2 N N C N N N (TM1,TM2)
-F 1 N N N N N N
-F 2 N N C N N N
+# F 1 N N N N N N
+# F 2 N N C N N N

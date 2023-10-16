@@ -1,10 +1,8 @@
-using DADTKV;
+namespace DADTKV;
 
-namespace DADTKVTransactionManager;
-
-public class UpdateRequestDtoConverter
+public static class UpdateRequestDtoConverter
 {
-    public static UpdateRequestDto convertToDto(UpdateRequest urbRequest)
+    public static UpdateRequestDto ConvertToDto(UpdateRequest urbRequest)
     {
         return new UpdateRequestDto
         {
@@ -16,12 +14,12 @@ public class UpdateRequestDtoConverter
         };
     }
 
-    public static UpdateRequest convertFromDto(UpdateRequestDto urbRequestDto,
+    public static UpdateRequest ConvertFromDto(UpdateRequestDto urbRequestDto,
         ProcessConfiguration processConfiguration)
     {
         return new UpdateRequest(
-            processConfiguration: processConfiguration,
-            serverId: urbRequestDto.ServerId,
+            processConfiguration,
+            urbRequestDto.ServerId,
             sequenceNum: urbRequestDto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(urbRequestDto.LeaseId),
             writeSet: urbRequestDto.WriteSet.ToList(),

@@ -1,26 +1,25 @@
-﻿using DADTKV;
-using DADTKVTransactionManager;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace DADTKVT;
+namespace DADTKV;
 
 /// <summary>
-///     Implementation of the DADTKVService.
+///     Implementation of the DadtkvService.
 /// </summary>
-public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
+public class DadtkvServiceImpl : DADTKVService.DADTKVServiceBase
 {
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans; //TODO: Maybe convert to hashset
     private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
-    private ulong _leaseSequenceNumCounter;
 
     private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
 
-    public DADTKVServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
+    private ulong _leaseSequenceNumCounter;
+
+    public DadtkvServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
         Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues)
     {
         _processConfiguration = processConfiguration;
@@ -106,13 +105,11 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
         // TODO put to false and add free lease request handler
         var conflict = true;
         foreach (var (key, queue) in _leaseQueues)
-        {
             if (queue.Peek().Equals(leaseId) && queue.Count > 1)
             {
                 conflict = true;
                 break;
             }
-        }
 
         // Commit transaction
         var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
@@ -140,10 +137,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
             returnReadSet = _dataStore.ExecuteTransaction(readSet, writeSet);
         }
 
-        if (freeLease)
-        {
-            _leaseQueues.FreeLeases(leaseId);
-        }
+        if (freeLease) _leaseQueues.FreeLeases(leaseId);
 
         _urBroadcaster.UrBroadcast(
             new UpdateRequest(
@@ -154,7 +148,7 @@ public class DADTKVServiceImpl : DADTKVService.DADTKVServiceBase
                 freeLease: freeLease
             ),
             req => { },
-            (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.convertToDto(req)).ResponseAsync
+            (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
         return returnReadSet;

@@ -37,7 +37,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
 
             if (request.ProposalNumber <= currentRoundAcceptorState.ReadTimestamp)
-                return Task.FromResult(new PrepareResponse
+                return Task.FromResult(new PrepareResponseDto
                 {
                     Promise = false,
                     WriteTimestamp = 0,
@@ -56,7 +56,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
 
             // Previously didn't respond with ACCEPTED
             if (currentRoundAcceptorState.Value == null)
-                return Task.FromResult(new PrepareResponse
+                return Task.FromResult(new PrepareResponseDto
                     {
                         Promise = true,
                         WriteTimestamp = 0,

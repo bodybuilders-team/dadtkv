@@ -26,12 +26,12 @@ public class ProcessConfiguration : SystemConfiguration
     {
         get
         {
-            var index = this.Processes.FindIndex((p) => p.Id.Equals(ProcessInfo.Id));
+            var index = Processes.FindIndex(p => p.Id.Equals(ProcessInfo.Id));
 
             if (index < 0)
                 throw new Exception("Server not found");
 
-            return (ulong) index;
+            return (ulong)index;
         }
     }
 }

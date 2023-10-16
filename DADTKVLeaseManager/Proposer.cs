@@ -141,13 +141,9 @@ public class Proposer : LeaseService.LeaseServiceBase
             // Update the lease queues in the proposal value
             foreach (var currentRequest in _leaseRequests)
                 if (_consensusState.Values.Any(consensusValue => consensusValue.LeaseRequests.Contains(currentRequest)))
-                {
                     toRemove.Add(currentRequest);
-                }
                 else
-                {
                     myProposalValue.LeaseRequests.Add(currentRequest);
-                }
 
             toRemove.ForEach(request => _leaseRequests.Remove(request));
         }
@@ -302,7 +298,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             {
                 /* TODO Update the consensus round value here too? */
             },
-            (client, req) => client.LearnAsync(LearnRequestDtoConverter.convertToDto(req)).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
     }
 }

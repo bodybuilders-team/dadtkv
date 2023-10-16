@@ -16,17 +16,17 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <Protobuf Include="../DADTKVCore/proto/LeaseService.proto" GrpcServices="Server"/>
-        <Protobuf Include="..\DADTKVCore\proto\AcceptorService.proto" AdditionalImportDirs="../DADTKVCore/proto/" GrpcServices="Both"/>
-        <Protobuf Include="..\DADTKVCore\proto\LearnerService.proto" GrpcServices="Both"/>
+        <Protobuf Include="../DADTKVCore/Proto/LeaseService.proto" GrpcServices="Server"/>
+        <Protobuf Include="../DADTKVCore/Proto/AcceptorService.proto" AdditionalImportDirs="../DADTKVCore/Proto/" GrpcServices="Both"/>
+        <Protobuf Include="../DADTKVCore/Proto/LearnerService.proto" GrpcServices="Both"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DADTKVCore\DADTKVCore.csproj"/>
+        <ProjectReference Include="../DADTKVCore/DADTKVCore.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Update="..\DADTKVCore\proto"/>
+        <Folder Update="../DADTKVCore/Proto"/>
     </ItemGroup>
 
 </Project>

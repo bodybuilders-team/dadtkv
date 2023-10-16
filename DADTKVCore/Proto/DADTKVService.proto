@@ -13,11 +13,11 @@ service DADTKVService {
 message TxSubmitRequestDto {
   string clientID = 1;
   repeated string readSet = 2;
-  repeated dadtkv.DadInt writeSet = 3;
+  repeated DadInt writeSet = 3;
 }
 
 message TxSubmitResponseDto {
-  repeated dadtkv.DadInt readSet = 1;
+  repeated DadInt readSet = 1;
 }
 
 message StatusRequestDto {

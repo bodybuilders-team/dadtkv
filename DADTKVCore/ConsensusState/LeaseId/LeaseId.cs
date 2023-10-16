@@ -7,7 +7,7 @@ public class LeaseId
 {
     public readonly ulong SequenceNum;
     public readonly ulong ServerId;
-    
+
     public LeaseId(ulong sequenceNum, ulong serverId)
     {
         SequenceNum = sequenceNum;
@@ -35,5 +35,4 @@ public class LeaseId
     {
         return $"(SequenceNum: {SequenceNum}, ServerId: '{ServerId}')";
     }
-
 }

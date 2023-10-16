@@ -1,16 +1,14 @@
-using DADTKV;
-
-namespace DADTKVTransactionManager;
+namespace DADTKV;
 
 public class UpdateRequest : IFifoUrbRequest<UpdateRequest>
 {
     private readonly ProcessConfiguration _processConfiguration;
-    public ulong SequenceNum { get; set; }
-    public ulong ServerId { get; }
 
     public LeaseId LeaseId { get; }
     public List<DadInt> WriteSet { get; }
     public bool FreeLease { get; }
+    public ulong SequenceNum { get; set; }
+    public ulong ServerId { get; }
 
     public ulong MessageId => ServerId + SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
 

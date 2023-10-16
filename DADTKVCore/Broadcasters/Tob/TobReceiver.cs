@@ -1,14 +1,12 @@
-using DADTKV;
-
-namespace DADTKVTransactionManager;
+namespace DADTKV;
 
 public class TobReceiver<TR, TA, TC> where TR : IFifoUrbRequest<TR>
 {
-    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
-    private readonly Action<TR> _tobDeliver;
     private readonly Func<TR, ulong> _getMessageId;
-    private long _lastProcessedMessageId = -1;
     private readonly List<TR> _pendingRequests = new();
+    private readonly Action<TR> _tobDeliver;
+    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
+    private long _lastProcessedMessageId = -1;
 
     public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TR, ulong> getMessageId,
         Func<TC, TR, Task<TA>> getResponse)

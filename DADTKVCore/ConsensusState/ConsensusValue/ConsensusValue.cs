@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace DADTKV;
 
 /// <summary>
@@ -19,8 +17,8 @@ public class ConsensusValue
         return new ConsensusValue
         {
             LeaseRequests = LeaseRequests.Select(leaseRequest => new LeaseRequest(
-                leaseId: leaseRequest.LeaseId,
-                set: leaseRequest.Set.ToList()
+                leaseRequest.LeaseId,
+                leaseRequest.Set.ToList()
             )).ToList()
         };
     }

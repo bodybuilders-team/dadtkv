@@ -1,10 +1,8 @@
-using DADTKV;
+namespace DADTKV;
 
-namespace DADTKVTransactionManager;
-
-public class FreeLeaseRequestDtoConverter
+public static class FreeLeaseRequestDtoConverter
 {
-    public static FreeLeaseRequestDto convertToDto(FreeLeaseRequest request)
+    public static FreeLeaseRequestDto ConvertToDto(FreeLeaseRequest request)
     {
         return new FreeLeaseRequestDto
         {
@@ -14,12 +12,11 @@ public class FreeLeaseRequestDtoConverter
         };
     }
 
-    public static FreeLeaseRequest convertFromDto(FreeLeaseRequestDto dto, ProcessConfiguration processConfiguration)
+    public static FreeLeaseRequest ConvertFromDto(FreeLeaseRequestDto dto, ProcessConfiguration processConfiguration)
     {
         return new FreeLeaseRequest(
-            processConfiguration: processConfiguration,
+            processConfiguration,
             sequenceNum: dto.SequenceNum,
-            serverId: dto.ServerId,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(dto.LeaseId)
         );
     }

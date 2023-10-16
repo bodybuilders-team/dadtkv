@@ -9,9 +9,9 @@ namespace DADTKV;
 /// </summary>
 public class LmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly ProcessConfiguration _processConfiguration;
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
@@ -27,7 +27,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
         _urbReceiver = new UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             LearnUrbDeliver,
-            (client, req) => client.LearnAsync(LearnRequestDtoConverter.convertToDto(req)).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
     }
 
@@ -52,7 +52,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.convertFromDto(request, _processConfiguration));
+        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 

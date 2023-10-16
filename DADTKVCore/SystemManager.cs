@@ -52,7 +52,7 @@ internal static class SystemManager
         var leaseManagerExePath =
             Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
         var transactionManagerExePath = Path.Combine(solutionDirectory,
-            "DADTKVTransactionManager/bin/Debug/net6.0/DADTKVTransactionManager.exe");
+            "DADTKV/bin/Debug/net6.0/DADTKV.exe");
         Console.WriteLine(configurationFile);
 
         foreach (var process in config.ServerProcesses)

@@ -1,13 +1,13 @@
-using DADTKV;
 
-namespace DADTKVTransactionManager;
+
+namespace DADTKV;
 
 public class FifoUrbReceiver<TR, TA, TC> where TR : IFifoUrbRequest<TR>
 {
-    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
-    private readonly Action<TR> _tobDeliver;
-    private Dictionary<ulong, long> _lastProcessedMessageId = new Dictionary<ulong, long>();
     private readonly Dictionary<ulong, List<TR>> _pendingRequests = new();
+    private readonly Action<TR> _tobDeliver;
+    private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
+    private Dictionary<ulong, long> _lastProcessedMessageId = new();
 
     public FifoUrbReceiver(List<TC> clients, Action<TR> tobDeliver,
         Func<TC, TR, Task<TA>> getResponse)

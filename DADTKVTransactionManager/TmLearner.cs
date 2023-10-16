@@ -1,5 +1,3 @@
-using System.Text;
-using DADTKVTransactionManager;
 using Grpc.Core;
 using Grpc.Net.Client;
 
@@ -10,11 +8,11 @@ namespace DADTKV;
 /// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly ProcessConfiguration _processConfiguration;
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _tobReceiver;
-    
+
     private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
 
@@ -44,7 +42,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             learnerServiceClients,
             TobDeliver,
             req => req.RoundNumber,
-            (client, req) => client.LearnAsync(LearnRequestDtoConverter.convertToDto(req)).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
         _urBroadcaster =
@@ -61,7 +59,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.convertFromDto(request, _processConfiguration));
+        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 
@@ -78,10 +76,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             {
                 leaseRequest.Set.ForEach(key =>
                 {
-                    if (!_leaseQueues.ContainsKey(key))
-                    {
-                        _leaseQueues.Add(key, new Queue<LeaseId>());
-                    }
+                    if (!_leaseQueues.ContainsKey(key)) _leaseQueues.Add(key, new Queue<LeaseId>());
 
                     _leaseQueues[key].Enqueue(leaseRequest.LeaseId);
                 });
@@ -104,15 +99,13 @@ public class TmLearner : LearnerService.LearnerServiceBase
                     queue.Dequeue();
                 }
             }
-            
+
             foreach (var leaseId in leasesToBeFreed)
-            {
                 // TODO abstract FreeLeaseRequest to remove updateSequenceNumber
                 _urBroadcaster.UrBroadcast(
                     new FreeLeaseRequest(_processConfiguration, leaseId),
-                    (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.convertToDto(req)).ResponseAsync
+                    (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync
                 );
-            }
         }
     }
 }

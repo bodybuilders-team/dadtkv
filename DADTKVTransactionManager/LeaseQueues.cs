@@ -1,6 +1,4 @@
-using DADTKV;
-
-namespace DADTKVTransactionManager;
+namespace DADTKV;
 
 public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
 {
@@ -25,7 +23,6 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
     /// <summary>
     ///     Checks if the leases of a request are on the top of the queue.
     /// </summary>
-    /// <param name="consensusStateValue">The consensus value.</param>
     /// <param name="leaseReq">The lease request.</param>
     /// <returns>True if the leases are on the top of the queue, false otherwise.</returns>
     public bool ObtainedLeases(LeaseRequest leaseReq)
@@ -36,9 +33,7 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
     public void FreeLeases(LeaseId leaseId)
     {
         foreach (var (key, queue) in this)
-        {
             if (queue.Count > 0 && queue.Peek().Equals(leaseId))
                 queue.Dequeue();
-        }
     }
 }

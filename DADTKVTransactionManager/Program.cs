@@ -1,6 +1,4 @@
-﻿using DADTKVT;
-using DADTKVTransactionManager;
-using Grpc.Core;
+﻿using Grpc.Core;
 
 namespace DADTKV;
 
@@ -37,9 +35,10 @@ internal static class Program
         {
             Services =
             {
-                DADTKVService.BindService(new DADTKVServiceImpl(processConfiguration,
+                DADTKVService.BindService(new DadtkvServiceImpl(processConfiguration,
                     datastore, executedTrans, leaseQueues)),
-                StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore, leaseQueues)),
+                StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore,
+                    leaseQueues)),
                 LearnerService.BindService(new TmLearner(processConfiguration, executedTrans, leaseQueues))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }

@@ -1,5 +1,4 @@
-﻿using DADTKVTransactionManager;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.Client;
 
 namespace DADTKV;
@@ -9,12 +8,13 @@ namespace DADTKV;
 /// </summary>
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
-    private readonly ProcessConfiguration _processConfiguration;
     private readonly DataStore _dataStore;
-    private readonly LeaseQueues _leaseQueues;
 
     private readonly FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
         _fifoUrbReceiver;
+
+    private readonly LeaseQueues _leaseQueues;
+    private readonly ProcessConfiguration _processConfiguration;
 
     public StateUpdateServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
@@ -34,7 +34,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
                 UrbDeliver,
-                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.convertToDto(req)).ResponseAsync
+                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
             );
     }
 
@@ -46,7 +46,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
-        _fifoUrbReceiver.FifoUrbProcessRequest(UpdateRequestDtoConverter.convertFromDto(request, _processConfiguration));
+        _fifoUrbReceiver.FifoUrbProcessRequest(
+            UpdateRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
 
         return Task.FromResult(new UpdateResponseDto
         {
@@ -61,10 +62,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
 
             // TODO what if we never obtain the leases
-            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
-            {
-                Thread.Sleep(100);
-            }
+            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId)) Thread.Sleep(100);
 
             lock (_dataStore)
             {
@@ -72,15 +70,9 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             }
 
             if (request.FreeLease)
-            {
                 foreach (var (key, queue) in _leaseQueues)
-                {
                     if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
-                    {
                         queue.Dequeue();
-                    }
-                }
-            }
         }
     }
 }
