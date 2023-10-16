@@ -27,7 +27,8 @@ public class LmLearner : LearnerService.LearnerServiceBase
         _urbReceiver = new UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             LearnUrbDeliver,
-            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+            processConfiguration
         );
     }
 

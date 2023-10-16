@@ -8,5 +8,4 @@ public interface IUrbRequest<in TR>
 {
     public ulong ServerId { get; }
     public ulong SequenceNum { get; set; }
-    public ulong MessageId { get; }
 }

@@ -41,7 +41,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
         _tobReceiver = new TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             TobDeliver,
-            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+            processConfiguration
         );
 
         _urBroadcaster =

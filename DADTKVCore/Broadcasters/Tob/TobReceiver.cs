@@ -2,15 +2,33 @@ namespace DADTKV;
 
 public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 {
-    private readonly List<TR> _pendingRequests = new();
+    private readonly List<TobRequest> _pendingRequests = new();
     private readonly Action<TR> _tobDeliver;
     private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
     private long _lastProcessedMessageId = -1;
+    private readonly ProcessConfiguration _processConfiguration;
 
-    public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse)
+    public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse,
+        ProcessConfiguration processConfiguration)
     {
         _tobDeliver = tobDeliver;
-        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse);
+        _processConfiguration = processConfiguration;
+        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse, processConfiguration);
+    }
+
+    private class TobRequest : IComparable<TobRequest>
+    {
+        public TR Request { get; }
+
+        public TobRequest(TR request)
+        {
+            Request = request;
+        }
+
+        public int CompareTo(TobRequest? other)
+        {
+            return Request.TobMessageId.CompareTo(other?.Request.TobMessageId);
+        }
     }
 
     public void TobProcessRequest(TR request)
@@ -22,11 +40,11 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     {
         lock (this)
         {
-            var messageId = (long)request.MessageId;
+            var messageId = request.TobMessageId;
 
-            if (messageId > _lastProcessedMessageId + 1)
+            if ((long)messageId > _lastProcessedMessageId + 1)
             {
-                _pendingRequests.AddSorted(request);
+                _pendingRequests.AddSorted(new TobRequest(request));
                 return;
             }
 
@@ -37,11 +55,11 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
             for (var i = 0; i < _pendingRequests.Count; i++)
             {
                 var pendingRequest = _pendingRequests[i];
-                if (pendingRequest.MessageId != (ulong)(_lastProcessedMessageId + 1))
+                if (pendingRequest.Request.TobMessageId != (ulong)(_lastProcessedMessageId + 1))
                     break;
 
                 _lastProcessedMessageId++;
-                _tobDeliver(pendingRequest);
+                _tobDeliver(pendingRequest.Request);
                 _pendingRequests.RemoveAt(i--);
             }
         }

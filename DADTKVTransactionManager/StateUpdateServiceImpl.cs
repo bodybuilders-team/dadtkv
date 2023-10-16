@@ -34,7 +34,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
                 UrbDeliver,
-                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
+                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+                processConfiguration
             );
     }
 
