@@ -11,6 +11,7 @@ public class ProcessInfo
 
     // TODO: Create ServerProcessInfo and ClientProcessInfo to abstract this? Avoid nullability issues
     public string? Url { get; set; } // TODO Just for servers
+    public string? Script { get; set; } // TODO Just for clients
 
     public Dictionary<int, string> SlotStatus { get; } = new();
 }

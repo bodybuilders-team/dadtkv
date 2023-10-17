@@ -97,11 +97,13 @@ public class SystemConfiguration
                                 Role = parameters[1]
                             };
 
-                            if (parameters.Length > 2)
-                                process.Url = parameters[2];
-
                             if (process.Role is "T" or "L")
+                            {
+                                process.Url = parameters[2];
                                 systemConfig._serverProcessesCount++;
+                            }
+                            else
+                                process.Script = parameters[2];
 
                             systemConfig.Processes.Add(process);
                             break;

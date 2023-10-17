@@ -38,6 +38,7 @@ internal static class Program
         // Wait for user input to shut down the system
         Console.WriteLine("Press Enter to shut down the Dadtkv system.");
         Console.ReadLine();
+        Console.WriteLine("Shutting down the Dadtkv system...");
         systemManager.ShutDown();
     }
 }

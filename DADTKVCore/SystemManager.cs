@@ -55,11 +55,10 @@ internal class SystemManager
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var clientExePath = Path.Combine(solutionDirectory, "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
         var clientScriptsDirectory = Path.Combine(solutionDirectory, "DadtkvClient/Script");
-        var clientScriptFiles = Directory.GetFiles(clientScriptsDirectory, "*.txt");
 
         foreach (var client in config.Clients)
         {
-            Console.WriteLine($"Starting client {client.Id}");
+            Console.WriteLine($"Starting client {client.Id} with script {client.Script}");
 
             var p = Process.Start(new ProcessStartInfo
             {
@@ -68,7 +67,7 @@ internal class SystemManager
                 {
                     config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url!,
                     client.Id,
-                    clientScriptFiles[new Random().Next(clientScriptFiles.Length)]
+                    Path.Combine(clientScriptsDirectory, client.Script! + ".txt")
                 }
             }) ?? throw new Exception("Failed to start client process: " + client.Id);
             _processes.Add(p);
