@@ -15,20 +15,20 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _fifoUrbReceiver;
 
     private readonly LeaseQueues _leaseQueues;
-    private readonly ProcessConfiguration _processConfiguration;
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     private readonly ILogger<StateUpdateServiceImpl> _logger =
         DadtkvLogger.Factory.CreateLogger<StateUpdateServiceImpl>();
 
-    public StateUpdateServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
+    public StateUpdateServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
     {
-        _processConfiguration = processConfiguration;
+        _serverProcessConfiguration = serverProcessConfiguration;
         _dataStore = dataStore;
         _leaseQueues = leaseQueues;
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
-        foreach (var process in processConfiguration.OtherTransactionManagers)
+        foreach (var process in serverProcessConfiguration.OtherTransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
@@ -39,7 +39,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                 stateUpdateServiceClients,
                 FifoUrbDeliver,
                 (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
-                processConfiguration
+                serverProcessConfiguration
             );
     }
 

@@ -12,17 +12,17 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private readonly List<TC> _clients;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
     private readonly HashSet<ulong> _msgIdLookup;
-    private readonly ProcessConfiguration _processConfiguration;
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly Action<TR> _urbDeliver;
 
     public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse,
-        ProcessConfiguration processConfiguration)
+        ServerProcessConfiguration serverProcessConfiguration)
     {
         _msgIdLookup = new HashSet<ulong>();
         _clients = clients;
         _urbDeliver = urbDeliver;
         _getResponse = getResponse;
-        _processConfiguration = processConfiguration;
+        _serverProcessConfiguration = serverProcessConfiguration;
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">Request to be processed.</param>
     public void UrbProcessRequest(TR request)
     {
-        var msgId = request.ServerId + request.SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
+        var msgId = request.ServerId + request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
 
         lock (_msgIdLookup)
         {

@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf.Collections;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -10,6 +11,7 @@ internal class ClientLogic
 {
     private readonly DadtkvService.DadtkvServiceClient _client;
     private readonly string _clientId;
+    private readonly ILogger<ClientLogic> _logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
 
     public ClientLogic(string clientId, string serverUrl)
     {
@@ -36,7 +38,7 @@ internal class ClientLogic
         var response = await _client.TxSubmitAsync(request);
         var end = DateTime.Now;
 
-        Console.WriteLine("Time taken: " + (end - start).TotalMilliseconds + "ms");
+        _logger.LogDebug($"Time taken: {(end - start).TotalMilliseconds} ms");
 
         return response.ReadSet.ToList();
     }

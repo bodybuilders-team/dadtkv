@@ -85,14 +85,13 @@ public class Proposer : LeaseService.LeaseServiceBase
                     Monitor.Enter(_consensusState);
                 }
 
-                _logger.LogDebug($"Yeahhh, we got all the updates ;P");
-                _logger.LogDebug($"Let's check our lease requests {string.Join(", ", _leaseRequests)}");
+                _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
+                _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
 
                 var roundNumber = (ulong)_consensusState.Values.Count;
 
                 var myProposalValue = GetMyProposalValue();
-                _logger.LogDebug($"Now we've update the lease requests! {string.Join(", ", _leaseRequests)}");
-                _logger.LogDebug($"Time to propose for round number {roundNumber}! {myProposalValue}");
+                _logger.LogDebug($"Proposing {myProposalValue} for round {roundNumber}");
 
                 lock (_leaseRequests)
                 {

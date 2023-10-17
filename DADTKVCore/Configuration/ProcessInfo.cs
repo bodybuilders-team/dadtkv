@@ -3,15 +3,46 @@ namespace Dadtkv;
 /// <summary>
 ///     Information about a process in the system.
 /// </summary>
-public class ProcessInfo
+public interface IProcessInfo
 {
-    public string Id { get; set; }
+    public string Id { get; }
+    public string Role { get; }
 
-    public string Role { get; set; }
+    public Dictionary<int, string> SlotStatus { get; }
+}
 
-    // TODO: Create ServerProcessInfo and ClientProcessInfo to abstract this? Avoid nullability issues
-    public string? Url { get; set; } // TODO Just for servers
-    public string? Script { get; set; } // TODO Just for clients
-
+/// <summary>
+///     Information about a server process in the system.
+/// </summary>
+public class ServerProcessInfo : IProcessInfo
+{
+    public string Id { get; init; }
+    public string Role { get; init; }
+    public string Url { get; init; }
     public Dictionary<int, string> SlotStatus { get; } = new();
+
+    public ServerProcessInfo(string id, string role, string url)
+    {
+        Id = id;
+        Role = role;
+        Url = url;
+    }
+}
+
+/// <summary>
+///     Information about a client process in the system.
+/// </summary>
+public class ClientProcessInfo : IProcessInfo
+{
+    public string Id { get; init; }
+    public string Role { get; init; }
+    public string Script { get; init; }
+    public Dictionary<int, string> SlotStatus { get; } = new();
+
+    public ClientProcessInfo(string id, string role, string script)
+    {
+        Id = id;
+        Role = role;
+        Script = script;
+    }
 }

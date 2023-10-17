@@ -47,13 +47,6 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
 
             currentRoundAcceptorState.ReadTimestamp = request.ProposalNumber;
 
-            /*
-             * If the acceptor has not yet accepted any proposal (that is, it responded with a PROMISE to a past proposal
-             * but not an ACCEPTED, it will simply respond back to the proposer with a PROMISE. However, if the acceptor
-             * has already accepted an earlier message it responds to the proposer with a PROMISE that contains the
-             * accepted ID and its corresponding value.
-             */
-
             // Previously didn't respond with ACCEPTED
             if (currentRoundAcceptorState.Value == null)
                 return Task.FromResult(new PrepareResponseDto
@@ -65,8 +58,8 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                     }
                 );
 
-            /*// Previously responded with ACCEPTED
-            return Task.FromResult(new PrepareResponse
+            // Previously responded with ACCEPTED
+            return Task.FromResult(new PrepareResponseDto
             {
                 Promise = true,
                 WriteTimestamp = currentRoundAcceptorState.WriteTimestamp,
@@ -74,8 +67,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
                 Value = currentRoundAcceptorState.Value != null
                     ? ConsensusValueDtoConverter.ConvertToDto(currentRoundAcceptorState.Value)
                     : null
-            });*/
-            return null;
+            });
         }
     }
 
@@ -92,7 +84,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
 
             // TODO does it need to be exactly the current read timestamp? Just checked, and greater or equal seems fine
-            if (request.ProposalNumber != currentRoundAcceptorState.ReadTimestamp)
+            if (!request.ProposalNumber.Equals(currentRoundAcceptorState.ReadTimestamp))
                 return Task.FromResult(new AcceptResponseDto { Accepted = false });
 
             currentRoundAcceptorState.WriteTimestamp = request.ProposalNumber;

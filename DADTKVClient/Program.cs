@@ -1,7 +1,11 @@
-﻿namespace Dadtkv;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Dadtkv;
 
 internal static class Program
 {
+    private static readonly ILogger<ClientLogic> _logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
+
     /// <summary>
     ///     Entry point for the client application.
     /// </summary>
@@ -23,7 +27,7 @@ internal static class Program
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
 
-        Console.WriteLine("Client started");
+        _logger.LogInformation("Client started");
 
         while (scriptReader.HasNextCommand())
         {
@@ -40,32 +44,32 @@ internal static class Program
                                 Value = x.Value
                             }).ToList();
 
-                        Console.WriteLine($"Executing transaction {transactionCommand}");
+                        _logger.LogInformation($"Executing transaction {transactionCommand}");
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 
-                        Console.WriteLine("\n### Transaction ###");
+                        _logger.LogInformation($"Transaction {transactionCommand} executed successfully");
                         if (readSet.Count == 0)
                         {
-                            Console.WriteLine("No read set");
+                            _logger.LogInformation("No read set");
                             break;
                         }
 
-                        Console.WriteLine("Read set:");
+                        _logger.LogInformation("Read set:");
                         foreach (var dadInt in readSet)
-                            Console.WriteLine(dadInt.Key + " " + dadInt.Value);
+                            _logger.LogInformation(dadInt.Key + " " + dadInt.Value);
                         break;
 
                     case WaitCommand waitCommand:
-                        Console.WriteLine("\nWaiting " + waitCommand.Milliseconds + " milliseconds");
+                        _logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
                         break;
 
                     case StatusCommand:
                         var status = clientLogic.Status().Result;
-                        Console.WriteLine("\n### Status ###");
+                        _logger.LogInformation("Status:");
                         foreach (var statusEntry in status)
-                            Console.WriteLine(statusEntry);
+                            _logger.LogInformation(statusEntry);
                         break;
                 }
             }

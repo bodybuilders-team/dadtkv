@@ -5,6 +5,8 @@ namespace Dadtkv;
 
 internal static class Program
 {
+    private static readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
+
     /// <summary>
     ///     Entry point for the lease manager server application.
     /// </summary>
@@ -21,7 +23,7 @@ internal static class Program
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
-        var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
+        var processConfiguration = new ServerProcessConfiguration(systemConfiguration, serverId);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
@@ -31,8 +33,6 @@ internal static class Program
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
 
-  
-        
         var server = new Server
         {
             Services =
@@ -47,8 +47,8 @@ internal static class Program
         };
 
         server.Start();
-
-        Console.WriteLine($"Transaction Manager server listening on port {serverProcessPort}");
+        _logger.LogInformation($"Transaction Manager server listening on port {serverProcessPort}");
+        
         Console.WriteLine("Press Enter to stop the server.");
         Console.ReadLine();
 
