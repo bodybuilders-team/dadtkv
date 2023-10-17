@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="34DADTKVClient" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe" />
-    <option name="PROGRAM_PARAMETERS" value="http://localhost:10002 c4 &quot;C:\IST\Courses\1st Semester\DAD\ist-meic-dad-g05\DADTKVClient\Script\client_script_2.txt&quot;" />
+    <option name="PROGRAM_PARAMETERS" value="http://localhost:10002 c4 &quot;..\..\..\Script\client_script_2.txt&quot;" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DadtkvClient/bin/Debug/net6.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

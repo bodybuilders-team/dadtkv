@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="22DADTKVTransactionManager" type="DotNetProject" factoryName=".NET Project">
+  <configuration default="false" name="DadtkvTransactionManager" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/DadtkvTransactionManager/bin/Debug/net6.0/DadtkvTransactionManager.exe" />
-    <option name="PROGRAM_PARAMETERS" value="TM2 &quot;..\..\..\..\DADTKVCore\Configuration\configuration_sample.txt&quot;" />
+    <option name="PROGRAM_PARAMETERS" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DadtkvTransactionManager/bin/Debug/net6.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
