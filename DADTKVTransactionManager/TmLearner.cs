@@ -11,7 +11,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
-    private readonly ProcessConfiguration _processConfiguration;
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _tobReceiver;
 
     private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
@@ -19,23 +19,23 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
     private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
 
-    public TmLearner(ProcessConfiguration processConfiguration,
+    public TmLearner(ServerProcessConfiguration serverProcessConfiguration,
         Dictionary<LeaseId, bool> executedTrans,
         LeaseQueues leaseQueues)
     {
-        _processConfiguration = processConfiguration;
+        _serverProcessConfiguration = serverProcessConfiguration;
         _executedTrans = executedTrans;
         _leaseQueues = leaseQueues;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
-        foreach (var process in processConfiguration.OtherServerProcesses)
+        foreach (var process in serverProcessConfiguration.OtherServerProcesses)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
         }
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
-        foreach (var process in processConfiguration.OtherTransactionManagers)
+        foreach (var process in serverProcessConfiguration.OtherTransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
@@ -45,7 +45,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
             learnerServiceClients,
             TobDeliver,
             (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
-            processConfiguration
+            serverProcessConfiguration
         );
 
         _urBroadcaster =
@@ -95,7 +95,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId == _processConfiguration.ServerId && queue.Count > 1 && _executedTrans[leaseId])
+                if (leaseId.ServerId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 && _executedTrans[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);
                     queue.Dequeue();
@@ -108,7 +108,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
             foreach (var leaseId in leasesToBeFreed)
                 _urBroadcaster.UrBroadcast(
-                    new FreeLeaseRequest(_processConfiguration.ServerId, leaseId),
+                    new FreeLeaseRequest(_serverProcessConfiguration.ServerId, leaseId),
                     (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync
                 );
         }

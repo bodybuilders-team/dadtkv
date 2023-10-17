@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -8,6 +9,7 @@ namespace Dadtkv;
 internal class SystemManager
 {
     private readonly List<Process> _processes = new();
+    private readonly ILogger<SystemManager> _logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
 
     /// <summary>
     ///     Starts the Dadtkv servers (Transaction Managers, Lease Managers).
@@ -16,15 +18,12 @@ internal class SystemManager
     /// <param name="configurationFile">The system configuration file.</param>
     public void StartServers(SystemConfiguration config, string configurationFile)
     {
-        var lms = config.ServerProcesses.Where(process => process.Role == "L").ToList();
-        var tms = config.ServerProcesses.Where(process => process.Role == "T").ToList();
-
-        StartServers(lms, configurationFile);
+        StartServers(config.LeaseManagers, configurationFile);
         Thread.Sleep(1000);
-        StartServers(tms, configurationFile);
+        StartServers(config.TransactionManagers, configurationFile);
     }
 
-    private void StartServers(List<ProcessInfo> serverProcesses, string configurationFile)
+    private void StartServers(List<ServerProcessInfo> serverProcesses, string configurationFile)
     {
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var leaseManagerExePath =
@@ -34,8 +33,8 @@ internal class SystemManager
 
         foreach (var process in serverProcesses)
         {
-            Console.WriteLine($"Starting {process.Role} {process.Id} at {process.Url}");
-            var fileName = process.Role == "L" ? leaseManagerExePath : transactionManagerExePath;
+            _logger.LogInformation($"Starting {process.Role} {process.Id} at {process.Url}");
+            var fileName = process.Role.Equals("L") ? leaseManagerExePath : transactionManagerExePath;
 
             var p = Process.Start(new ProcessStartInfo
             {
@@ -55,11 +54,10 @@ internal class SystemManager
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var clientExePath = Path.Combine(solutionDirectory, "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
         var clientScriptsDirectory = Path.Combine(solutionDirectory, "DadtkvClient/Script");
-        var clientScriptFiles = Directory.GetFiles(clientScriptsDirectory, "*.txt");
 
         foreach (var client in config.Clients)
         {
-            Console.WriteLine($"Starting client {client.Id}");
+            _logger.LogInformation($"Starting client {client.Id} with script {client.Script}");
 
             var p = Process.Start(new ProcessStartInfo
             {
@@ -68,7 +66,7 @@ internal class SystemManager
                 {
                     config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url!,
                     client.Id,
-                    clientScriptFiles[new Random().Next(clientScriptFiles.Length)]
+                    Path.Combine(clientScriptsDirectory, client.Script! + ".txt")
                 }
             }) ?? throw new Exception("Failed to start client process: " + client.Id);
             _processes.Add(p);

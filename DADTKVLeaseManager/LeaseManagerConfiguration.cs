@@ -3,25 +3,26 @@ namespace Dadtkv;
 /// <summary>
 ///     Configuration of a lease manager process.
 /// </summary>
-public class LeaseManagerConfiguration : ProcessConfiguration
+public class LeaseManagerConfiguration : ServerProcessConfiguration
 {
-    public LeaseManagerConfiguration(ProcessConfiguration processConfiguration) : base(
-        processConfiguration, processConfiguration.ProcessInfo.Id)
+    public LeaseManagerConfiguration(ServerProcessConfiguration serverProcessConfiguration) : base(
+        serverProcessConfiguration, serverProcessConfiguration.ProcessInfo.Id)
     {
     }
 
-    public IEnumerable<ProcessInfo> OtherLeaseManagers =>
-        LeaseManagers.Where(info => info.Id != ProcessInfo.Id).ToList();
+    public IEnumerable<IProcessInfo> OtherLeaseManagers =>
+        LeaseManagers.Where(info => !info.Id.Equals(ProcessInfo.Id)).ToList();
 
     /// <summary>
     ///     The lease manager with the lowest id is the leader.
     /// </summary>
     /// <returns>The id of the leader.</returns>
-    private string? GetLeaderId()
+    private string GetLeaderId()
     {
         return LeaseManagers
-            .Where(lm => !MyCurrentSuspicions.Contains(lm.Id))
-            .MinBy(info => GetLeaseManagerIdNum(info.Id))?.Id;
+                   .Where(lm => !MyCurrentSuspicions.Contains(lm.Id))
+                   .MinBy(info => GetLeaseManagerIdNum(info.Id))?.Id
+               ?? throw new Exception("No leader found");
     }
 
     /// <summary>
@@ -30,6 +31,6 @@ public class LeaseManagerConfiguration : ProcessConfiguration
     /// <returns>True if this process is the leader, false otherwise.</returns>
     public bool IsLeader()
     {
-        return GetLeaderId() == ProcessInfo.Id;
+        return GetLeaderId().Equals(ProcessInfo.Id);
     }
 }

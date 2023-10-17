@@ -5,26 +5,28 @@ namespace Dadtkv;
 /// </summary>
 public class SystemConfiguration
 {
-    private int _serverProcessesCount;
-
     private SystemConfiguration()
     {
     }
 
     protected SystemConfiguration(SystemConfiguration systemConfiguration)
     {
-        _serverProcessesCount = systemConfiguration._serverProcessesCount;
         Processes = systemConfiguration.Processes;
+        ServerProcesses = systemConfiguration.ServerProcesses;
+        LeaseManagers = systemConfiguration.LeaseManagers;
+        TransactionManagers = systemConfiguration.TransactionManagers;
+        Clients = systemConfiguration.Clients;
+
         Duration = systemConfiguration.Duration;
         Slots = systemConfiguration.Slots;
         WallTime = systemConfiguration.WallTime;
     }
 
-    protected List<ProcessInfo> Processes { get; } = new();
-    public List<ProcessInfo> ServerProcesses => Processes.GetRange(0, _serverProcessesCount);
-    public List<ProcessInfo> LeaseManagers => Processes.FindAll(p => p.Role is "L");
-    public List<ProcessInfo> TransactionManagers => Processes.FindAll(p => p.Role is "T");
-    public List<ProcessInfo> Clients => Processes.FindAll(p => p.Role is "C");
+    protected List<IProcessInfo> Processes { get; } = new();
+    public readonly List<ServerProcessInfo> ServerProcesses = new();
+    public readonly List<ServerProcessInfo> LeaseManagers = new();
+    public readonly List<ServerProcessInfo> TransactionManagers = new();
+    public readonly List<ClientProcessInfo> Clients = new();
 
     private int Slots { get; set; }
     private int Duration { get; set; }
@@ -56,93 +58,94 @@ public class SystemConfiguration
     /// </summary>
     /// <param name="id">The id of the lease manager.</param>
     /// <returns>The lease manager Id number.</returns>
-    public int GetLeaseManagerIdNum(string id)
+    protected int GetLeaseManagerIdNum(string id)
     {
-        return LeaseManagers.FindIndex(proc => proc.Id == id) + 1;
+        return LeaseManagers.FindIndex(proc => proc.Id.Equals(id)) + 1;
     }
-
 
     /// <summary>
     ///     Reads the system configuration from a file and returns a <see cref="SystemConfiguration" /> object.
     /// </summary>
     /// <param name="filePath">Path to the configuration file.</param>
     /// <returns>A <see cref="SystemConfiguration" /> object.</returns>
-    public static SystemConfiguration? ReadSystemConfiguration(string filePath)
+    public static SystemConfiguration ReadSystemConfiguration(string filePath)
     {
-        try
+        // Read and parse the configuration file
+        var lines = File.ReadAllLines(filePath);
+        var systemConfig = new SystemConfiguration();
+
+        foreach (var line in lines)
         {
-            // Read and parse the configuration file
-            var lines = File.ReadAllLines(filePath);
-            var systemConfig = new SystemConfiguration();
-
-            foreach (var line in lines)
+            var parts = line.Split(' ');
+            if (parts.Length >= 2)
             {
-                var parts = line.Split(' ');
-                if (parts.Length >= 2)
+                var command = parts[0];
+                var parameters = parts.Skip(1).ToArray();
+
+                List<IProcessInfo>? serverProcesses = null;
+
+                // Process different commands from the configuration file
+                switch (command)
                 {
-                    var command = parts[0];
-                    var parameters = parts.Skip(1).ToArray();
+                    case "#": // Comment
+                        continue;
+                    case "P": // Process identifier and role (Server or Client)
+                        var id = parameters[0];
+                        var role = parameters[1];
 
-                    List<ProcessInfo>? serverProcesses = null;
+                        if (role is "T" or "L")
+                        {
+                            var server = new ServerProcessInfo(id, role, parameters[2]);
 
-                    // Process different commands from the configuration file
-                    switch (command)
-                    {
-                        case "#": // Comment
-                            continue;
-                        case "P": // Process identifier and role (Server or Client)
-                            var process = new ProcessInfo
-                            {
-                                Id = parameters[0],
-                                Role = parameters[1]
-                            };
+                            systemConfig.ServerProcesses.Add(server);
+                            systemConfig.Processes.Add(server);
+                            if (role is "T")
+                                systemConfig.TransactionManagers.Add(server);
+                            else
+                                systemConfig.LeaseManagers.Add(server);
+                        }
+                        else
+                        {
+                            var client = new ClientProcessInfo(id, role, parameters[2]);
+                            systemConfig.Clients.Add(client);
+                            systemConfig.Processes.Add(client);
+                        }
 
-                            if (parameters.Length > 2)
-                                process.Url = parameters[2];
+                        break;
 
-                            if (process.Role is "T" or "L")
-                                systemConfig._serverProcessesCount++;
+                    case "S": // Number of time slots
+                        systemConfig.Slots = int.Parse(parameters[0]);
+                        break;
 
-                            systemConfig.Processes.Add(process);
-                            break;
+                    case "D": // Duration of time slots in milliseconds
+                        systemConfig.Duration = int.Parse(parameters[0]);
+                        break;
 
-                        case "S": // Number of time slots
-                            systemConfig.Slots = int.Parse(parameters[0]);
-                            break;
+                    case "T": // Global wall time of the first slot
+                        systemConfig.WallTime = DateTime.Parse(parameters[0]);
+                        break;
 
-                        case "D": // Duration of time slots in milliseconds
-                            systemConfig.Duration = int.Parse(parameters[0]);
-                            break;
+                    case "F": // Suspected nodes during time slots
+                        var slotNumber = int.Parse(parameters[0]);
+                        if (serverProcesses == null)
+                            throw new Exception("Server processes not initialized");
 
-                        case "T": // Global wall time of the first slot
-                            systemConfig.WallTime = DateTime.Parse(parameters[0]);
-                            break;
+                        for (var i = 0; i < serverProcesses.Count; i++)
+                            serverProcesses[i].SlotStatus[slotNumber] = parameters[1 + i];
 
-                        case "F": // Suspected nodes during time slots
-                            var slotNumber = int.Parse(parameters[0]);
-                            serverProcesses ??= systemConfig.ServerProcesses;
-                            for (var i = 0; i < serverProcesses.Count; i++)
-                                serverProcesses[i].SlotStatus[slotNumber] = parameters[1 + i];
+                        var suspicions = parameters.Skip(1 + serverProcesses.Count).ToList();
 
-                            var suspicions = parameters.Skip(1 + serverProcesses.Count).ToList();
-
-                            systemConfig.Suspicions[slotNumber] = suspicions
-                                .Select(s => s.Trim('(', ')'))
-                                .Select(s => new Tuple<string, string>(
-                                    s.Split(',')[0],
-                                    s.Split(',')[1])
-                                ).ToList();
-                            break;
-                    }
+                        systemConfig.Suspicions[slotNumber] = suspicions
+                            .Select(s => s.Trim('(', ')'))
+                            .Select(s => new Tuple<string, string>(
+                                s.Split(',')[0],
+                                s.Split(',')[1])
+                            ).ToList();
+                        break;
                 }
             }
+        }
 
-            return systemConfig;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error reading system configuration: {ex.Message}");
-            return null;
-        }
+        return systemConfig;
     }
 }

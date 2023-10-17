@@ -4,7 +4,10 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Dadtkv;
 
-public class DadtkvLogger
+/// <summary>
+///     Logger for the Dadtkv system.
+/// </summary>
+public static class DadtkvLogger
 {
     public static readonly ILoggerFactory Factory;
 

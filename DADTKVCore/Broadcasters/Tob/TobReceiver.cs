@@ -14,10 +14,10 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     private long _lastProcessedMessageId = -1;
 
     public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse,
-        ProcessConfiguration processConfiguration)
+        ServerProcessConfiguration serverProcessConfiguration)
     {
         _tobDeliver = tobDeliver;
-        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse, processConfiguration);
+        _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse, serverProcessConfiguration);
     }
 
     public void TobProcessRequest(TR request)
@@ -44,7 +44,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
             for (var i = 0; i < _pendingRequests.Count; i++)
             {
                 var pendingRequest = _pendingRequests[i];
-                if (pendingRequest.Request.TobMessageId != (ulong)(_lastProcessedMessageId + 1))
+                if (!pendingRequest.Request.TobMessageId.Equals((ulong)(_lastProcessedMessageId + 1)))
                     break;
 
                 _lastProcessedMessageId++;

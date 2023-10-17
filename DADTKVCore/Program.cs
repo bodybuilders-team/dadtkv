@@ -1,7 +1,12 @@
+using Microsoft.Extensions.Logging;
+
 namespace Dadtkv;
 
 internal static class Program
 {
+    
+    private static readonly ILogger<SystemManager> Logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
+    
     /// <summary>
     ///     Entry point for the Dadtkv system.
     /// </summary>
@@ -20,10 +25,7 @@ internal static class Program
         var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
         if (configuration == null)
-        {
-            Console.WriteLine($"Failed to read system configuration file at {configurationFile}");
-            return;
-        }
+            throw new Exception($"Failed to read system configuration file at {configurationFile}");
 
         // Start Dadtkv servers (Transaction Managers, Lease Managers)
         systemManager.StartServers(configuration, configurationFile);
@@ -33,11 +35,12 @@ internal static class Program
         systemManager.StartClients(configuration);
 
         Thread.Sleep(1000);
-        Console.WriteLine(systemManager.IsRunning() ? "Dadtkv system started" : "Failed to start Dadtkv system");
+        Logger.LogInformation(systemManager.IsRunning() ? "Dadtkv system started" : "Failed to start Dadtkv system");
 
         // Wait for user input to shut down the system
         Console.WriteLine("Press Enter to shut down the Dadtkv system.");
         Console.ReadLine();
+        Logger.LogInformation("Shutting down the Dadtkv system...");
         systemManager.ShutDown();
     }
 }

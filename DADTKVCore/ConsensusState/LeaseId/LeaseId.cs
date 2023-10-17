@@ -21,7 +21,7 @@ public class LeaseId
         if (obj.GetType() != this.GetType()) return false;
         
         var other = (LeaseId)obj;
-        return SequenceNum == other.SequenceNum && ServerId == other.ServerId;
+        return SequenceNum.Equals(other.SequenceNum) && ServerId.Equals(other.ServerId);
     }
 
     public override int GetHashCode()

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -11,15 +12,17 @@ public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
-    private readonly ProcessConfiguration _processConfiguration;
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
-    public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
+    private readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+
+    public LmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState)
     {
-        _processConfiguration = processConfiguration;
+        _serverProcessConfiguration = serverProcessConfiguration;
         _consensusState = consensusState;
 
-        var learnerServiceClients = processConfiguration.OtherServerProcesses
+        var learnerServiceClients = serverProcessConfiguration.OtherServerProcesses
             .Select(process => GrpcChannel.ForAddress(process.Url))
             .Select(channel => new LearnerService.LearnerServiceClient(channel))
             .ToList();
@@ -28,7 +31,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
             learnerServiceClients,
             LearnUrbDeliver,
             (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
-            processConfiguration
+            serverProcessConfiguration
         );
     }
 
@@ -69,9 +72,9 @@ public class LmLearner : LearnerService.LearnerServiceBase
             ResizeConsensusStateList((int)request.RoundNumber);
 
             if (_consensusState.Values[(int)request.RoundNumber] != null)
-                Debug.WriteLine($"Value for the round already exists." +
-                                $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
-                                $"Current: {request.ConsensusValue}");
+                _logger.LogDebug($"Value for the round already exists." +
+                                 $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
+                                 $"Current: {request.ConsensusValue}");
 
             _consensusState.Values[(int)request.RoundNumber] = request.ConsensusValue;
         }
