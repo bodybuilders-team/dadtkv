@@ -20,7 +20,7 @@ public class LeaseManagerConfiguration : ServerProcessConfiguration
     private string GetLeaderId()
     {
         return LeaseManagers
-                   .Where(lm => !MyCurrentSuspicions.Contains(lm.Id))
+                   .Where(lm => !MyCurrentSuspected.Contains(lm.Id))
                    .MinBy(info => GetLeaseManagerIdNum(info.Id))?.Id
                ?? throw new Exception("No leader found");
     }

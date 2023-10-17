@@ -19,15 +19,15 @@ public class ServerProcessConfiguration : SystemConfiguration
     public List<ServerProcessInfo> OtherTransactionManagers =>
         TransactionManagers.Where(info => !info.Id.Equals(ProcessInfo.Id)).ToList();
 
-    protected List<string> MyCurrentSuspicions => CurrentSuspicions
-        .Where(tuple => tuple.Item1.Equals(ProcessInfo.Id))
-        .Select(tuple => tuple.Item2).ToList();
+    public List<string> MyCurrentSuspected => CurrentSuspicions
+        .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
+        .Select(suspicion => suspicion.Suspected).ToList();
 
     public ulong ServerId
     {
         get
         {
-            var index = Processes.FindIndex(p => p.Id.Equals(ProcessInfo.Id));
+            var index = FindProcessIndex(ProcessInfo.Id);
 
             if (index < 0)
                 throw new Exception("Server not found");

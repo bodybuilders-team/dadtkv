@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -17,9 +19,10 @@ public class SystemConfiguration
         TransactionManagers = systemConfiguration.TransactionManagers;
         Clients = systemConfiguration.Clients;
 
-        Duration = systemConfiguration.Duration;
-        Slots = systemConfiguration.Slots;
+        TimeSlotDuration = systemConfiguration.TimeSlotDuration;
+        NumberOfTimeSlots = systemConfiguration.NumberOfTimeSlots;
         WallTime = systemConfiguration.WallTime;
+        TimeSlotSuspicionsList = systemConfiguration.TimeSlotSuspicionsList;
     }
 
     protected List<IProcessInfo> Processes { get; } = new();
@@ -28,30 +31,40 @@ public class SystemConfiguration
     public readonly List<ServerProcessInfo> TransactionManagers = new();
     public readonly List<ClientProcessInfo> Clients = new();
 
-    private int Slots { get; set; }
-    private int Duration { get; set; }
+    private int NumberOfTimeSlots { get; set; }
+    public int TimeSlotDuration { get; set; }
     private DateTime WallTime { get; set; }
 
-    private Dictionary<int, List<Tuple<string, string>>> Suspicions { get; } = new();
+    public List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
 
-    protected IEnumerable<Tuple<string, string>> CurrentSuspicions
+    public class TimeSlotSuspicions
     {
-        get
+        public int TimeSlot { get; set; }
+        public List<Suspicion> Suspicions { get; }
+
+        public TimeSlotSuspicions(int timeSlot, List<Suspicion> suspicions)
         {
-            var currentTimeSlot = (int)Math.Floor((DateTime.Now - WallTime).TotalMilliseconds / Duration) + 1;
-            var suspicion = Suspicions.ContainsKey(currentTimeSlot) ? Suspicions[currentTimeSlot] : null;
-
-            // Get previous non null timeslot
-            // TODO: Improve
-            while (suspicion == null && currentTimeSlot > 0)
-            {
-                currentTimeSlot--;
-                suspicion = Suspicions.ContainsKey(currentTimeSlot) ? Suspicions[currentTimeSlot] : null;
-            }
-
-            return suspicion ?? new List<Tuple<string, string>>();
+            TimeSlot = timeSlot;
+            Suspicions = suspicions;
         }
     }
+
+    public class Suspicion
+    {
+        public string Suspect { get; set; }
+        public string Suspected { get; set; }
+
+        public Suspicion(string suspect, string suspected)
+        {
+            Suspect = suspect;
+            Suspected = suspected;
+        }
+    }
+    
+    public int TimeSlotCursor = 0;
+
+    protected List<Suspicion> CurrentSuspicions =>
+        TimeSlotSuspicionsList.Count > 0 ? TimeSlotSuspicionsList[TimeSlotCursor].Suspicions : new List<Suspicion>();
 
     /// <summary>
     ///     Gets the lease manager Id number.
@@ -62,6 +75,8 @@ public class SystemConfiguration
     {
         return LeaseManagers.FindIndex(proc => proc.Id.Equals(id)) + 1;
     }
+
+    public int FindProcessIndex(string id) => Processes.FindIndex(p => p.Id.Equals(id));
 
     /// <summary>
     ///     Reads the system configuration from a file and returns a <see cref="SystemConfiguration" /> object.
@@ -81,8 +96,6 @@ public class SystemConfiguration
             {
                 var command = parts[0];
                 var parameters = parts.Skip(1).ToArray();
-
-                List<IProcessInfo>? serverProcesses = null;
 
                 // Process different commands from the configuration file
                 switch (command)
@@ -114,11 +127,11 @@ public class SystemConfiguration
                         break;
 
                     case "S": // Number of time slots
-                        systemConfig.Slots = int.Parse(parameters[0]);
+                        systemConfig.NumberOfTimeSlots = int.Parse(parameters[0]);
                         break;
 
                     case "D": // Duration of time slots in milliseconds
-                        systemConfig.Duration = int.Parse(parameters[0]);
+                        systemConfig.TimeSlotDuration = int.Parse(parameters[0]);
                         break;
 
                     case "T": // Global wall time of the first slot
@@ -127,24 +140,32 @@ public class SystemConfiguration
 
                     case "F": // Suspected nodes during time slots
                         var slotNumber = int.Parse(parameters[0]);
-                        if (serverProcesses == null)
+                        if (systemConfig.ServerProcesses == null)
                             throw new Exception("Server processes not initialized");
 
-                        for (var i = 0; i < serverProcesses.Count; i++)
-                            serverProcesses[i].SlotStatus[slotNumber] = parameters[1 + i];
+                        for (var i = 0; i < systemConfig.ServerProcesses.Count; i++)
+                            systemConfig.ServerProcesses[i].TimeSlotStatusList
+                                .Add(new TimeSlotStatus(slotNumber, parameters[1 + i]));
 
-                        var suspicions = parameters.Skip(1 + serverProcesses.Count).ToList();
+                        var suspicions = parameters.Skip(1 + systemConfig.ServerProcesses.Count).ToList();
 
-                        systemConfig.Suspicions[slotNumber] = suspicions
+                        systemConfig.TimeSlotSuspicionsList.Add(new TimeSlotSuspicions(slotNumber, suspicions
                             .Select(s => s.Trim('(', ')'))
-                            .Select(s => new Tuple<string, string>(
-                                s.Split(',')[0],
-                                s.Split(',')[1])
-                            ).ToList();
+                            .Select(s => new Suspicion(
+                                suspect: s.Split(',')[0],
+                                suspected: s.Split(',')[1])
+                            )
+                            .ToList()));
+
                         break;
                 }
             }
         }
+
+        systemConfig.ServerProcesses.ForEach(server =>
+        {
+            server.TimeSlotStatusList.Sort((a, b) => a.TimeSlot.CompareTo(b.TimeSlot));
+        });
 
         return systemConfig;
     }

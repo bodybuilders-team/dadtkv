@@ -7,8 +7,6 @@ public interface IProcessInfo
 {
     public string Id { get; }
     public string Role { get; }
-
-    public Dictionary<int, string> SlotStatus { get; }
 }
 
 /// <summary>
@@ -16,10 +14,10 @@ public interface IProcessInfo
 /// </summary>
 public class ServerProcessInfo : IProcessInfo
 {
-    public string Id { get; init; }
-    public string Role { get; init; }
-    public string Url { get; init; }
-    public Dictionary<int, string> SlotStatus { get; } = new();
+    public string Id { get; }
+    public string Role { get; }
+    public string Url { get; }
+    public List<TimeSlotStatus> TimeSlotStatusList { get; } = new();
 
     public ServerProcessInfo(string id, string role, string url)
     {
@@ -34,15 +32,31 @@ public class ServerProcessInfo : IProcessInfo
 /// </summary>
 public class ClientProcessInfo : IProcessInfo
 {
-    public string Id { get; init; }
-    public string Role { get; init; }
-    public string Script { get; init; }
-    public Dictionary<int, string> SlotStatus { get; } = new();
+    public string Id { get; }
+    public string Role { get; }
+    public string Script { get; }
 
     public ClientProcessInfo(string id, string role, string script)
     {
         Id = id;
         Role = role;
         Script = script;
+    }
+}
+
+public class TimeSlotStatus: IComparable<TimeSlotStatus>
+{
+    public int TimeSlot { get; set; }
+    public string Status { get; set; }
+        
+    public TimeSlotStatus(int timeSlot, string status)
+    {
+        TimeSlot = timeSlot;
+        Status = status;
+    }
+
+    public int CompareTo(TimeSlotStatus? other)
+    {
+        return TimeSlot.CompareTo(other?.TimeSlot);
     }
 }

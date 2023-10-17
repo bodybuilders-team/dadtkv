@@ -34,6 +34,23 @@ public class Proposer : LeaseService.LeaseServiceBase
                 learnerServiceClients);
         _initialProposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
+        
+        var timeSlotTimer = new Timer(leaseManagerConfiguration.TimeSlotDuration);
+        var currentTimeSlot = 1;
+        
+        timeSlotTimer.Elapsed += (_, _) =>
+        {
+            _logger.LogDebug($"Time slot {currentTimeSlot} ended. Starting time slot {currentTimeSlot + 1}");
+            currentTimeSlot++;
+            
+            if (leaseManagerConfiguration.TimeSlotCursor + 1 < leaseManagerConfiguration.TimeSlotSuspicionsList.Count && 
+                currentTimeSlot >= leaseManagerConfiguration.TimeSlotSuspicionsList[leaseManagerConfiguration.TimeSlotCursor].TimeSlot)
+            {
+                leaseManagerConfiguration.TimeSlotCursor++;
+            }
+        };
+        
+        timeSlotTimer.Start();
     }
 
     /// <summary>
@@ -60,7 +77,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// </summary>
     public void Start()
     {
-        const int timeDelta = 1000;
+        var timeDelta = _leaseManagerConfiguration.TimeSlotDuration;
         var timer = new Timer(timeDelta);
 
         // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
@@ -91,7 +108,6 @@ public class Proposer : LeaseService.LeaseServiceBase
                 var roundNumber = (ulong)_consensusState.Values.Count;
 
                 var myProposalValue = GetMyProposalValue();
-                _logger.LogDebug($"Proposing {myProposalValue} for round {roundNumber}");
 
                 lock (_leaseRequests)
                 {
@@ -183,6 +199,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         if (!_leaseManagerConfiguration.IsLeader())
             return false;
+        
+        _logger.LogDebug($"Proposing {myProposalValue} for round {roundNumber}");
 
         // Step 1 - Prepare
         ConsensusValueDto? adoptedValue = null;
