@@ -24,6 +24,6 @@ public class LearnRequest : ITobRequest<LearnRequest>
     public override string ToString()
     {
         return
-            $"(ConsensusValue: {ConsensusValue}, RoundNumber: {RoundNumber}, ServerId: {ServerId}, SequenceNum: {SequenceNum})";
+            $"LearnRequest(ConsensusValue: {ConsensusValue}, RoundNumber: {RoundNumber}, ServerId: {ServerId}, SequenceNum: {SequenceNum})";
     }
 }

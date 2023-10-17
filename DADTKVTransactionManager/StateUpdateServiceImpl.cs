@@ -60,11 +60,11 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
     private void FifoUrbDeliver(UpdateRequest request)
     {
+        _logger.LogDebug($"Received Update request 2: {request}");
+
         lock (_leaseQueues)
         {
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
-            _logger.LogDebug($"Received Update request 2: {request}");
-
 
             // TODO what if we never obtain the leases
             while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))

@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using Dadtkv.Requests.TxSubmitRequest;
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 
@@ -72,10 +73,12 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     /// </summary>
     /// <param name="request">The transaction to be executed.</param>
     /// <returns>The result of the transaction.</returns>
-    private Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto request)
+    private Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto requestDto)
     {
         lock (_leaseQueues)
         {
+            var request = TxSubmitRequestDtoConverter.ConvertFromDto(requestDto);
+
             var leases = ExtractLeases(request);
 
             // TODO: Optimization: Fast path
@@ -107,7 +110,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             // TODO put to false and add free lease request handler
             var conflict = true;
             foreach (var (key, queue) in _leaseQueues)
-                if (queue.Peek().Equals(leaseId) && queue.Count > 1)
+                if (queue.Count > 0 && queue.Peek().Equals(leaseId) && queue.Count > 1)
                 {
                     conflict = true;
                     break;
@@ -116,7 +119,10 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             // Commit transaction
             var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
 
-            return Task.FromResult(new TxSubmitResponseDto { ReadSet = { readData } });
+            return Task.FromResult(new TxSubmitResponseDto
+            {
+                ReadSet = { readData.Select(DadIntDtoConverter.ConvertToDto) }
+            });
         }
     }
 
@@ -159,7 +165,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     /// </summary>
     /// <param name="request">The transaction.</param>
     /// <returns>The leases.</returns>
-    private static HashSet<string> ExtractLeases(TxSubmitRequestDto request)
+    private static HashSet<string> ExtractLeases(TxSubmitRequest request)
     {
         var leases = new HashSet<string>();
         foreach (var lease in request.WriteSet.Select(x => x.Key))

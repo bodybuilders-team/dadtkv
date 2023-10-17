@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -13,6 +15,9 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private readonly Dictionary<ulong, List<FifoRequest>?> _pendingRequestsMap = new();
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
+
+    private readonly ILogger<FifoUrbReceiver<TR, TA, TC>> _logger =
+        DadtkvLogger.Factory.CreateLogger<FifoUrbReceiver<TR, TA, TC>>();
 
     public FifoUrbReceiver(List<TC> clients, Action<TR> fifoUrbDeliver, Func<TC, TR, Task<TA>> getResponse,
         ServerProcessConfiguration serverProcessConfiguration)
@@ -31,8 +36,8 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     {
         lock (this)
         {
-            var messageId = request.ServerId +
-                            request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
+            _logger.LogDebug($"Received Fifo Urb Request: {request}");
+
             var serverId = request.ServerId;
 
             _lastProcessedMessageIdMap.TryAdd(serverId, -1);
@@ -40,9 +45,9 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             if (!_pendingRequestsMap.ContainsKey(serverId))
                 _pendingRequestsMap[serverId] = new List<FifoRequest>();
 
-            if ((long)messageId > _lastProcessedMessageIdMap[serverId] + 1)
+            if ((long)request.SequenceNum > _lastProcessedMessageIdMap[serverId] + 1)
             {
-                _pendingRequestsMap[serverId]!.AddSorted(new FifoRequest(request, messageId));
+                _pendingRequestsMap[serverId]!.AddSorted(new FifoRequest(request));
                 return;
             }
 
@@ -53,7 +58,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             for (var i = 0; i < _pendingRequestsMap[serverId]!.Count; i++)
             {
                 var pendingRequest = _pendingRequestsMap[serverId]![i];
-                if (!pendingRequest.FifoMessageId.Equals((ulong)(_lastProcessedMessageIdMap[serverId] + 1)))
+                if (!pendingRequest.Request.SequenceNum.Equals((ulong)(_lastProcessedMessageIdMap[serverId] + 1)))
                     break;
 
                 _lastProcessedMessageIdMap[serverId]++;
@@ -65,19 +70,16 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
     private class FifoRequest : IComparable<FifoRequest>
     {
-        public readonly ulong FifoMessageId;
+        public TR Request { get; }
 
-        public FifoRequest(TR request, ulong fifoMessageId)
+        public FifoRequest(TR request)
         {
             Request = request;
-            FifoMessageId = fifoMessageId;
         }
-
-        public TR Request { get; }
 
         public int CompareTo(FifoRequest? other)
         {
-            return FifoMessageId.CompareTo(other?.FifoMessageId);
+            return Request.SequenceNum.CompareTo(other?.Request.SequenceNum);
         }
     }
 }

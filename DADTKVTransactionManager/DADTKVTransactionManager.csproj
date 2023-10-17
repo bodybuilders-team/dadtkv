@@ -19,12 +19,12 @@
         <Protobuf Include="../DadtkvCore/Proto/DadtkvService.proto" GrpcServices="Server"/>
         <Protobuf Include="../DadtkvCore/Proto/LeaseService.proto" GrpcServices="Client"/>
         <Protobuf Include="./Proto/StateUpdateService.proto" AdditionalImportDirs="../DadtkvCore/Proto/" GrpcServices="Both"/>
-        <Protobuf Include="../DadtkvCore/Proto/DadInt.proto" GrpcServices="None"/>
         <Protobuf Include="../DadtkvCore/Proto/LearnerService.proto" AdditionalImportDirs="../DadtkvCore/Proto/" GrpcServices="Both"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="../DadtkvCore/DadtkvCore.csproj"/>
     </ItemGroup>
+
 
 </Project>

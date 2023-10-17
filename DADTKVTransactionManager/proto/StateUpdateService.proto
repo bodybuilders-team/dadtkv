@@ -3,7 +3,7 @@ package dadtkv;
 
 option csharp_namespace = "Dadtkv";
 
-import "DadInt.proto";
+import "DadIntDto.proto";
 import "LeaseIdDto.proto";
 
 service StateUpdateService {
@@ -15,7 +15,7 @@ message UpdateRequestDto {
   uint64 serverId = 1;
   uint64 sequenceNum = 2;
   LeaseIdDto leaseId = 3;
-  repeated dadtkv.DadInt writeSet = 4;
+  repeated dadtkv.DadIntDto writeSet = 4;
   bool freeLease = 5;
 }
 

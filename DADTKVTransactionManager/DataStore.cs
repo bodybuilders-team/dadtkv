@@ -32,11 +32,10 @@ public class DataStore
 
         // TODO: Change DadInt to include null value
         foreach (var key in readSet)
-            readData.Add(new DadInt
-            {
-                Key = key,
-                Value = _dataStorage.GetValueOrNull(key)
-            });
+            readData.Add(new DadInt(
+                key: key,
+                value: _dataStorage.GetValueOrNull(key)
+            ));
 
         ExecuteTransaction(writeSet);
 
@@ -45,16 +44,6 @@ public class DataStore
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
-        sb.Append("DataStore: {");
-
-        foreach (var kvp in _dataStorage)
-            sb.Append($"'{kvp.Key}': {kvp.Value}, ");
-
-        if (_dataStorage.Count > 0)
-            sb.Length -= 2; // Remove the trailing comma and space
-
-        sb.Append('}');
-        return sb.ToString();
+        return $"DataStore( DataStorage: {_dataStorage.ToStringRep()})";
     }
 }

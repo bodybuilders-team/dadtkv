@@ -27,7 +27,7 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="getResponse">Function to get the response from a client.</param>
     public void UrBroadcast(TR request, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse)
     {
-        request.SequenceNum = Interlocked.Increment(ref _sequenceNumCounter);
+        request.SequenceNum = ConcurrentUtils.GetAndIncrement(ref _sequenceNumCounter);
 
         var resTasks = _clients
             .Select(client => getResponse(client, request))
@@ -46,7 +46,7 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="getResponse">Function to get the response from a client.</param>
     public void UrBroadcast(TR request, Func<TC, TR, Task<TA>> getResponse)
     {
-        request.SequenceNum = Interlocked.Increment(ref _sequenceNumCounter);
+        request.SequenceNum = ConcurrentUtils.GetAndIncrement(ref _sequenceNumCounter);
         _clients.ForEach(client => getResponse(client, request));
     }
 }

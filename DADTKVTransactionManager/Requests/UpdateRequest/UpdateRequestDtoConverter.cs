@@ -9,7 +9,7 @@ public static class UpdateRequestDtoConverter
             SequenceNum = urbRequest.SequenceNum,
             ServerId = urbRequest.ServerId,
             LeaseId = LeaseIdDtoConverter.ConvertToDto(urbRequest.LeaseId),
-            WriteSet = { urbRequest.WriteSet },
+            WriteSet = { urbRequest.WriteSet.Select(DadIntDtoConverter.ConvertToDto).ToList() },
             FreeLease = urbRequest.FreeLease
         };
     }
@@ -20,7 +20,7 @@ public static class UpdateRequestDtoConverter
             serverId: urbRequestDto.ServerId,
             sequenceNum: urbRequestDto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(urbRequestDto.LeaseId),
-            writeSet: urbRequestDto.WriteSet.ToList(),
+            writeSet: urbRequestDto.WriteSet.Select(DadIntDtoConverter.ConvertFromDto).ToList(),
             freeLease: urbRequestDto.FreeLease
         );
     }

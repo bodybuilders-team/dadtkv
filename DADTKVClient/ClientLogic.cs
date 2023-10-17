@@ -25,7 +25,7 @@ internal class ClientLogic
     /// <param name="readSet">The keys to read from the server.</param>
     /// <param name="writeSet">The keys and values to write to the server.</param>
     /// <returns>The values read from the server.</returns>
-    public async Task<List<DadInt>> TxSubmit(IEnumerable<string> readSet, IEnumerable<DadInt> writeSet)
+    public async Task<List<DadIntDto>> TxSubmit(IEnumerable<string> readSet, IEnumerable<DadIntDto> writeSet)
     {
         var request = new TxSubmitRequestDto
         {

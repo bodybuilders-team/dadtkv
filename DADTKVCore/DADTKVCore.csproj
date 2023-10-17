@@ -27,6 +27,7 @@
         <Protobuf Include="./Proto/ConsensusValueDto.proto" AdditionalImportDirs="./Proto/" GrpcServices="None"/>
         <Protobuf Include="./Proto/LeaseRequestDto.proto" AdditionalImportDirs="./Proto/" GrpcServices="None"/>
         <Protobuf Include="./Proto/LeaseIdDto.proto" GrpcServices="None"/>
+        <Protobuf Include="./Proto/DadIntDto.proto" GrpcServices="None"/>
     </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@ syntax = "proto3";
 package dadtkv;
 option csharp_namespace = "Dadtkv";
 
-message DadInt {
+message DadIntDto {
   string key = 1;
   int32 value = 2;
 }

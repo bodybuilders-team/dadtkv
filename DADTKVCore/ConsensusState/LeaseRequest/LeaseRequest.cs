@@ -36,6 +36,6 @@ public class LeaseRequest
 
     public override string ToString()
     {
-        return $"(LeaseId: {LeaseId}, Keys: {string.Join(",", Keys.ToArray())})";
+        return $"LeaseRequest(LeaseId: {LeaseId}, Keys: {string.Join(",", Keys.ToArray())})";
     }
 }

@@ -38,7 +38,7 @@ internal static class Program
                 {
                     case TransactionCommand transactionCommand:
                         var writeSet = transactionCommand.WriteSet
-                            .Select(x => new DadInt
+                            .Select(x => new DadIntDto
                             {
                                 Key = x.Key,
                                 Value = x.Value
