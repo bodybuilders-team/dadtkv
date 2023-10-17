@@ -1,4 +1,5 @@
 ﻿using Grpc.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -30,6 +31,8 @@ internal static class Program
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
 
+  
+        
         var server = new Server
         {
             Services =

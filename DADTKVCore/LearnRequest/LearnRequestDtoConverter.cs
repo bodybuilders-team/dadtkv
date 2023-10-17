@@ -5,10 +5,9 @@ namespace Dadtkv;
 /// </summary>
 public static class LearnRequestDtoConverter
 {
-    public static LearnRequest ConvertFromDto(LearnRequestDto dto, ProcessConfiguration processConfiguration)
+    public static LearnRequest ConvertFromDto(LearnRequestDto dto)
     {
         return new LearnRequest(
-            processConfiguration,
             dto.ServerId,
             dto.RoundNumber,
             ConsensusValueDtoConverter.ConvertFromDto(dto.ConsensusValue),

@@ -40,6 +40,7 @@ internal static class Program
                                 Value = x.Value
                             }).ToList();
 
+                        Console.WriteLine($"Executing transaction {transactionCommand}");
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 

@@ -12,19 +12,6 @@ public class ConsensusValue
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
-        sb.Append("ConsensusValue: [");
-
-        foreach (var leaseRequest in LeaseRequests)
-        {
-            sb.Append(leaseRequest);
-            sb.Append(", ");
-        }
-
-        if (LeaseRequests.Count > 0)
-            sb.Length -= 2; // Remove the trailing comma and space
-
-        sb.Append(']');
-        return sb.ToString();
+        return $"(LeaseRequests: {LeaseRequests.ToStringRep()})";
     }
 }

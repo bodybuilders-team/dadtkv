@@ -12,10 +12,10 @@ public static class FreeLeaseRequestDtoConverter
         };
     }
 
-    public static FreeLeaseRequest ConvertFromDto(FreeLeaseRequestDto dto, ProcessConfiguration processConfiguration)
+    public static FreeLeaseRequest ConvertFromDto(FreeLeaseRequestDto dto)
     {
         return new FreeLeaseRequest(
-            processConfiguration,
+            serverId: dto.ServerId,
             sequenceNum: dto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(dto.LeaseId)
         );

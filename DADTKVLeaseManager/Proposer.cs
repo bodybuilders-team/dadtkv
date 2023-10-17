@@ -1,4 +1,5 @@
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using Timer = System.Timers.Timer;
 
 namespace Dadtkv;
@@ -15,7 +16,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly ulong _initialProposalNumber;
     private readonly LeaseManagerConfiguration _leaseManagerConfiguration;
     private readonly List<LeaseRequest> _leaseRequests = new();
-
+    private readonly ILogger<Proposer> _logger = DadtkvLogger.Factory.CreateLogger<Proposer>();
     private readonly UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urBroadcaster;
 
     public Proposer(
@@ -65,39 +66,58 @@ public class Proposer : LeaseService.LeaseServiceBase
         // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
         timer.Elapsed += (_, _) =>
         {
-            if (_leaseRequests.Count == 0)
+            lock (_consensusState)
             {
+                lock (_leaseRequests)
+                {
+                    if (_leaseRequests.Count == 0)
+                    {
+                        timer.Start();
+                        return;
+                    }
+                }
+
+
+                while (!UpdateConsensusValues())
+                {
+                    Monitor.Exit(_consensusState);
+                    Thread.Sleep(10);
+                    Monitor.Enter(_consensusState);
+                }
+
+                _logger.LogDebug($"Yeahhh, we got all the updates ;P");
+                _logger.LogDebug($"Let's check our lease requests {string.Join(", ", _leaseRequests)}");
+
+                var roundNumber = (ulong)_consensusState.Values.Count;
+
+                var myProposalValue = GetMyProposalValue();
+                _logger.LogDebug($"Now we've update the lease requests! {string.Join(", ", _leaseRequests)}");
+                _logger.LogDebug($"Time to propose for round number {roundNumber}! {myProposalValue}");
+
+                lock (_leaseRequests)
+                {
+                    if (_leaseRequests.Count == 0)
+                    {
+                        timer.Start();
+                        return;
+                    }
+                }
+
+                var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
+
+                if (!decided)
+                {
+                    timer.Start();
+                    return;
+                }
+
+                // TODO Add lock?... :(
+                while ((ulong)_consensusState.Values.Count <= roundNumber ||
+                       _consensusState.Values[(int)roundNumber] == null)
+                    Thread.Sleep(10);
+
                 timer.Start();
-                return;
             }
-
-            while (!UpdateConsensusValues())
-                Thread.Sleep(10);
-
-            var roundNumber = (ulong)_consensusState.Values.Count;
-
-            var myProposalValue = GetMyProposalValue();
-
-            if (_leaseRequests.Count == 0)
-            {
-                timer.Start();
-                return;
-            }
-
-            var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
-
-            if (!decided)
-            {
-                timer.Start();
-                return;
-            }
-
-            // TODO Add lock?... :(
-            while ((ulong)_consensusState.Values.Count <= roundNumber ||
-                   _consensusState.Values[(int)roundNumber] == null)
-                Thread.Sleep(10);
-
-            timer.Start();
         };
 
         timer.AutoReset = false;
@@ -139,7 +159,8 @@ public class Proposer : LeaseService.LeaseServiceBase
 
             // Update the lease queues in the proposal value
             foreach (var currentRequest in _leaseRequests)
-                if (_consensusState.Values.Any(consensusValue => consensusValue.LeaseRequests.Contains(currentRequest)))
+                if (_consensusState.Values.Any(consensusValue =>
+                        consensusValue!.LeaseRequests.Exists(((req) => req.Equals(currentRequest)))))
                     toRemove.Add(currentRequest);
                 else
                     myProposalValue.LeaseRequests.Add(currentRequest);
@@ -288,7 +309,6 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         _urBroadcaster.UrBroadcast(
             new LearnRequest(
-                _leaseManagerConfiguration,
                 _leaseManagerConfiguration.ServerId,
                 roundNumber,
                 newConsensusValue

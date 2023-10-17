@@ -1,5 +1,6 @@
 using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -15,6 +16,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
     private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
+
+    private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
 
     public TmLearner(ProcessConfiguration processConfiguration,
         Dictionary<LeaseId, bool> executedTrans,
@@ -59,7 +62,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
+        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 
@@ -99,9 +102,13 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 }
             }
 
+            _logger.LogDebug($"Received learn request: {request}");
+            _logger.LogDebug($"Leases that were freed: {leasesToBeFreed.ToStringRep()}");
+            _logger.LogDebug($"Lease queues after learn request: {_leaseQueues}");
+
             foreach (var leaseId in leasesToBeFreed)
                 _urBroadcaster.UrBroadcast(
-                    new FreeLeaseRequest(_processConfiguration, leaseId),
+                    new FreeLeaseRequest(_processConfiguration.ServerId, leaseId),
                     (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync
                 );
         }

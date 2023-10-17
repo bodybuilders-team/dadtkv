@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Dadtkv;
 
 public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
@@ -35,5 +37,11 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
         foreach (var (key, queue) in this)
             if (queue.Count > 0 && queue.Peek().Equals(leaseId))
                 queue.Dequeue();
+    }
+
+    public override string ToString()
+    {
+        var lines = this.Select(kvp => $"{kvp.Key}:{kvp.Value.ToStringRep()}");
+        return "{" + string.Join(",", lines) + "}";
     }
 }

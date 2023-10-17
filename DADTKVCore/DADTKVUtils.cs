@@ -1,3 +1,6 @@
+using System.Text;
+using Microsoft.Extensions.Logging;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -115,5 +118,54 @@ public static class DadtkvUtils
         if (index < 0)
             index = ~index;
         list.Insert(index, item);
+    }
+
+    public static string ToStringRep<T>(this IList<T> list)
+    {
+        var sb = new StringBuilder();
+        sb.Append("[");
+        // Do the same as above but take into account empty list and list with only one element
+        foreach (var ele in list)
+        {
+            sb.Append(ele);
+            sb.Append(", ");
+        }
+
+        if (list.Count > 0)
+            sb.Length -= 2; // Remove the trailing comma and space
+
+        sb.Append(']');
+
+        return sb.ToString();
+    }
+
+    public static string ToStringRep<TK, TV>(this IDictionary<TK, TV> dictionary) where TK : notnull
+    {
+        var lines = dictionary.Select(kvp => $"{kvp.Key}:{kvp.Value}");
+        return "{" + string.Join(",", lines) + "}";
+    }
+
+    public static string ToStringRep<TV>(this ISet<TV> set)
+    {
+        var lines = set.Select(ele => $"{ele}");
+        return "{" + string.Join(",", lines) + "}";
+    }
+
+    public static string ToStringRep<T>(this Queue<T> queue)
+    {
+        var sb = new StringBuilder();
+        sb.Append("[");
+        
+        foreach (var ele in queue)
+        {
+            sb.Append(ele);
+            sb.Append(", ");
+        }
+        
+        if (queue.Count > 0)
+            sb.Length -= 2; // Remove the trailing comma and space
+        
+        sb.Append(']');
+        return sb.ToString();
     }
 }

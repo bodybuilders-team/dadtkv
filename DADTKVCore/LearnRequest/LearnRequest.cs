@@ -5,27 +5,25 @@ namespace Dadtkv;
 /// </summary>
 public class LearnRequest : ITobRequest<LearnRequest>
 {
-    private readonly ProcessConfiguration _processConfiguration;
-
-    public LearnRequest(ProcessConfiguration processConfiguration, ulong serverId, ulong roundNumber,
+    public LearnRequest(ulong serverId, ulong roundNumber,
         ConsensusValue consensusValue, ulong sequenceNum = 0)
     {
-        _processConfiguration = processConfiguration;
         ServerId = serverId;
         SequenceNum = sequenceNum;
         RoundNumber = roundNumber;
         ConsensusValue = consensusValue;
     }
 
-    public ulong RoundNumber { get; }
     public ConsensusValue ConsensusValue { get; }
-    public ulong UrbMessageId => ServerId + SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
+    public ulong RoundNumber { get; }
     public ulong ServerId { get; }
     public ulong SequenceNum { get; set; }
-    public ulong TobMessageId { get; set; }
 
-    public int CompareTo(LearnRequest? other)
+    public ulong TobMessageId => RoundNumber;
+
+    public override string ToString()
     {
-        return TobMessageId.CompareTo(other?.TobMessageId);
+        return
+            $"(ConsensusValue: {ConsensusValue}, RoundNumber: {RoundNumber}, ServerId: {ServerId}, SequenceNum: {SequenceNum})";
     }
 }

@@ -18,4 +18,7 @@
         <Protobuf Include="../DadtkvCore/Proto/DadInt.proto" GrpcServices="None"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="../DadtkvCore/DadtkvCore.csproj"/>
+    </ItemGroup>
 </Project>

@@ -14,12 +14,10 @@ public static class UpdateRequestDtoConverter
         };
     }
 
-    public static UpdateRequest ConvertFromDto(UpdateRequestDto urbRequestDto,
-        ProcessConfiguration processConfiguration)
+    public static UpdateRequest ConvertFromDto(UpdateRequestDto urbRequestDto)
     {
         return new UpdateRequest(
-            processConfiguration,
-            urbRequestDto.ServerId,
+            serverId: urbRequestDto.ServerId,
             sequenceNum: urbRequestDto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(urbRequestDto.LeaseId),
             writeSet: urbRequestDto.WriteSet.ToList(),

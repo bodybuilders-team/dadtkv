@@ -1,5 +1,6 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -15,6 +16,9 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
     private readonly LeaseQueues _leaseQueues;
     private readonly ProcessConfiguration _processConfiguration;
+
+    private readonly ILogger<StateUpdateServiceImpl> _logger =
+        DadtkvLogger.Factory.CreateLogger<StateUpdateServiceImpl>();
 
     public StateUpdateServiceImpl(ProcessConfiguration processConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
@@ -33,7 +37,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _fifoUrbReceiver =
             new FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
-                UrbDeliver,
+                FifoUrbDeliver,
                 (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
                 processConfiguration
             );
@@ -47,17 +51,20 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
+        _logger.LogDebug($"Received Update request: {request}");
         _fifoUrbReceiver.FifoUrbProcessRequest(
-            UpdateRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
+            UpdateRequestDtoConverter.ConvertFromDto(request));
 
         return Task.FromResult(new UpdateResponseDto { Ok = true });
     }
 
-    private void UrbDeliver(UpdateRequest request)
+    private void FifoUrbDeliver(UpdateRequest request)
     {
         lock (_leaseQueues)
         {
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
+            _logger.LogDebug($"Received Update request 2: {request}");
+
 
             // TODO what if we never obtain the leases
             while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
@@ -76,6 +83,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                 foreach (var (key, queue) in _leaseQueues)
                     if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
                         queue.Dequeue();
+
+            _logger.LogDebug($"Lease queues after update request: {_leaseQueues}");
         }
     }
 }

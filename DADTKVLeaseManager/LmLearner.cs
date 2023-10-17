@@ -53,7 +53,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request, _processConfiguration));
+        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 

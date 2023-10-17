@@ -14,25 +14,23 @@ public class LeaseId
         ServerId = serverId;
     }
 
-    private bool Equals(LeaseId other)
-    {
-        return ServerId == other.ServerId && SequenceNum == other.SequenceNum;
-    }
-
     public override bool Equals(object? obj)
     {
-        if (ReferenceEquals(null, obj)) return false;
-        if (ReferenceEquals(this, obj)) return true;
-        return obj.GetType() == GetType() && Equals((LeaseId)obj);
+        if (null == obj) return false;
+        if (this == obj) return true;
+        if (obj.GetType() != this.GetType()) return false;
+        
+        var other = (LeaseId)obj;
+        return SequenceNum == other.SequenceNum && ServerId == other.ServerId;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(ServerId, SequenceNum);
+        return HashCode.Combine(SequenceNum, ServerId);
     }
 
     public override string ToString()
     {
-        return $"(SequenceNum: {SequenceNum}, ServerId: '{ServerId}')";
+        return $"(SequenceNum: {SequenceNum}, ServerId: {ServerId})";
     }
 }

@@ -1,5 +1,7 @@
 ﻿using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -13,6 +15,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
     private readonly ProcessConfiguration _processConfiguration;
+    private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
 
     private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
@@ -100,7 +103,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             }
 
             var end = DateTime.Now;
-            Console.WriteLine("Time taken to obtain leases: " + (end - start).TotalMilliseconds + "ms");
+            _logger.LogDebug($"Time taken to obtain leases: {(end - start).TotalMilliseconds} ms");
 
             // TODO put to false and add free lease request handler
             var conflict = true;
@@ -138,9 +141,9 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
         if (freeLease) _leaseQueues.FreeLeases(leaseId);
 
+        
         _urBroadcaster.UrBroadcast(
             new UpdateRequest(
-                _processConfiguration,
                 _processConfiguration.ServerId,
                 leaseId,
                 writeSet,
