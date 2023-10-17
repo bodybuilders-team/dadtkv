@@ -1,7 +1,6 @@
 syntax = "proto3";
 package dadtkv;
-
-option csharp_namespace = "DADTKV";
+option csharp_namespace = "Dadtkv";
 
 message DadInt {
   string key = 1;

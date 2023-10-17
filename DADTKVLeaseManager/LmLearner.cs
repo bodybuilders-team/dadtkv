@@ -2,9 +2,7 @@ using System.Diagnostics;
 using Grpc.Core;
 using Grpc.Net.Client;
 
-namespace DADTKV;
-
-// TODO: Rename to Learner? Is inside the LearnerManager project.
+namespace Dadtkv;
 
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
@@ -13,10 +11,12 @@ public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
-    private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
+    private readonly ProcessConfiguration _processConfiguration;
+    private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState)
     {
+        _processConfiguration = processConfiguration;
         _consensusState = consensusState;
 
         var learnerServiceClients = processConfiguration.OtherServerProcesses
@@ -24,11 +24,11 @@ public class LmLearner : LearnerService.LearnerServiceBase
             .Select(channel => new LearnerService.LearnerServiceClient(channel))
             .ToList();
 
-        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
             LearnUrbDeliver,
-            req => req.ServerId + req.SequenceNum,
-            (client, req) => client.LearnAsync(req).ResponseAsync
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+            processConfiguration
         );
     }
 
@@ -51,10 +51,10 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <param name="request">The learn request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The learn response.</returns>
-    public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
+    public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(request);
-        return Task.FromResult(new LearnResponse { Ok = true });
+        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
+        return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 
     /// <summary>
@@ -71,10 +71,9 @@ public class LmLearner : LearnerService.LearnerServiceBase
             if (_consensusState.Values[(int)request.RoundNumber] != null)
                 Debug.WriteLine($"Value for the round already exists." +
                                 $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
-                                $"Current: {ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue)}");
+                                $"Current: {request.ConsensusValue}");
 
-            _consensusState.Values[(int)request.RoundNumber] =
-                ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
+            _consensusState.Values[(int)request.RoundNumber] = request.ConsensusValue;
         }
     }
 }

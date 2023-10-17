@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Receiver for the Uniform Reliable Broadcast protocol.
@@ -7,22 +7,22 @@ namespace DADTKV;
 /// <typeparam name="TR">Type of the request.</typeparam>
 /// <typeparam name="TA">Type of the response.</typeparam>
 /// <typeparam name="TC">Type of the client.</typeparam>
-public class UrbReceiver<TR, TA, TC>
+public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 {
     private readonly List<TC> _clients;
-    private readonly Func<TR, string> _getMessageId;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
-    private readonly HashSet<string> _msgIdLookup;
+    private readonly HashSet<ulong> _msgIdLookup;
+    private readonly ProcessConfiguration _processConfiguration;
     private readonly Action<TR> _urbDeliver;
 
-    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TR, string> getMessageId,
-        Func<TC, TR, Task<TA>> getResponse)
+    public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse,
+        ProcessConfiguration processConfiguration)
     {
-        _msgIdLookup = new HashSet<string>();
+        _msgIdLookup = new HashSet<ulong>();
         _clients = clients;
         _urbDeliver = urbDeliver;
-        _getMessageId = getMessageId;
         _getResponse = getResponse;
+        _processConfiguration = processConfiguration;
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class UrbReceiver<TR, TA, TC>
     /// <param name="request">Request to be processed.</param>
     public void UrbProcessRequest(TR request)
     {
-        var msgId = _getMessageId(request);
+        var msgId = request.ServerId + request.SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
 
         lock (_msgIdLookup)
         {
@@ -48,7 +48,7 @@ public class UrbReceiver<TR, TA, TC>
             .Select(client => _getResponse(client, request))
             .ToList();
 
-        var majority = DADTKVUtils.WaitForMajority(resTasks, res => true);
+        var majority = DadtkvUtils.WaitForMajority(resTasks, _ => true);
 
         if (majority)
             _urbDeliver(request);

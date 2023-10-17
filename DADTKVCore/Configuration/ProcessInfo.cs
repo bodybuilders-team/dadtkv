@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Information about a process in the system.
@@ -10,6 +10,7 @@ public class ProcessInfo
     public string Role { get; set; }
 
     // TODO: Create ServerProcessInfo and ClientProcessInfo to abstract this? Avoid nullability issues
-    public string? Url { get; set; }
+    public string? Url { get; set; } // TODO Just for servers
+
     public Dictionary<int, string> SlotStatus { get; } = new();
 }

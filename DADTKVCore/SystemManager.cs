@@ -1,97 +1,95 @@
 ﻿using System.Diagnostics;
 
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
-///     The system manager is responsible for starting the DADTKV system.
+///     The system manager is responsible for starting the Dadtkv system.
 /// </summary>
-internal static class SystemManager
+internal class SystemManager
 {
-    /// <summary>
-    ///     Entry point for the DADTKV system.
-    /// </summary>
-    /// <param name="args">Arguments: systemConfigFilePath</param>
-    private static void Main(string[] args)
-    {
-        // Read the system configuration file
-        /*var configurationFilePath = "Configuration/configuration_sample.txt";//args[0];
-        var configurationFile = Path.Combine(Environment.CurrentDirectory, configurationFilePath);
-        var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);*/
-        var configurationFilePath = "Configuration/configuration_sample.txt";
-        var projectDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName;
-        var configurationFile = Path.Combine(projectDirectory, configurationFilePath);
-        var configuration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
-
-        if (configuration == null)
-        {
-            Console.WriteLine($"Failed to read system configuration file at {configurationFile}");
-            return;
-        }
-
-        // Start DADTKV servers (Transaction Managers, Lease Managers)
-        StartServers(configuration, configurationFile);
-        return;
-        Thread.Sleep(5000);
-
-        // Start DADTKV clients
-        StartClients(configuration);
-
-        // Wait for user input to shut down the system
-        Console.WriteLine("Press Enter to shut down the DADTKV system.");
-        Console.ReadLine();
-
-        // TODO: Stop DADTKV processes gracefully?
-    }
+    private readonly List<Process> _processes = new();
 
     /// <summary>
-    ///     Starts the DADTKV servers (Transaction Managers, Lease Managers).
+    ///     Starts the Dadtkv servers (Transaction Managers, Lease Managers).
     /// </summary>
     /// <param name="config">The system configuration.</param>
     /// <param name="configurationFile">The system configuration file.</param>
-    private static void StartServers(SystemConfiguration config, string configurationFile)
+    public void StartServers(SystemConfiguration config, string configurationFile)
     {
-        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.Parent.FullName;
-        var leaseManagerExePath =
-            Path.Combine(solutionDirectory, "DADTKVLeaseManager/bin/Debug/net6.0/DADTKVLeaseManager.exe");
-        var transactionManagerExePath = Path.Combine(solutionDirectory,
-            "DADTKVTransactionManager/bin/Debug/net6.0/DADTKVTransactionManager.exe");
-        Console.WriteLine(configurationFile);
+        var lms = config.ServerProcesses.Where(process => process.Role == "L").ToList();
+        var tms = config.ServerProcesses.Where(process => process.Role == "T").ToList();
 
-        foreach (var process in config.ServerProcesses)
+        StartServers(lms, configurationFile);
+        Thread.Sleep(1000);
+        StartServers(tms, configurationFile);
+    }
+
+    private void StartServers(List<ProcessInfo> serverProcesses, string configurationFile)
+    {
+        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
+        var leaseManagerExePath =
+            Path.Combine(solutionDirectory, "DadtkvLeaseManager/bin/Debug/net6.0/DadtkvLeaseManager.exe");
+        var transactionManagerExePath = Path.Combine(solutionDirectory,
+            "DadtkvTransactionManager/bin/Debug/net6.0/DadtkvTransactionManager.exe");
+
+        foreach (var process in serverProcesses)
         {
             Console.WriteLine($"Starting {process.Role} {process.Id} at {process.Url}");
-
             var fileName = process.Role == "L" ? leaseManagerExePath : transactionManagerExePath;
-            Console.WriteLine(fileName);
 
-            Process.Start(new ProcessStartInfo
+            var p = Process.Start(new ProcessStartInfo
             {
                 FileName = fileName,
                 ArgumentList = { process.Id, configurationFile }
-            });
+            }) ?? throw new Exception("Failed to start server process: " + process.Id);
+            _processes.Add(p);
         }
     }
 
     /// <summary>
-    ///     Starts the DADTKV clients.
+    ///     Starts the Dadtkv clients.
     /// </summary>
     /// <param name="config">The system configuration.</param>
-    private static void StartClients(SystemConfiguration config)
+    public void StartClients(SystemConfiguration config)
     {
+        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
+        var clientExePath = Path.Combine(solutionDirectory, "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
+        var clientScriptsDirectory = Path.Combine(solutionDirectory, "DadtkvClient/Script");
+        var clientScriptFiles = Directory.GetFiles(clientScriptsDirectory, "*.txt");
+
         foreach (var client in config.Clients)
         {
-            Console.WriteLine($"Starting client {client.Id} at {client.Url}");
+            Console.WriteLine($"Starting client {client.Id}");
 
-            Process.Start(new ProcessStartInfo
+            var p = Process.Start(new ProcessStartInfo
             {
-                FileName = "DADTKVClient.exe",
+                FileName = clientExePath,
                 ArgumentList =
                 {
-                    config.TransactionManagers[0].Url!, // TODO: Ip lookup? Load balancing?
-                    client.Id
-                    // TODO: client.ScriptFilePath
+                    config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url!,
+                    client.Id,
+                    clientScriptFiles[new Random().Next(clientScriptFiles.Length)]
                 }
-            });
+            }) ?? throw new Exception("Failed to start client process: " + client.Id);
+            _processes.Add(p);
         }
+    }
+
+    /// <summary>
+    ///     Shuts down the Dadtkv system.
+    /// </summary>
+    public void ShutDown()
+    {
+        foreach (var process in _processes)
+            process.Kill();
+    }
+
+    /// <summary>
+    ///     Checks if the Dadtkv system is running.
+    /// </summary>
+    /// <returns>True if the Dadtkv system is running, false otherwise.</returns>
+    public bool IsRunning()
+    {
+        return _processes.All(process => !process.HasExited);
     }
 }

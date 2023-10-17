@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Complex Test" type="CompoundRunConfigurationType">
+    <toRun name="11DADTKVLeaseManager" type="DotNetProject" />
+    <toRun name="12DADTKVLeaseManager" type="DotNetProject" />
+    <toRun name="13DADTKVLeaseManager" type="DotNetProject" />
+    <toRun name="21DADTKVTransactionManager" type="DotNetProject" />
+    <toRun name="22DADTKVTransactionManager" type="DotNetProject" />
+    <toRun name="23DADTKVTransactionManager" type="DotNetProject" />
+    <toRun name="31DADTKVClient" type="DotNetProject" />
+    <toRun name="32DADTKVClient" type="DotNetProject" />
+    <toRun name="33DADTKVClient" type="DotNetProject" />
+    <toRun name="34DADTKVClient" type="DotNetProject" />
+    <toRun name="35DADTKVClient" type="DotNetProject" />
+    <toRun name="36DADTKVClient" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>

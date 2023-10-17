@@ -1,9 +1,12 @@
-namespace DADTKV;
+using System.Text;
+using Microsoft.Extensions.Logging;
+
+namespace Dadtkv;
 
 /// <summary>
-///     Utilities for the DADTKV project.
+///     Utilities for the Dadtkv project.
 /// </summary>
-public static class DADTKVUtils
+public static class DadtkvUtils
 {
     private const int DefaultTimeout = 1000;
 
@@ -83,5 +86,86 @@ public static class DADTKVUtils
     public static TV? GetValueOrNull<TK, TV>(this IDictionary<TK, TV?> dict, TK key, TV? defaultValue = default)
     {
         return dict.TryGetValue(key, out var value) ? value : defaultValue;
+    }
+
+    /// <summary>
+    ///     Adds an item to the list in sorted order.
+    /// </summary>
+    /// <param name="list">The list to add the item to.</param>
+    /// <param name="item">The item to add.</param>
+    /// <typeparam name="T">The type of the list.</typeparam>
+    public static void AddSorted<T>(this List<T> list, T item) where T : IComparable<T>
+    {
+        if (list.Count == 0)
+        {
+            list.Add(item);
+            return;
+        }
+
+        if (list[^1].CompareTo(item) <= 0)
+        {
+            list.Add(item);
+            return;
+        }
+
+        if (list[0].CompareTo(item) >= 0)
+        {
+            list.Insert(0, item);
+            return;
+        }
+
+        var index = list.BinarySearch(item);
+        if (index < 0)
+            index = ~index;
+        list.Insert(index, item);
+    }
+
+    public static string ToStringRep<T>(this IList<T> list)
+    {
+        var sb = new StringBuilder();
+        sb.Append("[");
+        // Do the same as above but take into account empty list and list with only one element
+        foreach (var ele in list)
+        {
+            sb.Append(ele);
+            sb.Append(", ");
+        }
+
+        if (list.Count > 0)
+            sb.Length -= 2; // Remove the trailing comma and space
+
+        sb.Append(']');
+
+        return sb.ToString();
+    }
+
+    public static string ToStringRep<TK, TV>(this IDictionary<TK, TV> dictionary) where TK : notnull
+    {
+        var lines = dictionary.Select(kvp => $"{kvp.Key}:{kvp.Value}");
+        return "{" + string.Join(",", lines) + "}";
+    }
+
+    public static string ToStringRep<TV>(this ISet<TV> set)
+    {
+        var lines = set.Select(ele => $"{ele}");
+        return "{" + string.Join(",", lines) + "}";
+    }
+
+    public static string ToStringRep<T>(this Queue<T> queue)
+    {
+        var sb = new StringBuilder();
+        sb.Append("[");
+        
+        foreach (var ele in queue)
+        {
+            sb.Append(ele);
+            sb.Append(", ");
+        }
+        
+        if (queue.Count > 0)
+            sb.Length -= 2; // Remove the trailing comma and space
+        
+        sb.Append(']');
+        return sb.ToString();
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace DADTKV;
+﻿namespace Dadtkv;
 
 internal static class Program
 {
@@ -10,7 +10,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         if (args.Length != 3)
-            throw new ArgumentException("Invalid arguments.");
+            throw new ArgumentException("Invalid arguments. Usage: DadtkvClient.exe serverUrl clientID scriptFilePath");
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -40,6 +40,7 @@ internal static class Program
                                 Value = x.Value
                             }).ToList();
 
+                        Console.WriteLine($"Executing transaction {transactionCommand}");
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 

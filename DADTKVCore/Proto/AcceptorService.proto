@@ -1,33 +1,33 @@
 syntax = "proto3";
 package dadtkv;
+option csharp_namespace = "Dadtkv";
 
-option csharp_namespace = "DADTKV";
-import "ConsensusValue.proto";
+import "ConsensusValueDto.proto";
 
 service AcceptorService {
-  rpc Prepare(PrepareRequest) returns (PrepareResponse);
-  rpc Accept(AcceptRequest) returns (AcceptResponse);
+  rpc Prepare(PrepareRequestDto) returns (PrepareResponseDto);
+  rpc Accept(AcceptRequestDto) returns (AcceptResponseDto);
 }
 
-message PrepareRequest {
+message PrepareRequestDto {
   uint64 proposalNumber = 1;
   uint64 roundNumber = 2;
 }
 
-message PrepareResponse {
+message PrepareResponseDto {
   bool promise = 1;
   uint64 writeTimestamp = 2;
   uint64 roundNumber = 3;
   ConsensusValueDto value = 4;
 }
 
-message AcceptRequest {
+message AcceptRequestDto {
   uint64 proposalNumber = 1;
   uint64 roundNumber = 2;
   ConsensusValueDto value = 3;
 }
 
-message AcceptResponse {
+message AcceptResponseDto {
   bool accepted = 1;
 }
 

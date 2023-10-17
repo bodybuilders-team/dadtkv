@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Simple Test (1C, 1TM, 1LM)" type="CompoundRunConfigurationType">
+    <toRun name="11DADTKVLeaseManager" type="DotNetProject" />
+    <toRun name="21DADTKVTransactionManager" type="DotNetProject" />
+    <toRun name="31DADTKVClient" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>

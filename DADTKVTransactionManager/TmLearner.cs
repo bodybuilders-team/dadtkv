@@ -1,31 +1,31 @@
-using System.Text;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Logging;
 
-namespace DADTKV;
-
-// TODO: Rename to Learner? Is inside the LearnerManager project.
+namespace Dadtkv;
 
 /// <summary>
 ///     The learner is responsible for learning the decided value for a Paxos round.
 /// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly ConsensusState _consensusState;
-    private readonly object _consensusStateLockObject = new();
     private readonly Dictionary<LeaseId, bool> _executedTrans;
-    private readonly HashSet<LeaseId> _freedLeases;
-    private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
+    private readonly LeaseQueues _leaseQueues;
     private readonly ProcessConfiguration _processConfiguration;
-    private readonly UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient> _urbReceiver;
+    private readonly TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _tobReceiver;
 
-    public TmLearner(ProcessConfiguration processConfiguration, ConsensusState consensusState,
-        Dictionary<LeaseId, bool> executedTrans, HashSet<LeaseId> freedLeases)
+    private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
+        _urBroadcaster;
+
+    private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
+
+    public TmLearner(ProcessConfiguration processConfiguration,
+        Dictionary<LeaseId, bool> executedTrans,
+        LeaseQueues leaseQueues)
     {
         _processConfiguration = processConfiguration;
-        _consensusState = consensusState;
         _executedTrans = executedTrans;
-        _freedLeases = freedLeases;
+        _leaseQueues = leaseQueues;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
         foreach (var process in processConfiguration.OtherServerProcesses)
@@ -34,32 +34,24 @@ public class TmLearner : LearnerService.LearnerServiceBase
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(channel));
         }
 
-        _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
-        foreach (var process in processConfiguration.LeaseManagers)
+        var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
+        foreach (var process in processConfiguration.OtherTransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
-            _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
+            stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
-        _urbReceiver = new UrbReceiver<LearnRequest, LearnResponse, LearnerService.LearnerServiceClient>(
+        _tobReceiver = new TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients,
-            LearnUrbDeliver,
-            req => req.ServerId + req.SequenceNum,
-            (client, req) => client.LearnAsync(req).ResponseAsync
+            TobDeliver,
+            (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+            processConfiguration
         );
-    }
 
-    /// <summary>
-    ///     Resize the consensus state list to fit the round number.
-    /// </summary>
-    /// <param name="roundNumber">The round number.</param>
-    private void ResizeConsensusStateList(int roundNumber)
-    {
-        lock (_consensusStateLockObject)
-        {
-            for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
-                _consensusState.Values.Add(null);
-        }
+        _urBroadcaster =
+            new UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>(
+                stateUpdateServiceClients
+            );
     }
 
     /// <summary>
@@ -68,10 +60,10 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <param name="request">The learn request.</param>
     /// <param name="context">The server call context.</param>
     /// <returns>The learn response.</returns>
-    public override Task<LearnResponse> Learn(LearnRequest request, ServerCallContext context)
+    public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(request);
-        return Task.FromResult(new LearnResponse { Ok = true });
+        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
+        return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 
     /// <summary>
@@ -79,54 +71,46 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// </summary>
     /// <param name="request">The learn request.</param>
     /// <exception cref="Exception">If the value for the round already exists.</exception>
-    private void LearnUrbDeliver(LearnRequest request)
+    private void TobDeliver(LearnRequest request)
     {
-        lock (_consensusStateLockObject)
+        lock (_leaseQueues)
         {
-            ResizeConsensusStateList((int)request.RoundNumber);
+            request.ConsensusValue.LeaseRequests.ForEach(leaseRequest =>
+            {
+                leaseRequest.Keys.ForEach(key =>
+                {
+                    if (!_leaseQueues.ContainsKey(key))
+                        _leaseQueues.Add(key, new Queue<LeaseId>());
 
-            var consensusValue = ConsensusValueDtoConverter.ConvertFromDto(request.ConsensusValue);
-            _consensusState.Values[(int)request.RoundNumber] = consensusValue;
+                    _leaseQueues[key].Enqueue(leaseRequest.LeaseId);
+                });
+            });
 
             var leasesToBeFreed = new HashSet<LeaseId>();
-            foreach (var (key, queue) in consensusValue.LeaseQueues)
+
+            foreach (var (key, queue) in _leaseQueues)
             {
                 if (queue.Count == 0)
                     continue;
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId == _processConfiguration.ProcessInfo.Id && queue.Count > 1 &&
-                    _executedTrans[leaseId] && !_freedLeases.Contains(leaseId)
-                   )
+                if (leaseId.ServerId == _processConfiguration.ServerId && queue.Count > 1 && _executedTrans[leaseId])
+                {
                     leasesToBeFreed.Add(leaseId);
+                    queue.Dequeue();
+                }
             }
 
-            // Create string with list of leases to be freed
-            var sb = new StringBuilder();
-            foreach (var leaseId in leasesToBeFreed)
-            {
-                sb.Append(leaseId);
-                sb.Append(", ");
-            }
-
-            Console.Write(
-                $"Received instance: {consensusValue} from {request.ServerId} with seq number " +
-                $"{request.SequenceNum} and round number {request.RoundNumber} and will free the " +
-                $"following leases: [{sb}] \n\n"
-            );
+            _logger.LogDebug($"Received learn request: {request}");
+            _logger.LogDebug($"Leases that were freed: {leasesToBeFreed.ToStringRep()}");
+            _logger.LogDebug($"Lease queues after learn request: {_leaseQueues}");
 
             foreach (var leaseId in leasesToBeFreed)
-            {
-                foreach (var leaseServiceClient in _leaseServiceClients)
-                    leaseServiceClient.FreeLeaseAsync(new FreeLeaseRequest
-                        {
-                            LeaseId = LeaseIdDtoConverter.ConvertToDto(leaseId)
-                        }
-                    );
-
-                _freedLeases.Add(leaseId);
-            }
+                _urBroadcaster.UrBroadcast(
+                    new FreeLeaseRequest(_processConfiguration.ServerId, leaseId),
+                    (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync
+                );
         }
     }
 }

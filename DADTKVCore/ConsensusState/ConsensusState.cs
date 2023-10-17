@@ -1,8 +1,6 @@
 using System.Text;
 
-namespace DADTKV;
-
-// TODO: Maybe create package Consensus (com subpackages LeaseId, ConsensusValue e file ConsensusState)
+namespace Dadtkv;
 
 /// <summary>
 ///     The state of the consensus algorithm.

@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Command to get the status of the system.

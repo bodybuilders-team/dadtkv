@@ -16,13 +16,15 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 
-        <Protobuf Include="../DADTKVCore/Proto/DADTKVService.proto" GrpcServices="Server"/>
-        <Protobuf Include="../DADTKVCore/Proto/LeaseService.proto" GrpcServices="Client"/>
-        <Protobuf Include="Proto/StateUpdateService.proto" AdditionalImportDirs="../DADTKVCore/Proto/" GrpcServices="Both"/>
-        <Protobuf Include="../DADTKVCore/Proto/DadInt.proto" GrpcServices="None"/>
-        <Protobuf Include="../DADTKVCore/Proto/LearnerService.proto" AdditionalImportDirs="../DADTKVCore/Proto/" GrpcServices="Both"/>
+        <Protobuf Include="../DadtkvCore/Proto/DadtkvService.proto" GrpcServices="Server"/>
+        <Protobuf Include="../DadtkvCore/Proto/LeaseService.proto" GrpcServices="Client"/>
+        <Protobuf Include="./Proto/StateUpdateService.proto" AdditionalImportDirs="../DadtkvCore/Proto/" GrpcServices="Both"/>
+        <Protobuf Include="../DadtkvCore/Proto/DadInt.proto" GrpcServices="None"/>
+        <Protobuf Include="../DadtkvCore/Proto/LearnerService.proto" AdditionalImportDirs="../DadtkvCore/Proto/" GrpcServices="Both"/>
     </ItemGroup>
+
     <ItemGroup>
-        <ProjectReference Include="..\DADTKVCore\DADTKVCore.csproj"/>
+        <ProjectReference Include="../DadtkvCore/DadtkvCore.csproj"/>
     </ItemGroup>
+
 </Project>

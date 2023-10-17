@@ -1,9 +1,8 @@
 syntax = "proto3";
 package dadtkv;
-
-option csharp_namespace = "DADTKV";
+option csharp_namespace = "Dadtkv";
 
 message LeaseIdDto {
-  string serverId = 1;
+  uint64 serverId = 1;
   uint64 sequenceNum = 2;
 }

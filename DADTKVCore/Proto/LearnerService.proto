@@ -1,21 +1,13 @@
 syntax = "proto3";
 package dadtkv;
+option csharp_namespace = "Dadtkv";
 
-option csharp_namespace = "DADTKV";
-
-import "ConsensusValue.proto";
+import "LearnRequestDto.proto";
 
 service LearnerService {
-  rpc Learn(LearnRequest) returns (LearnResponse) {}
+  rpc Learn(LearnRequestDto) returns (LearnResponseDto) {}
 }
 
-message LearnRequest {
-  string serverId = 1;
-  uint64 sequenceNum = 2;
-  uint64 roundNumber = 3;
-  ConsensusValueDto consensusValue = 4;
-}
-
-message LearnResponse {
+message LearnResponseDto {
   bool ok = 1;
 }

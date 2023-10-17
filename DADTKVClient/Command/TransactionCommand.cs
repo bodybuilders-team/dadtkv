@@ -1,4 +1,4 @@
-namespace DADTKV;
+namespace Dadtkv;
 
 /// <summary>
 ///     Command to execute a transaction.
@@ -13,4 +13,9 @@ internal class TransactionCommand : ICommand
 
     public List<string> ReadSet { get; }
     public Dictionary<string, int> WriteSet { get; }
+
+    public override string ToString()
+    {
+        return $"(ReadSet: {ReadSet.ToStringRep()}, WriteSet: {WriteSet.ToStringRep()})";
+    }
 }

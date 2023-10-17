@@ -1,0 +1,10 @@
+syntax = "proto3";
+package dadtkv;
+option csharp_namespace = "Dadtkv";
+
+import "LeaseIdDto.proto";
+
+message LeaseRequestDto {
+  LeaseIdDto leaseId = 1;
+  repeated string keys = 3;
+}

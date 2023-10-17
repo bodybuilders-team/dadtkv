@@ -1,28 +1,13 @@
 syntax = "proto3";
 package dadtkv;
+option csharp_namespace = "Dadtkv";
 
-option csharp_namespace = "DADTKV";
-
-import "LeaseId.proto";
+import "LeaseRequestDto.proto";
 
 service LeaseService {
-  rpc RequestLease(LeaseRequest) returns (LeaseResponse);
-  rpc FreeLease(FreeLeaseRequest) returns (FreeLeaseResponse);
+  rpc RequestLease(LeaseRequestDto) returns (LeaseResponseDto);
 }
 
-message LeaseRequest {
-  LeaseIdDto leaseId = 1;
-  repeated string set = 3;
-}
-
-message FreeLeaseRequest {
-  LeaseIdDto leaseId = 1;
-}
-
-message LeaseResponse {
-  bool ok = 1;
-}
-
-message FreeLeaseResponse {
+message LeaseResponseDto {
   bool ok = 1;
 }
