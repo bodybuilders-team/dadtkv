@@ -12,8 +12,8 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private readonly List<TC> _clients;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
     private readonly HashSet<ulong> _msgIdLookup;
-    private readonly Action<TR> _urbDeliver;
     private readonly ProcessConfiguration _processConfiguration;
+    private readonly Action<TR> _urbDeliver;
 
     public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse,
         ProcessConfiguration processConfiguration)
@@ -48,7 +48,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             .Select(client => _getResponse(client, request))
             .ToList();
 
-        var majority = DadtkvUtils.WaitForMajority(resTasks, res => true);
+        var majority = DadtkvUtils.WaitForMajority(resTasks, _ => true);
 
         if (majority)
             _urbDeliver(request);

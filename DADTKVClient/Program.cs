@@ -10,7 +10,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         if (args.Length != 3)
-            throw new ArgumentException("Invalid arguments.");
+            throw new ArgumentException("Invalid arguments. Usage: DadtkvClient.exe serverUrl clientID scriptFilePath");
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 

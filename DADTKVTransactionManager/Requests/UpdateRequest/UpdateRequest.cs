@@ -4,14 +4,6 @@ public class UpdateRequest : IUrbRequest<UpdateRequest>
 {
     private readonly ProcessConfiguration _processConfiguration;
 
-    public LeaseId LeaseId { get; }
-    public List<DadInt> WriteSet { get; }
-    public bool FreeLease { get; }
-    public ulong SequenceNum { get; set; }
-    public ulong ServerId { get; }
-
-    public ulong MessageId => ServerId + SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
-
     public UpdateRequest(ProcessConfiguration processConfiguration, ulong serverId, LeaseId leaseId,
         List<DadInt> writeSet, bool freeLease, ulong sequenceNum = 0)
     {
@@ -22,6 +14,14 @@ public class UpdateRequest : IUrbRequest<UpdateRequest>
         WriteSet = writeSet;
         FreeLease = freeLease;
     }
+
+    public LeaseId LeaseId { get; }
+    public List<DadInt> WriteSet { get; }
+    public bool FreeLease { get; }
+
+    public ulong MessageId => ServerId + SequenceNum * (ulong)_processConfiguration.ServerProcesses.Count;
+    public ulong SequenceNum { get; set; }
+    public ulong ServerId { get; }
 
     public int CompareTo(UpdateRequest? other)
     {

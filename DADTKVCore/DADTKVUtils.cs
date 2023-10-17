@@ -85,6 +85,12 @@ public static class DadtkvUtils
         return dict.TryGetValue(key, out var value) ? value : defaultValue;
     }
 
+    /// <summary>
+    ///     Adds an item to the list in sorted order.
+    /// </summary>
+    /// <param name="list">The list to add the item to.</param>
+    /// <param name="item">The item to add.</param>
+    /// <typeparam name="T">The type of the list.</typeparam>
     public static void AddSorted<T>(this List<T> list, T item) where T : IComparable<T>
     {
         if (list.Count == 0)
@@ -93,7 +99,7 @@ public static class DadtkvUtils
             return;
         }
 
-        if (list[list.Count - 1].CompareTo(item) <= 0)
+        if (list[^1].CompareTo(item) <= 0)
         {
             list.Add(item);
             return;

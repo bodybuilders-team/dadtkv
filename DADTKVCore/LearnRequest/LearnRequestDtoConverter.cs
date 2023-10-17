@@ -1,5 +1,8 @@
 namespace Dadtkv;
 
+/// <summary>
+///     Converts a LearnRequest to and from a LearnRequestDto and vice versa.
+/// </summary>
 public static class LearnRequestDtoConverter
 {
     public static LearnRequest ConvertFromDto(LearnRequestDto dto, ProcessConfiguration processConfiguration)
@@ -8,7 +11,7 @@ public static class LearnRequestDtoConverter
             processConfiguration,
             dto.ServerId,
             dto.RoundNumber,
-            consensusValue: ConsensusValueDtoConverter.ConvertFromDto(dto.ConsensusValue),
+            ConsensusValueDtoConverter.ConvertFromDto(dto.ConsensusValue),
             dto.SequenceNum
         );
     }

@@ -1,5 +1,8 @@
 namespace Dadtkv;
 
+/// <summary>
+///     Converts a LeaseRequest to and from a LeaseRequestDto and vice versa.
+/// </summary>
 public static class LeaseRequestDtoConverter
 {
     public static LeaseRequest ConvertFromDto(LeaseRequestDto leaseRequestDto)

@@ -63,7 +63,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         var timer = new Timer(timeDelta);
 
         // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
-        timer.Elapsed += (source, e) =>
+        timer.Elapsed += (_, _) =>
         {
             if (_leaseRequests.Count == 0)
             {
@@ -93,7 +93,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
 
             // TODO Add lock?... :(
-            while ((ulong)_consensusState.Values.Count <= roundNumber || 
+            while ((ulong)_consensusState.Values.Count <= roundNumber ||
                    _consensusState.Values[(int)roundNumber] == null)
                 Thread.Sleep(10);
 
@@ -288,10 +288,10 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         _urBroadcaster.UrBroadcast(
             new LearnRequest(
-                processConfiguration: _leaseManagerConfiguration,
-                serverId: _leaseManagerConfiguration.ServerId,
-                roundNumber: roundNumber,
-                consensusValue: newConsensusValue
+                _leaseManagerConfiguration,
+                _leaseManagerConfiguration.ServerId,
+                roundNumber,
+                newConsensusValue
             ),
             req =>
             {

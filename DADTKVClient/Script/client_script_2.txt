@@ -1,25 +1,7 @@
-# DAD 2023-24 sample client script
-#
-# A line starting with a '#' character is a comment.
-#
-# There are no empty lines in a script.
-# You can assume the scripts are correct and contain
-# no impossible situations.
-#
-# client scripts should be executed in a loop
-#
-# a T command includes a read set and a write set
-# the read set is just a list of string keys
-# the write set contains keys and values
 S
 T () (<"b",25>,<"a",42>)
 S
-# wait command (in milliseconds)
-# W 1000
-# both the read set and write set can be empty but the parenthesis will still be in the command
 T ("a","b") (<"c",420>)
 S
 T ("c") (<"c",222>)
-# A status request from all the processes in the system
-# is issued via a S command
 S

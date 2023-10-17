@@ -13,7 +13,8 @@ internal static class Program
     private static void Main(string[] args)
     {
         if (args.Length != 2)
-            throw new ArgumentException("Invalid arguments.");
+            throw new ArgumentException(
+                "Invalid arguments. Usage: DadtkvLeaseManager.exe serverId systemConfigFilePath");
 
         var serverId = args[0];
 

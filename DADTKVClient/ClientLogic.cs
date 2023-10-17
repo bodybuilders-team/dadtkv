@@ -31,13 +31,13 @@ internal class ClientLogic
             ReadSet = { readSet },
             WriteSet = { writeSet }
         };
-        
+
         var start = DateTime.Now;
         var response = await _client.TxSubmitAsync(request);
         var end = DateTime.Now;
-        
+
         Console.WriteLine("Time taken: " + (end - start).TotalMilliseconds + "ms");
-        
+
         return response.ReadSet.ToList();
     }
 

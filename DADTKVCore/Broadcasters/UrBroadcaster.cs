@@ -33,7 +33,7 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
             .Select(client => getResponse(client, request))
             .ToList();
 
-        var majority = DadtkvUtils.WaitForMajority(resTasks, res => true);
+        var majority = DadtkvUtils.WaitForMajority(resTasks, _ => true);
 
         if (majority)
             urbDeliver(request);

@@ -4,25 +4,25 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    // Entry point for the server application
-    // Arguments: serverId systemConfigFilePath
+    /// <summary>
+    ///     Entry point for the lease manager server application.
+    /// </summary>
+    /// <param name="args">Arguments: serverId systemConfigFilePath</param>
+    /// <exception cref="ArgumentException">Invalid arguments.</exception>
     public static void Main(string[] args)
     {
         if (args.Length != 2)
-            throw new ArgumentException("Invalid arguments.");
+            throw new ArgumentException(
+                "Invalid arguments. Usage: DadtkvTransactionManager.exe serverId systemConfigFilePath");
 
         var serverId = args[0];
 
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
-
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
-
-        var consensusState = new ConsensusState();
 
         var processConfiguration = new ProcessConfiguration(systemConfiguration, serverId);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
-
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -34,8 +34,8 @@ internal static class Program
         {
             Services =
             {
-                DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration,
-                    datastore, executedTrans, leaseQueues)),
+                DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration, datastore, executedTrans,
+                    leaseQueues)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore,
                     leaseQueues)),
                 LearnerService.BindService(new TmLearner(processConfiguration, executedTrans, leaseQueues))

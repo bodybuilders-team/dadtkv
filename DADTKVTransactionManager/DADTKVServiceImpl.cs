@@ -79,8 +79,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             // TODO: Optimization: Fast path
 
             var leaseId = new LeaseId(
-                sequenceNum: _leaseSequenceNumCounter++,
-                serverId: _processConfiguration.ServerId
+                _leaseSequenceNumCounter++,
+                _processConfiguration.ServerId
             );
 
             var leaseReq = new LeaseRequest(leaseId, leases.ToList());
@@ -90,7 +90,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
             _executedTrans.Add(leaseId, false);
 
-            
+
             var start = DateTime.Now;
             while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
@@ -98,6 +98,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 Thread.Sleep(10);
                 Monitor.Enter(_leaseQueues);
             }
+
             var end = DateTime.Now;
             Console.WriteLine("Time taken to obtain leases: " + (end - start).TotalMilliseconds + "ms");
 
@@ -139,11 +140,11 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
         _urBroadcaster.UrBroadcast(
             new UpdateRequest(
-                processConfiguration: _processConfiguration,
-                serverId: _processConfiguration.ServerId,
-                leaseId: leaseId,
-                writeSet: writeSet,
-                freeLease: freeLease
+                _processConfiguration,
+                _processConfiguration.ServerId,
+                leaseId,
+                writeSet,
+                freeLease
             ),
             req => { },
             (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
