@@ -13,7 +13,7 @@ service StateUpdateService {
 
 message UpdateRequestDto {
   uint64 serverId = 1;
-  uint64 senderId = 2;
+  uint64 broadcasterId = 2;
   uint64 sequenceNum = 3;
   LeaseIdDto leaseId = 4;
   repeated dadtkv.DadIntDto writeSet = 5;
@@ -26,7 +26,7 @@ message UpdateResponseDto {
 
 message FreeLeaseRequestDto {
   uint64 serverId = 1;
-  uint64 senderId = 2;
+  uint64 broadcasterId = 2;
   uint64 sequenceNum = 3;
   LeaseIdDto leaseId = 4;
 }

@@ -41,33 +41,32 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
         lock (this)
         {
-            var senderId = request.SenderId;
+            var broadcasterId = request.BroadcasterId;
 
-            _lastProcessedMessageIdMap.TryAdd(senderId, -1);
+            _lastProcessedMessageIdMap.TryAdd(broadcasterId, -1);
 
-            if (!_pendingRequestsMap.ContainsKey(senderId))
-                _pendingRequestsMap[senderId] = new List<FifoRequest>();
+            if (!_pendingRequestsMap.ContainsKey(broadcasterId))
+                _pendingRequestsMap[broadcasterId] = new List<FifoRequest>();
 
-
-            if ((long)request.SequenceNum > _lastProcessedMessageIdMap[senderId] + 1)
+            if ((long)request.SequenceNum > _lastProcessedMessageIdMap[broadcasterId] + 1)
             {
-                _pendingRequestsMap[senderId]!.AddSorted(new FifoRequest(request));
+                _pendingRequestsMap[broadcasterId]!.AddSorted(new FifoRequest(request));
                 return;
             }
 
-            _lastProcessedMessageIdMap[senderId]++;
+            _lastProcessedMessageIdMap[broadcasterId]++;
 
             requestsToDeliver.Add(request);
             // TODO make this readable
-            for (var i = 0; i < _pendingRequestsMap[senderId]!.Count; i++)
+            for (var i = 0; i < _pendingRequestsMap[broadcasterId]!.Count; i++)
             {
-                var pendingRequest = _pendingRequestsMap[senderId]![i];
-                if (!pendingRequest.Request.SequenceNum.Equals((ulong)(_lastProcessedMessageIdMap[senderId] + 1)))
+                var pendingRequest = _pendingRequestsMap[broadcasterId]![i];
+                if (!pendingRequest.Request.SequenceNum.Equals((ulong)(_lastProcessedMessageIdMap[broadcasterId] + 1)))
                     break;
 
-                _lastProcessedMessageIdMap[senderId]++;
+                _lastProcessedMessageIdMap[broadcasterId]++;
                 requestsToDeliver.Add(pendingRequest.Request);
-                _pendingRequestsMap[senderId]!.RemoveAt(i--);
+                _pendingRequestsMap[broadcasterId]!.RemoveAt(i--);
             }
         }
 

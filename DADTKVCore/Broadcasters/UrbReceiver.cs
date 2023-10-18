@@ -40,7 +40,8 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">Request to be processed.</param>
     public void UrbProcessRequest(TR request)
     {
-        var msgId = request.SenderId + request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
+        var msgId = request.BroadcasterId +
+                    request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
 
         lock (_msgIdLookup)
         {
@@ -54,8 +55,10 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             .Select(client => _getResponse(client, request))
             .ToList();
 
+        resTasks.Add((Task<TA>)Task.CompletedTask);
+
         _logger.LogDebug($"Waiting for URB majority for request: {request} (num tasks: {resTasks.Count})");
-        var majority = DadtkvUtils.WaitForMajority(resTasks, _ => true);
+        var majority = DadtkvUtils.WaitForMajority(resTasks).Result;
         _logger.LogDebug($"Finished waiting for URB, majority: {majority} for request: {request}");
 
         if (majority)

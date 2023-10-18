@@ -13,7 +13,7 @@ public static class LeaseIdDtoConverter
     public static LeaseId ConvertFromDto(LeaseIdDto leaseIdDto)
     {
         return new LeaseId(
-            senderId: leaseIdDto.SenderId,
+            broadcasterId: leaseIdDto.BroadcasterId,
             sequenceNum: leaseIdDto.SequenceNum
         );
     }
@@ -27,7 +27,7 @@ public static class LeaseIdDtoConverter
     {
         return new LeaseIdDto
         {
-            SenderId = leaseId.SenderId,
+            BroadcasterId = leaseId.BroadcasterId,
             SequenceNum = leaseId.SequenceNum
         };
     }

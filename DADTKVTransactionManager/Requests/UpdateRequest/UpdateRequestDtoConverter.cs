@@ -7,7 +7,7 @@ public static class UpdateRequestDtoConverter
         return new UpdateRequestDto
         {
             ServerId = urbRequest.ServerId,
-            SenderId = urbRequest.SenderId,
+            BroadcasterId = urbRequest.BroadcasterId,
             SequenceNum = urbRequest.SequenceNum,
             LeaseId = LeaseIdDtoConverter.ConvertToDto(urbRequest.LeaseId),
             WriteSet = { urbRequest.WriteSet.Select(DadIntDtoConverter.ConvertToDto).ToList() },
@@ -19,7 +19,7 @@ public static class UpdateRequestDtoConverter
     {
         return new UpdateRequest(
             updateRequestDto.ServerId,
-            updateRequestDto.SenderId,
+            updateRequestDto.BroadcasterId,
             sequenceNum: updateRequestDto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(updateRequestDto.LeaseId),
             writeSet: updateRequestDto.WriteSet.Select(DadIntDtoConverter.ConvertFromDto).ToList(),

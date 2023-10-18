@@ -3,6 +3,6 @@ package dadtkv;
 option csharp_namespace = "Dadtkv";
 
 message LeaseIdDto {
-  uint64 senderId = 1;
+  uint64 broadcasterId = 1;
   uint64 sequenceNum = 2;
 }

@@ -10,7 +10,6 @@ namespace Dadtkv;
 public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
-    private readonly object _consensusStateLockObject = new();
 
     private readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
@@ -40,11 +39,8 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <param name="roundNumber">The round number.</param>
     private void ResizeConsensusStateList(int roundNumber)
     {
-        lock (_consensusStateLockObject)
-        {
-            for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
-                _consensusState.Values.Add(null);
-        }
+        for (var i = _consensusState.Values.Count; i <= roundNumber; i++)
+            _consensusState.Values.Add(null);
     }
 
     /// <summary>
@@ -66,7 +62,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <exception cref="Exception">If the value for the round already exists.</exception>
     private void LearnUrbDeliver(LearnRequest request)
     {
-        lock (_consensusStateLockObject)
+        lock (_consensusState)
         {
             ResizeConsensusStateList((int)request.RoundNumber);
 

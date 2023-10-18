@@ -45,77 +45,75 @@ public static class DadtkvUtils
     /// <param name="timeout">The timeout in milliseconds.</param>
     /// <typeparam name="TResponse">The type of the response.</typeparam>
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
-    public static bool WaitForMajority<TResponse>(
+    public static async Task<bool> WaitForMajority<TResponse>(
         List<Task<TResponse>> asyncTasks,
-        int majority,
-        Func<TResponse, bool> predicate
+        Func<TResponse, bool> predicate,
+        int timeout = 10000
     )
     {
-        // Majority is defined as n/2 + 1
-        var cde = new CountdownEvent(majority);
+        var tasksWithTimeout =
+            asyncTasks.Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout))).ToList();
 
-        for (var i = 0; i < asyncTasks.Count; i++)
+
+        var majority = asyncTasks.Count / 2 + 1;
+
+        var countSatisfyingPredicate = 0;
+        var completedTaskCount = 0;
+
+        var remainingTasks = new HashSet<Task<TResponse>>(tasksWithTimeout);
+
+        while (remainingTasks.Count > 0)
         {
-            var currentTaskIdx = i;
-            var asyncTask = asyncTasks[i];
-            new Thread(() =>
+            // Wait for the next task to complete
+            var completedTask = await Task.WhenAny(remainingTasks);
+
+            remainingTasks.Remove(completedTask);
+            completedTaskCount++;
+
+            if (!completedTask.IsFaulted && predicate(completedTask.Result))
             {
-                _logger.LogDebug($"WaitForMajority ({asyncTasks.Count}) - Waiting - {currentTaskIdx}");
-                asyncTask.Wait();
-                var res = asyncTask.Result;
-                var signal = predicate.Invoke(res);
-                _logger.LogDebug($"WaitForMajority ({asyncTasks.Count}) - Done - {currentTaskIdx}");
-                if (!signal) return;
-                lock (cde)
-                {
-                    if (!cde.IsSet)
-                        cde.Signal();
-                }
-            }).Start();
+                countSatisfyingPredicate++;
+            }
+
+            if (countSatisfyingPredicate >= majority)
+            {
+                return true;
+            }
+
+            // If it's impossible to reach the majority given the remaining tasks, return false
+            if (completedTaskCount - countSatisfyingPredicate >= majority)
+            {
+                return false;
+            }
         }
 
-        // TODO: use the failure detector for each 
-        return cde.Wait(999999999);
+        return false;
     }
 
-    public static bool WaitForMajority<TResponse>(
-        List<Task<TResponse>> asyncTasks,
-        Func<TResponse, bool> predicate
+    public static async Task<bool> WaitForMajority<TResponse>(
+        List<Task<TResponse>> asyncTasks
     )
     {
-        return WaitForMajority(asyncTasks, asyncTasks.Count / 2 + 1, predicate);
+        return await WaitForMajority(asyncTasks, _ => true);
     }
 
-    // public static bool WaitForMajority<TResponse>(
-    //     List<Task<TResponse>> asyncTasks,
-    //     Func<TResponse, bool> predicate
-    // )
-    // {
-    //     var numTasks = asyncTasks.Count;
-    //     var numCompleted = 0;
-    //     var numTrue = 0;
-    //     var numFalse = 0;
-    //
-    //     while (numCompleted < numTasks)
-    //     {
-    //         var completedTask = Task.WhenAny(asyncTasks).Result;
-    //         numCompleted++;
-    //
-    //         if (completedTask.IsFaulted)
-    //             continue;
-    //
-    //         var response = completedTask.Result;
-    //         if (predicate(response))
-    //             numTrue++;
-    //         else
-    //             numFalse++;
-    //
-    //         if (numTrue > numTasks / 2 || numFalse > numTasks / 2)
-    //             return false;
-    //     }
-    //
-    //     return numTrue > numTasks / 2;
-    // }
+    private static async Task<TResult> TimeoutAfter<TResult>(this Task<TResult> task, TimeSpan timeout)
+    {
+        using var timeoutCancellationTokenSource = new CancellationTokenSource();
+
+        var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
+
+        if (completedTask == task)
+        {
+            timeoutCancellationTokenSource.Cancel();
+            return await task; // Very important in order to propagate exceptions
+        }
+        else
+        {
+            throw new TimeoutException("The operation has timed out.");
+        }
+    }
+
     /// <summary>
     ///     Gets the value associated with the specified key, or the default value if the key does not exist.
     /// </summary>

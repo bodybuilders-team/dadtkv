@@ -132,10 +132,35 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     /// <param name="readSet">The keys to read.</param>
     /// <param name="writeSet">The keys and values to write.</param>
     /// <returns>The values read.</returns>
-    private IEnumerable<DadInt> ExecuteTransaction(LeaseId leaseId, IEnumerable<string> readSet, List<DadInt> writeSet,
+    private List<DadInt> ExecuteTransaction(LeaseId leaseId, IEnumerable<string> readSet, List<DadInt> writeSet,
         bool freeLease)
     {
         List<DadInt> returnReadSet;
+
+
+        _logger.LogDebug($"Sending update request for lease {leaseId}" + (freeLease ? " and freeing the lease." : "."));
+        // Do we need to wait for majority?
+        var majority = false;
+
+        _urBroadcaster.UrBroadcast(
+            new UpdateRequest(
+                _serverProcessConfiguration.ServerId,
+                _serverProcessConfiguration.ServerId,
+                leaseId,
+                writeSet,
+                freeLease
+            ),
+            (req) =>
+            {
+                majority = true; 
+            },
+            (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
+        );
+
+        if (!majority)
+        {
+            return new List<DadInt> { new DadInt("aborted", 0) };
+        }
 
         lock (_dataStore)
         {
@@ -145,19 +170,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
         if (freeLease) _leaseQueues.FreeLeases(leaseId);
 
-        _logger.LogDebug($"Sending update request for lease {leaseId}" + (freeLease ? " and freeing the lease." : "."));
-        _urBroadcaster.UrBroadcast(
-            new UpdateRequest(
-                _serverProcessConfiguration.ServerId,
-                _serverProcessConfiguration.ServerId,
-                leaseId,
-                writeSet,
-                freeLease
-            ),
-            req => { },
-            (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
-        );
-
+        // If we don't get a majority, maybe we should send aborted to client
         return returnReadSet;
     }
 

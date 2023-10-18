@@ -8,7 +8,7 @@ public static class LearnRequestDtoConverter
     public static LearnRequest ConvertFromDto(LearnRequestDto dto)
     {
         return new LearnRequest(
-            dto.SenderId,
+            dto.BroadcasterId,
             dto.RoundNumber,
             ConsensusValueDtoConverter.ConvertFromDto(dto.ConsensusValue),
             dto.SequenceNum
@@ -19,7 +19,7 @@ public static class LearnRequestDtoConverter
     {
         return new LearnRequestDto
         {
-            SenderId = request.SenderId,
+            BroadcasterId = request.BroadcasterId,
             SequenceNum = request.SequenceNum,
             ConsensusValue = ConsensusValueDtoConverter.ConvertToDto(request.ConsensusValue),
             RoundNumber = request.RoundNumber

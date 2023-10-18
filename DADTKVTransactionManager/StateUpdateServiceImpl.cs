@@ -63,8 +63,11 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _logger.LogDebug(
             $"Received Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
 
-        _fifoUrbReceiver.FifoUrbProcessRequest(
-            UpdateRequestDtoConverter.ConvertFromDto(request));
+        new Thread(() =>
+        {
+            _fifoUrbReceiver.FifoUrbProcessRequest(
+                UpdateRequestDtoConverter.ConvertFromDto(request));
+        }).Start();
 
         _logger.LogDebug(
             $"Responding Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
@@ -74,34 +77,34 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
     private void FifoUrbDeliver(UpdateRequest request)
     {
-        new Thread(() =>
+        // TODO: Abstract this duplication check out if this
+        if (request.BroadcasterId == _serverProcessConfiguration.ServerId)
+            return;
+
+        //TODO, can't be just a thread, otherwise fifo order is not guaranteed
+        _logger.LogDebug($"Received Update request 2: {request}");
+
+        lock (_leaseQueues)
         {
-            _logger.LogDebug($"Received Update request 2: {request}");
+            var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
 
-            lock (_leaseQueues)
+            // TODO what if we never obtain the leases
+            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
             {
-                var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
-
-                // TODO what if we never obtain the leases
-                while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
-                {
-                    Monitor.Exit(_leaseQueues);
-                    Thread.Sleep(10);
-                    Monitor.Enter(_leaseQueues);
-                }
-
-                lock (_dataStore)
-                {
-                    _dataStore.ExecuteTransaction(request.WriteSet);
-                }
-
-                if (request.FreeLease)
-                    foreach (var (key, queue) in _leaseQueues)
-                        if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
-                            queue.Dequeue();
-
-                _logger.LogDebug($"Lease queues after update request: {_leaseQueues}");
+                Monitor.Exit(_leaseQueues);
+                Thread.Sleep(10);
+                Monitor.Enter(_leaseQueues);
             }
-        }).Start();
+
+            lock (_dataStore)
+            {
+                _dataStore.ExecuteTransaction(request.WriteSet);
+            }
+
+            if (request.FreeLease)
+                _leaseQueues.FreeLeases(request.LeaseId);
+
+            _logger.LogDebug($"Lease queues after update request: {_leaseQueues}");
+        }
     }
 }

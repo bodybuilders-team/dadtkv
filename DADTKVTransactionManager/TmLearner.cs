@@ -95,7 +95,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.SenderId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 &&
+                if (leaseId.BroadcasterId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 &&
                     _executedTrans[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);

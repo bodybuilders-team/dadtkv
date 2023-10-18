@@ -4,13 +4,13 @@ public class FreeLeaseRequest : IUrbRequest<FreeLeaseRequest>
 {
     public readonly LeaseId LeaseId;
 
-    public FreeLeaseRequest(ulong senderId, LeaseId leaseId, ulong sequenceNum = 0)
+    public FreeLeaseRequest(ulong broadcasterId, LeaseId leaseId, ulong sequenceNum = 0)
     {
-        SenderId = senderId;
+        BroadcasterId = broadcasterId;
         SequenceNum = sequenceNum;
         LeaseId = leaseId;
     }
 
-    public ulong SenderId { get; }
+    public ulong BroadcasterId { get; }
     public ulong SequenceNum { get; set; }
 }

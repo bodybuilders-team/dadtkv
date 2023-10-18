@@ -82,56 +82,53 @@ public class Proposer : LeaseService.LeaseServiceBase
         // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
         timer.Elapsed += (_, _) =>
         {
-            lock (_consensusState)
+            lock (_leaseRequests)
             {
-                lock (_leaseRequests)
-                {
-                    if (_leaseRequests.Count == 0)
-                    {
-                        timer.Start();
-                        return;
-                    }
-                }
-
-
-                while (!UpdateConsensusValues())
-                {
-                    Monitor.Exit(_consensusState);
-                    Thread.Sleep(10);
-                    Monitor.Enter(_consensusState);
-                }
-
-                _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
-                _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
-
-                var roundNumber = (ulong)_consensusState.Values.Count;
-
-                var myProposalValue = GetMyProposalValue();
-
-                lock (_leaseRequests)
-                {
-                    if (_leaseRequests.Count == 0)
-                    {
-                        timer.Start();
-                        return;
-                    }
-                }
-
-                var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
-
-                if (!decided)
+                if (_leaseRequests.Count == 0)
                 {
                     timer.Start();
                     return;
                 }
-
-                // TODO Add lock?... :(
-                while ((ulong)_consensusState.Values.Count <= roundNumber ||
-                       _consensusState.Values[(int)roundNumber] == null)
-                    Thread.Sleep(10);
-
-                timer.Start();
             }
+
+            while (!UpdateConsensusValues())
+            {
+                Thread.Sleep(10);
+            }
+
+            _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
+            _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
+
+            ulong roundNumber;
+            lock (_consensusState)
+            {
+                roundNumber = (ulong)_consensusState.Values.Count;
+            }
+
+            var myProposalValue = GetMyProposalValue();
+
+            if (myProposalValue.LeaseRequests.Count == 0)
+            {
+                timer.Start();
+                return;
+            }
+
+            var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
+
+            if (!decided)
+            {
+                timer.Start();
+                return;
+            }
+
+            // TODO Add lock?... :(
+            while ((ulong)_consensusState.Values.Count <= roundNumber ||
+                   _consensusState.Values[(int)roundNumber] == null)
+            {
+                Thread.Sleep(10);
+            }
+
+            timer.Start();
         };
 
         timer.AutoReset = false;
@@ -146,13 +143,20 @@ public class Proposer : LeaseService.LeaseServiceBase
     private bool UpdateConsensusValues()
     {
         var isUpdated = true;
-        for (var i = 0; i < _consensusState.Values.Count; i++)
-        {
-            if (_consensusState.Values[i] != null)
-                continue;
 
-            isUpdated = false;
-            Propose(new ConsensusValue(), _initialProposalNumber, (ulong)i);
+        lock (_consensusState)
+        {
+            for (var i = 0; i < _consensusState.Values.Count; i++)
+            {
+                if (_consensusState.Values[i] != null)
+                    continue;
+
+                isUpdated = false;
+
+                var roundNumber = (ulong)i;
+                new Thread(() => { Propose(new ConsensusValue(), _initialProposalNumber, roundNumber); })
+                    .Start();
+            }
         }
 
         return isUpdated;
@@ -256,6 +260,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         var asyncTasks = new List<Task<PrepareResponseDto>>();
         foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
         {
+            //TODO -1: Do not send to ourselves, send using methods
             var res = acceptorServiceServiceClient.PrepareAsync(
                 new PrepareRequestDto
                 {
@@ -286,7 +291,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
                 return true;
             }
-        );
+        ).Result;
     }
 
     /// <summary>
@@ -312,7 +317,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             acceptCalls.Add(res.ResponseAsync);
         });
 
-        return DadtkvUtils.WaitForMajority(acceptCalls, res => res.Accepted);
+        return DadtkvUtils.WaitForMajority(acceptCalls, res => res.Accepted).Result;
     }
 
     /// <summary>
@@ -329,10 +334,6 @@ public class Proposer : LeaseService.LeaseServiceBase
                 roundNumber,
                 newConsensusValue
             ),
-            req =>
-            {
-                /* TODO Update the consensus round value here too? */
-            },
             (client, req) => client.LearnAsync(LearnRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
     }

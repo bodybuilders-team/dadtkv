@@ -5,13 +5,13 @@ namespace Dadtkv;
 /// </summary>
 public class LeaseId
 {
-    public readonly ulong SenderId;
+    public readonly ulong BroadcasterId;
     public readonly ulong SequenceNum;
 
-    public LeaseId(ulong sequenceNum, ulong senderId)
+    public LeaseId(ulong sequenceNum, ulong broadcasterId)
     {
         SequenceNum = sequenceNum;
-        SenderId = senderId;
+        BroadcasterId = broadcasterId;
     }
 
     public override bool Equals(object? obj)
@@ -21,16 +21,16 @@ public class LeaseId
         if (obj.GetType() != GetType()) return false;
 
         var other = (LeaseId)obj;
-        return SequenceNum.Equals(other.SequenceNum) && SenderId.Equals(other.SenderId);
+        return SequenceNum.Equals(other.SequenceNum) && BroadcasterId.Equals(other.BroadcasterId);
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(SequenceNum, SenderId);
+        return HashCode.Combine(SequenceNum, BroadcasterId);
     }
 
     public override string ToString()
     {
-        return $"(SequenceNum: {SequenceNum}, SenderId: {SenderId})";
+        return $"(SequenceNum: {SequenceNum}, BroadcasterId: {BroadcasterId})";
     }
 }

@@ -7,7 +7,7 @@ public static class FreeLeaseRequestDtoConverter
         return new FreeLeaseRequestDto
         {
             SequenceNum = request.SequenceNum,
-            SenderId = request.SenderId,
+            BroadcasterId = request.BroadcasterId,
             LeaseId = LeaseIdDtoConverter.ConvertToDto(request.LeaseId)
         };
     }
@@ -15,7 +15,7 @@ public static class FreeLeaseRequestDtoConverter
     public static FreeLeaseRequest ConvertFromDto(FreeLeaseRequestDto dto)
     {
         return new FreeLeaseRequest(
-            dto.SenderId,
+            dto.BroadcasterId,
             sequenceNum: dto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(dto.LeaseId)
         );
