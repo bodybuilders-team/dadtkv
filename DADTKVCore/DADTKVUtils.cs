@@ -8,7 +8,7 @@ namespace Dadtkv;
 /// </summary>
 public static class DadtkvUtils
 {
-    private const int DefaultTimeout = 1000;
+    private static readonly ILogger _logger = DadtkvLogger.Factory.CreateLogger("DadtkvUtils");
 
     /// <summary>
     ///     Selects a random element from the list.
@@ -47,20 +47,23 @@ public static class DadtkvUtils
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
     public static bool WaitForMajority<TResponse>(
         List<Task<TResponse>> asyncTasks,
-        Func<TResponse, bool> predicate,
-        int timeout = DefaultTimeout
+        Func<TResponse, bool> predicate
     )
     {
-        // Majority is defined as n/2 + 1
+        // Majority is defined as n/2 + 1 TODO: why + 1? Do we never send to ourselves?
         var cde = new CountdownEvent(asyncTasks.Count / 2 + 1);
 
-        asyncTasks.ForEach(asyncTask =>
+        for (int i = 0; i < asyncTasks.Count; i++)
         {
+            var currentTaskIdx = i;
+            var asyncTask = asyncTasks[i];
             new Thread(() =>
             {
+                _logger.LogDebug($"WaitForMajority ({asyncTasks.Count}) - Waiting - {currentTaskIdx}");
                 asyncTask.Wait();
                 var res = asyncTask.Result;
                 var signal = predicate.Invoke(res);
+                _logger.LogDebug($"WaitForMajority ({asyncTasks.Count}) - Done - {currentTaskIdx}");
                 if (!signal) return;
                 lock (cde)
                 {
@@ -68,12 +71,42 @@ public static class DadtkvUtils
                         cde.Signal();
                 }
             }).Start();
-        });
+        }
 
         // TODO: use the failure detector for each 
-        return cde.Wait(timeout);
+        return cde.Wait(999999999);
     }
 
+    // public static bool WaitForMajority<TResponse>(
+    //     List<Task<TResponse>> asyncTasks,
+    //     Func<TResponse, bool> predicate
+    // )
+    // {
+    //     var numTasks = asyncTasks.Count;
+    //     var numCompleted = 0;
+    //     var numTrue = 0;
+    //     var numFalse = 0;
+    //
+    //     while (numCompleted < numTasks)
+    //     {
+    //         var completedTask = Task.WhenAny(asyncTasks).Result;
+    //         numCompleted++;
+    //
+    //         if (completedTask.IsFaulted)
+    //             continue;
+    //
+    //         var response = completedTask.Result;
+    //         if (predicate(response))
+    //             numTrue++;
+    //         else
+    //             numFalse++;
+    //
+    //         if (numTrue > numTasks / 2 || numFalse > numTasks / 2)
+    //             return false;
+    //     }
+    //
+    //     return numTrue > numTasks / 2;
+    // }
     /// <summary>
     ///     Gets the value associated with the specified key, or the default value if the key does not exist.
     /// </summary>
@@ -155,16 +188,16 @@ public static class DadtkvUtils
     {
         var sb = new StringBuilder();
         sb.Append("[");
-        
+
         foreach (var ele in queue)
         {
             sb.Append(ele);
             sb.Append(", ");
         }
-        
+
         if (queue.Count > 0)
             sb.Length -= 2; // Remove the trailing comma and space
-        
+
         sb.Append(']');
         return sb.ToString();
     }

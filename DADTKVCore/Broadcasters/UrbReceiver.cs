@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -14,6 +16,9 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private readonly HashSet<ulong> _msgIdLookup;
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly Action<TR> _urbDeliver;
+
+    private readonly ILogger<UrbReceiver<TR, TA, TC>> _logger =
+        DadtkvLogger.Factory.CreateLogger<UrbReceiver<TR, TA, TC>>();
 
     public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse,
         ServerProcessConfiguration serverProcessConfiguration)
@@ -48,7 +53,9 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             .Select(client => _getResponse(client, request))
             .ToList();
 
+        _logger.LogDebug($"Waiting for URB majority for request: {request} (num tasks: {resTasks.Count})");
         var majority = DadtkvUtils.WaitForMajority(resTasks, _ => true);
+        _logger.LogDebug($"Finished waiting for URB, majority: {majority} for request: {request}");
 
         if (majority)
             _urbDeliver(request);

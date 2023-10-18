@@ -27,6 +27,8 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 
     private void UrbDeliver(TR request)
     {
+        var requestsToDeliver = new List<TR>();
+
         lock (this)
         {
             var messageId = request.TobMessageId;
@@ -38,7 +40,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
             }
 
             _lastProcessedMessageId++;
-            _tobDeliver(request);
+            requestsToDeliver.Add(request);
 
             // TODO make this readable
             for (var i = 0; i < _pendingRequests.Count; i++)
@@ -48,10 +50,12 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
                     break;
 
                 _lastProcessedMessageId++;
-                _tobDeliver(pendingRequest.Request);
+                requestsToDeliver.Add(pendingRequest.Request);
                 _pendingRequests.RemoveAt(i--);
             }
         }
+
+        requestsToDeliver.ForEach(_tobDeliver);
     }
 
     private class TobRequest : IComparable<TobRequest>

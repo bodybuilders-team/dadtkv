@@ -34,16 +34,19 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
     private void UrbDeliver(TR request)
     {
+        _logger.LogDebug(
+            $"Received Fifo Urb Request: {request}");
+        var requestsToDeliver = new List<TR>();
+
         lock (this)
         {
-            _logger.LogDebug($"Received Fifo Urb Request: {request}");
-
             var serverId = request.ServerId;
 
             _lastProcessedMessageIdMap.TryAdd(serverId, -1);
 
             if (!_pendingRequestsMap.ContainsKey(serverId))
                 _pendingRequestsMap[serverId] = new List<FifoRequest>();
+
 
             if ((long)request.SequenceNum > _lastProcessedMessageIdMap[serverId] + 1)
             {
@@ -52,8 +55,8 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
             }
 
             _lastProcessedMessageIdMap[serverId]++;
-            _fifoUrbDeliver(request);
 
+            requestsToDeliver.Add(request);
             // TODO make this readable
             for (var i = 0; i < _pendingRequestsMap[serverId]!.Count; i++)
             {
@@ -62,10 +65,12 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
                     break;
 
                 _lastProcessedMessageIdMap[serverId]++;
-                _fifoUrbDeliver(pendingRequest.Request);
+                requestsToDeliver.Add(pendingRequest.Request);
                 _pendingRequestsMap[serverId]!.RemoveAt(i--);
             }
         }
+
+        requestsToDeliver.ForEach(_fifoUrbDeliver);
     }
 
     private class FifoRequest : IComparable<FifoRequest>

@@ -28,7 +28,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _leaseQueues = leaseQueues;
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
-        foreach (var process in serverProcessConfiguration.OtherTransactionManagers)
+        foreach (var process in serverProcessConfiguration.TransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
@@ -51,7 +51,9 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
-        _logger.LogDebug($"Received Update request: {request}");
+        // Obtain the serverw id from the context.Peer string by searching the clients
+        _logger.LogDebug($"Received Update request from server with url (request: {request})");
+
         _fifoUrbReceiver.FifoUrbProcessRequest(
             UpdateRequestDtoConverter.ConvertFromDto(request));
 
