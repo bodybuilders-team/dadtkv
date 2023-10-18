@@ -1,5 +1,4 @@
-﻿using Dadtkv.Requests.TxSubmitRequest;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 
@@ -71,30 +70,23 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     /// <summary>
     ///     Submit a transaction to be executed.
     /// </summary>
-    /// <param name="request">The transaction to be executed.</param>
+    /// <param name="requestDto">The transaction to be executed.</param>
     /// <returns>The result of the transaction.</returns>
     private Task<TxSubmitResponseDto> TxSubmit(TxSubmitRequestDto requestDto)
     {
         lock (_leaseQueues)
         {
             var request = TxSubmitRequestDtoConverter.ConvertFromDto(requestDto);
-
             var leases = ExtractLeases(request);
+            var leaseId = new LeaseId(_leaseSequenceNumCounter++, _serverProcessConfiguration.ServerId);
+            var leaseReq = new LeaseRequest(leaseId, leases.ToList());
 
             // TODO: Optimization: Fast path
-
-            var leaseId = new LeaseId(
-                _leaseSequenceNumCounter++,
-                _serverProcessConfiguration.ServerId
-            );
-
-            var leaseReq = new LeaseRequest(leaseId, leases.ToList());
 
             foreach (var leaseServiceClient in _leaseServiceClients)
                 leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
 
             _executedTrans.Add(leaseId, false);
-
 
             var start = DateTime.Now;
             while (!_leaseQueues.ObtainedLeases(leaseReq))
@@ -109,7 +101,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
             // TODO put to false and add free lease request handler
             var conflict = true;
-            foreach (var (key, queue) in _leaseQueues)
+            foreach (var (_, queue) in _leaseQueues)
                 if (queue.Count > 0 && queue.Peek().Equals(leaseId) && queue.Count > 1)
                 {
                     conflict = true;
@@ -129,17 +121,21 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     /// <summary>
     ///     Execute a transaction.
     /// </summary>
+    /// <param name="leaseId">The lease id.</param>
     /// <param name="readSet">The keys to read.</param>
     /// <param name="writeSet">The keys and values to write.</param>
+    /// <param name="freeLease">Whether to free the lease after the transaction.</param>
     /// <returns>The values read.</returns>
-    private List<DadInt> ExecuteTransaction(LeaseId leaseId, IEnumerable<string> readSet, List<DadInt> writeSet,
-        bool freeLease)
+    private List<DadInt> ExecuteTransaction(
+        LeaseId leaseId,
+        IEnumerable<string> readSet,
+        List<DadInt> writeSet,
+        bool freeLease
+    )
     {
         List<DadInt> returnReadSet;
 
-
         _logger.LogDebug($"Sending update request for lease {leaseId}" + (freeLease ? " and freeing the lease." : "."));
-        // Do we need to wait for majority?
         var majority = false;
 
         _urBroadcaster.UrBroadcast(
@@ -150,17 +146,11 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 writeSet,
                 freeLease
             ),
-            (req) =>
-            {
-                majority = true; 
-            },
+            _ => { majority = true; },
             (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
-        if (!majority)
-        {
-            return new List<DadInt> { new DadInt("aborted", 0) };
-        }
+        if (!majority) return new List<DadInt> { new("aborted", 0) };
 
         lock (_dataStore)
         {
@@ -168,7 +158,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             _executedTrans[leaseId] = true;
         }
 
-        if (freeLease) _leaseQueues.FreeLeases(leaseId);
+        if (freeLease)
+            _leaseQueues.FreeLeases(leaseId);
 
         // If we don't get a majority, maybe we should send aborted to client
         return returnReadSet;

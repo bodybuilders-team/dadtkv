@@ -14,7 +14,7 @@ public class LeaseRequest
     public LeaseId LeaseId { get; }
     public List<string> Keys { get; }
 
-    protected bool Equals(LeaseRequest other)
+    private bool Equals(LeaseRequest other)
     {
         return LeaseId.Equals(other.LeaseId);
     }
@@ -23,8 +23,7 @@ public class LeaseRequest
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != GetType()) return false;
-        return Equals((LeaseRequest)obj);
+        return obj.GetType() == GetType() && Equals((LeaseRequest)obj);
     }
 
     public override int GetHashCode()

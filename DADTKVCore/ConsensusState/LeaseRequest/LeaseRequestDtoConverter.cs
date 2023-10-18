@@ -5,6 +5,11 @@ namespace Dadtkv;
 /// </summary>
 public static class LeaseRequestDtoConverter
 {
+    /// <summary>
+    ///     Converts a <see cref="LeaseRequestDto" /> to a <see cref="LeaseRequest" />.
+    /// </summary>
+    /// <param name="leaseRequestDto">The <see cref="LeaseRequestDto" /> to convert.</param>
+    /// <returns>The converted <see cref="LeaseRequest" />.</returns>
     public static LeaseRequest ConvertFromDto(LeaseRequestDto leaseRequestDto)
     {
         return new LeaseRequest(
@@ -13,6 +18,11 @@ public static class LeaseRequestDtoConverter
         );
     }
 
+    /// <summary>
+    ///     Converts a <see cref="LeaseRequest" /> to a <see cref="LeaseRequestDto" />.
+    /// </summary>
+    /// <param name="leaseRequest">The <see cref="LeaseRequest" /> to convert.</param>
+    /// <returns>The converted <see cref="LeaseRequestDto" />.</returns>
     public static LeaseRequestDto ConvertToDto(LeaseRequest leaseRequest)
     {
         return new LeaseRequestDto

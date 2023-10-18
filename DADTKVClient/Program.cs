@@ -4,7 +4,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<ClientLogic> _logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
+    private static readonly ILogger<ClientLogic> Logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
 
     /// <summary>
     ///     Entry point for the client application.
@@ -27,7 +27,7 @@ internal static class Program
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
 
-        _logger.LogInformation("Client started");
+        Logger.LogInformation("Client started");
 
         while (scriptReader.HasNextCommand())
         {
@@ -44,32 +44,32 @@ internal static class Program
                                 Value = x.Value
                             }).ToList();
 
-                        _logger.LogInformation($"Executing transaction {transactionCommand}");
+                        Logger.LogInformation($"Executing transaction {transactionCommand}");
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 
-                        _logger.LogInformation($"Transaction {transactionCommand} executed successfully");
+                        Logger.LogInformation($"Transaction {transactionCommand} executed successfully");
                         if (readSet.Count == 0)
                         {
-                            _logger.LogInformation("No read set");
+                            Logger.LogInformation("No read set");
                             break;
                         }
 
-                        _logger.LogInformation("Read set:");
+                        Logger.LogInformation("Read set:");
                         foreach (var dadInt in readSet)
-                            _logger.LogInformation(dadInt.Key + " " + dadInt.Value);
+                            Logger.LogInformation(dadInt.Key + " " + dadInt.Value);
                         break;
 
                     case WaitCommand waitCommand:
-                        _logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
+                        Logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
                         break;
 
                     case StatusCommand:
                         var status = clientLogic.Status().Result;
-                        _logger.LogInformation("Status:");
+                        Logger.LogInformation("Status:");
                         foreach (var statusEntry in status)
-                            _logger.LogInformation(statusEntry);
+                            Logger.LogInformation(statusEntry);
                         break;
                 }
             }

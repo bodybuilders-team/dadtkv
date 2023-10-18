@@ -20,11 +20,19 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         _urbReceiver = new UrbReceiver<TR, TA, TC>(clients, UrbDeliver, getResponse, serverProcessConfiguration);
     }
 
+    /// <summary>
+    ///     Processes a request.
+    /// </summary>
+    /// <param name="request">The request to process.</param>
     public void TobProcessRequest(TR request)
     {
         _urbReceiver.UrbProcessRequest(request);
     }
 
+    /// <summary>
+    ///     Delivers a request.
+    /// </summary>
+    /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
         var requestsToDeliver = new List<TR>();
@@ -58,6 +66,10 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         requestsToDeliver.ForEach(_tobDeliver);
     }
 
+    /// <summary>
+    ///     A Total Order Broadcast request.
+    ///     Implements <see cref="IComparable{T}" /> to allow for sorting, using the TobMessageId.
+    /// </summary>
     private class TobRequest : IComparable<TobRequest>
     {
         public TobRequest(TR request)

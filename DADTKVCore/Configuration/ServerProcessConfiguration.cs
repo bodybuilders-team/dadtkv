@@ -19,10 +19,16 @@ public class ServerProcessConfiguration : SystemConfiguration
     public List<ServerProcessInfo> OtherTransactionManagers =>
         TransactionManagers.Where(info => !info.Id.Equals(ProcessInfo.Id)).ToList();
 
+    /// <summary>
+    ///    The current suspicions where this server is the suspect.
+    /// </summary>
     public List<string> MyCurrentSuspected => CurrentSuspicions
         .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspected).ToList();
-    
+
+    /// <summary>
+    ///     The current suspicions where this server is the suspected.
+    /// </summary>
     public List<string> MyCurrentSuspecting => CurrentSuspicions
         .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspect).ToList();

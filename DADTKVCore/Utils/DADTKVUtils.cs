@@ -1,5 +1,4 @@
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -8,8 +7,6 @@ namespace Dadtkv;
 /// </summary>
 public static class DadtkvUtils
 {
-    private static readonly ILogger _logger = DadtkvLogger.Factory.CreateLogger("DadtkvUtils");
-
     /// <summary>
     ///     Selects a random element from the list.
     /// </summary>
@@ -38,7 +35,7 @@ public static class DadtkvUtils
     }
 
     /// <summary>
-    ///     Waits for a majority of the async tasks to complete.
+    ///     Waits for a majority of the async tasks to complete, checking for a predicate.
     /// </summary>
     /// <param name="asyncTasks">The async tasks to wait for.</param>
     /// <param name="predicate">The predicate to check for.</param>
@@ -51,9 +48,9 @@ public static class DadtkvUtils
         int timeout = 10000
     )
     {
-        var tasksWithTimeout =
-            asyncTasks.Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout))).ToList();
-
+        var tasksWithTimeout = asyncTasks
+            .Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout)))
+            .ToList();
 
         var majority = asyncTasks.Count / 2 + 1;
 
@@ -71,47 +68,46 @@ public static class DadtkvUtils
             completedTaskCount++;
 
             if (!completedTask.IsFaulted && predicate(completedTask.Result))
-            {
                 countSatisfyingPredicate++;
-            }
 
             if (countSatisfyingPredicate >= majority)
-            {
                 return true;
-            }
 
             // If it's impossible to reach the majority given the remaining tasks, return false
-            if (completedTaskCount - countSatisfyingPredicate >= majority)
-            {
-                return false;
-            }
+            if (completedTaskCount - countSatisfyingPredicate >= majority) return false;
         }
 
         return false;
     }
 
-    public static async Task<bool> WaitForMajority<TResponse>(
-        List<Task<TResponse>> asyncTasks
-    )
+    /// <summary>
+    ///     Waits for a majority of the async tasks to complete.
+    /// </summary>
+    /// <param name="asyncTasks">The async tasks to wait for.</param>
+    /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
+    public static async Task<bool> WaitForMajority<TResponse>(List<Task<TResponse>> asyncTasks)
     {
         return await WaitForMajority(asyncTasks, _ => true);
     }
 
+    /// <summary>
+    ///     Times out a task after a specified timeout.
+    /// </summary>
+    /// <param name="task">The task to time out.</param>
+    /// <param name="timeout">The timeout.</param>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <returns>The task.</returns>
     private static async Task<TResult> TimeoutAfter<TResult>(this Task<TResult> task, TimeSpan timeout)
     {
         using var timeoutCancellationTokenSource = new CancellationTokenSource();
 
         var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
 
-        if (completedTask == task)
-        {
-            timeoutCancellationTokenSource.Cancel();
-            return await task; // Very important in order to propagate exceptions
-        }
-        else
-        {
+        if (completedTask != task)
             throw new TimeoutException("The operation has timed out.");
-        }
+
+        timeoutCancellationTokenSource.Cancel();
+        return await task; // Very important in order to propagate exceptions
     }
 
     /// <summary>
@@ -160,10 +156,16 @@ public static class DadtkvUtils
         list.Insert(index, item);
     }
 
+    /// <summary>
+    ///     Gets the string representation of the list.
+    /// </summary>
+    /// <param name="list">The list to get the string representation of.</param>
+    /// <typeparam name="T">The type of the list.</typeparam>
+    /// <returns>The string representation of the list.</returns>
     public static string ToStringRep<T>(this IList<T> list)
     {
         var sb = new StringBuilder();
-        sb.Append("[");
+        sb.Append('[');
         // Do the same as above but take into account empty list and list with only one element
         foreach (var ele in list)
         {
@@ -179,22 +181,41 @@ public static class DadtkvUtils
         return sb.ToString();
     }
 
+    /// <summary>
+    ///     Gets the string representation of the dictionary.
+    /// </summary>
+    /// <param name="dictionary">The dictionary to get the string representation of.</param>
+    /// <typeparam name="TK">The type of the key.</typeparam>
+    /// <typeparam name="TV">The type of the value.</typeparam>
+    /// <returns>The string representation of the dictionary.</returns>
     public static string ToStringRep<TK, TV>(this IDictionary<TK, TV> dictionary) where TK : notnull
     {
         var lines = dictionary.Select(kvp => $"{kvp.Key}:{kvp.Value}");
         return "{" + string.Join(",", lines) + "}";
     }
 
+    /// <summary>
+    ///     Gets the string representation of the set.
+    /// </summary>
+    /// <param name="set">The set to get the string representation of.</param>
+    /// <typeparam name="TV">The type of the set.</typeparam>
+    /// <returns>The string representation of the set.</returns>
     public static string ToStringRep<TV>(this ISet<TV> set)
     {
         var lines = set.Select(ele => $"{ele}");
         return "{" + string.Join(",", lines) + "}";
     }
 
+    /// <summary>
+    ///     Gets the string representation of the queue.
+    /// </summary>
+    /// <param name="queue">The queue to get the string representation of.</param>
+    /// <typeparam name="T">The type of the queue.</typeparam>
+    /// <returns>The string representation of the queue.</returns>
     public static string ToStringRep<T>(this Queue<T> queue)
     {
         var sb = new StringBuilder();
-        sb.Append("[");
+        sb.Append('[');
 
         foreach (var ele in queue)
         {

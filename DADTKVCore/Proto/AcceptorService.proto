@@ -30,4 +30,3 @@ message AcceptRequestDto {
 message AcceptResponseDto {
   bool accepted = 1;
 }
-

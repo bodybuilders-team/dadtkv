@@ -8,15 +8,14 @@ namespace Dadtkv;
 /// </summary>
 public class SystemConfiguration
 {
+    private readonly ILogger<SystemConfiguration> _logger = DadtkvLogger.Factory.CreateLogger<SystemConfiguration>();
     public readonly List<ClientProcessInfo> Clients = new();
     public readonly List<ServerProcessInfo> LeaseManagers = new();
     public readonly List<ServerProcessInfo> ServerProcesses = new();
     public readonly List<ServerProcessInfo> TransactionManagers = new();
-    private readonly ILogger<SystemConfiguration> _logger = DadtkvLogger.Factory.CreateLogger<SystemConfiguration>();
 
-    public int TimeSlotCursor;
-
-    public Timer TimeSlotTimer;
+    public readonly Timer TimeSlotTimer = new();
+    private int _timeSlotCursor;
 
     private SystemConfiguration()
     {
@@ -34,43 +33,44 @@ public class SystemConfiguration
         NumberOfTimeSlots = systemConfiguration.NumberOfTimeSlots;
         WallTime = systemConfiguration.WallTime;
         TimeSlotSuspicionsList = systemConfiguration.TimeSlotSuspicionsList;
-        
+
         TimeSlotTimer = new Timer(TimeSlotDuration);
-        TimeSlotCursor = 0;
-        
+        _timeSlotCursor = 0;
         var currentTimeSlot = 0;
 
-        _logger.LogDebug($"At time slot 1, the following suspicions are active:");
+        _logger.LogDebug("At time slot 1, the following suspicions are active:");
         foreach (var suspicion in CurrentSuspicions)
             _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
-        
+
         TimeSlotTimer.Elapsed += (_, _) =>
         {
+            // Needed because the timer is started before the first time has elapsed
             if (currentTimeSlot++ == 0)
                 return;
-            
+
             _logger.LogDebug($"Time slot {currentTimeSlot - 1} ended. Starting time slot {currentTimeSlot}");
-            
-            if (TimeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
-                currentTimeSlot >= TimeSlotSuspicionsList[TimeSlotCursor + 1].TimeSlot)
-                TimeSlotCursor++;
-            
+
+            if (_timeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
+                currentTimeSlot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
+                _timeSlotCursor++;
+
             _logger.LogDebug($"At time slot {currentTimeSlot}, the following suspicions are active:");
             foreach (var suspicion in CurrentSuspicions)
                 _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
         };
     }
 
-    protected List<IProcessInfo> Processes { get; } = new();
+    private List<IProcessInfo> Processes { get; } = new();
 
     private int NumberOfTimeSlots { get; set; }
     public int TimeSlotDuration { get; set; }
     private DateTime WallTime { get; set; }
 
-    public List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
+    private List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
 
-    protected List<Suspicion> CurrentSuspicions =>
-        TimeSlotSuspicionsList.Count > 0 ? TimeSlotSuspicionsList[TimeSlotCursor].Suspicions : new List<Suspicion>();
+    protected List<Suspicion> CurrentSuspicions => TimeSlotSuspicionsList.Count > 0 
+        ? TimeSlotSuspicionsList[_timeSlotCursor].Suspicions 
+        : new List<Suspicion>();
 
     /// <summary>
     ///     Gets the lease manager Id number.

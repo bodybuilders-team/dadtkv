@@ -64,9 +64,9 @@ internal class SystemManager
                 FileName = clientExePath,
                 ArgumentList =
                 {
-                    config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url!,
+                    config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url,
                     client.Id,
-                    Path.Combine(clientScriptsDirectory, client.Script! + ".txt")
+                    Path.Combine(clientScriptsDirectory, client.Script + ".txt")
                 }
             }) ?? throw new Exception("Failed to start client process: " + client.Id);
             _processes.Add(p);

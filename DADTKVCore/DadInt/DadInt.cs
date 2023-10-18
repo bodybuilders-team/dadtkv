@@ -1,5 +1,8 @@
 namespace Dadtkv;
 
+/// <summary>
+///     A key-value pair with a string key and an int value.
+/// </summary>
 public class DadInt
 {
     public readonly string Key;

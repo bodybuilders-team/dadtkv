@@ -29,9 +29,8 @@ public class Proposer : LeaseService.LeaseServiceBase
         _consensusState = consensusState;
         _acceptorServiceServiceClients = acceptorServiceClients;
         _leaseManagerConfiguration = leaseManagerConfiguration;
-        _urBroadcaster =
-            new UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
-                learnerServiceClients);
+        _urBroadcaster = new UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
+            learnerServiceClients);
         _initialProposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
     }
@@ -76,9 +75,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             }
 
             while (!UpdateConsensusValues())
-            {
                 Thread.Sleep(10);
-            }
 
             _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
             _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
@@ -105,12 +102,10 @@ public class Proposer : LeaseService.LeaseServiceBase
                 return;
             }
 
-            // TODO Add lock?... :(
             while ((ulong)_consensusState.Values.Count <= roundNumber ||
-                   _consensusState.Values[(int)roundNumber] == null)
-            {
+                   _consensusState.Values[(int)roundNumber] == null
+                  )
                 Thread.Sleep(10);
-            }
 
             timer.Start();
         };
@@ -138,8 +133,9 @@ public class Proposer : LeaseService.LeaseServiceBase
                 isUpdated = false;
 
                 var roundNumber = (ulong)i;
-                new Thread(() => { Propose(new ConsensusValue(), _initialProposalNumber, roundNumber); })
-                    .Start();
+                new Thread(() =>
+                    Propose(new ConsensusValue(), _initialProposalNumber, roundNumber)
+                ).Start();
             }
         }
 
@@ -147,8 +143,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     }
 
     /// <summary>
-    ///     Get the proposal value for the current round. Applies the lease requests to the previous round's value, removing
-    ///     from the lease requests the ones that were already applied.
+    ///     Get the proposal value for the current round. Applies the lease requests to the previous round's value,
+    ///     removing from the lease requests the ones that were already applied.
     /// </summary>
     /// <returns>The proposal value for the current round.</returns>
     private ConsensusValue GetMyProposalValue()
@@ -225,7 +221,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         Propose(
             myProposalValue,
-            proposalNumber + (ulong)_leaseManagerConfiguration.LeaseManagers.Count, roundNumber
+            proposalNumber + (ulong)_leaseManagerConfiguration.LeaseManagers.Count,
+            roundNumber
         );
     }
 
@@ -241,19 +238,18 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// </returns>
     private bool SendPrepares(ulong proposalNumber, ulong roundNumber, Action<ConsensusValueDto?> updateAdoptedValue)
     {
-        var asyncTasks = new List<Task<PrepareResponseDto>>();
-        foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
-        {
-            // TODO -1: Do not send to ourselves, send using methods
-            var res = acceptorServiceServiceClient.PrepareAsync(
-                new PrepareRequestDto
-                {
-                    ProposalNumber = proposalNumber,
-                    RoundNumber = roundNumber
-                }
-            );
-            asyncTasks.Add(res.ResponseAsync);
-        }
+        var asyncTasks = _acceptorServiceServiceClients
+            .Select(acceptorServiceServiceClient =>
+                acceptorServiceServiceClient.PrepareAsync( // TODO -1: Do not send to ourselves, send using methods
+                    new PrepareRequestDto
+                    {
+                        ProposalNumber = proposalNumber,
+                        RoundNumber = roundNumber
+                    }
+                )
+            )
+            .Select(res => res.ResponseAsync)
+            .ToList();
 
         var highestWriteTimestamp = 0UL;
 
