@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging;
+using Timer = System.Timers.Timer;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -9,8 +12,11 @@ public class SystemConfiguration
     public readonly List<ServerProcessInfo> LeaseManagers = new();
     public readonly List<ServerProcessInfo> ServerProcesses = new();
     public readonly List<ServerProcessInfo> TransactionManagers = new();
+    private readonly ILogger<SystemConfiguration> _logger = DadtkvLogger.Factory.CreateLogger<SystemConfiguration>();
 
-    public int TimeSlotCursor = 0;
+    public int TimeSlotCursor;
+
+    public Timer TimeSlotTimer;
 
     private SystemConfiguration()
     {
@@ -28,6 +34,31 @@ public class SystemConfiguration
         NumberOfTimeSlots = systemConfiguration.NumberOfTimeSlots;
         WallTime = systemConfiguration.WallTime;
         TimeSlotSuspicionsList = systemConfiguration.TimeSlotSuspicionsList;
+        
+        TimeSlotTimer = new Timer(TimeSlotDuration);
+        TimeSlotCursor = 0;
+        
+        var currentTimeSlot = 0;
+
+        _logger.LogDebug($"At time slot 1, the following suspicions are active:");
+        foreach (var suspicion in CurrentSuspicions)
+            _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
+        
+        TimeSlotTimer.Elapsed += (_, _) =>
+        {
+            if (currentTimeSlot++ == 0)
+                return;
+            
+            _logger.LogDebug($"Time slot {currentTimeSlot - 1} ended. Starting time slot {currentTimeSlot}");
+            
+            if (TimeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
+                currentTimeSlot >= TimeSlotSuspicionsList[TimeSlotCursor + 1].TimeSlot)
+                TimeSlotCursor++;
+            
+            _logger.LogDebug($"At time slot {currentTimeSlot}, the following suspicions are active:");
+            foreach (var suspicion in CurrentSuspicions)
+                _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
+        };
     }
 
     protected List<IProcessInfo> Processes { get; } = new();

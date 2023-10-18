@@ -73,6 +73,7 @@ internal static class Program
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
 
+        processConfiguration.TimeSlotTimer.Start();
         server.Start();
         proposer.Start();
 

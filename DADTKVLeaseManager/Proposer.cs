@@ -34,22 +34,6 @@ public class Proposer : LeaseService.LeaseServiceBase
                 learnerServiceClients);
         _initialProposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
-
-        var timeSlotTimer = new Timer(leaseManagerConfiguration.TimeSlotDuration);
-        var currentTimeSlot = 1;
-
-        timeSlotTimer.Elapsed += (_, _) =>
-        {
-            _logger.LogDebug($"Time slot {currentTimeSlot} ended. Starting time slot {currentTimeSlot + 1}");
-            currentTimeSlot++;
-
-            if (leaseManagerConfiguration.TimeSlotCursor + 1 < leaseManagerConfiguration.TimeSlotSuspicionsList.Count &&
-                currentTimeSlot >= leaseManagerConfiguration
-                    .TimeSlotSuspicionsList[leaseManagerConfiguration.TimeSlotCursor].TimeSlot)
-                leaseManagerConfiguration.TimeSlotCursor++;
-        };
-
-        timeSlotTimer.Start();
     }
 
     /// <summary>
@@ -260,7 +244,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         var asyncTasks = new List<Task<PrepareResponseDto>>();
         foreach (var acceptorServiceServiceClient in _acceptorServiceServiceClients)
         {
-            //TODO -1: Do not send to ourselves, send using methods
+            // TODO -1: Do not send to ourselves, send using methods
             var res = acceptorServiceServiceClient.PrepareAsync(
                 new PrepareRequestDto
                 {

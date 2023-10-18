@@ -22,6 +22,10 @@ public class ServerProcessConfiguration : SystemConfiguration
     public List<string> MyCurrentSuspected => CurrentSuspicions
         .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspected).ToList();
+    
+    public List<string> MyCurrentSuspecting => CurrentSuspicions
+        .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
+        .Select(suspicion => suspicion.Suspect).ToList();
 
     public ulong ServerId
     {
