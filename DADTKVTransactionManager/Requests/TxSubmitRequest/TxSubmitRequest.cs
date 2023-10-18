@@ -1,5 +1,8 @@
-namespace Dadtkv.Requests.TxSubmitRequest;
+namespace Dadtkv;
 
+/// <summary>
+///     A request to submit a transaction.
+/// </summary>
 public class TxSubmitRequest
 {
     public readonly string ClientId;

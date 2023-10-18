@@ -6,7 +6,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+    private static readonly ILogger<LmLearner> Logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
 
     /// <summary>
     ///     Entry point for the lease manager server application.
@@ -22,23 +22,23 @@ internal static class Program
         var serverId = args[0];
 
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
-        var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
+        var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
         var processConfiguration = new ServerProcessConfiguration(systemConfiguration, serverId);
-        var leaseManagerConfiguration = new LeaseManagerConfiguration(processConfiguration);
+        var leaseManagerConfig = new LeaseManagerConfiguration(processConfiguration);
         var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
         var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
         var leaseManagersChannels =
-            leaseManagerConfiguration.LeaseManagers.ToDictionary(
+            leaseManagerConfig.LeaseManagers.ToDictionary(
                 processInfo => processInfo.Id,
                 processInfo => GrpcChannel.ForAddress(processInfo.Url)
             );
 
         var transactionManagersChannels =
-            leaseManagerConfiguration
+            leaseManagerConfig
                 .TransactionManagers.ToDictionary(
                     processInfo => processInfo.Id,
                     processInfo => GrpcChannel.ForAddress(processInfo.Url)
@@ -57,8 +57,7 @@ internal static class Program
 
         var consensusState = new ConsensusState();
 
-        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients,
-            leaseManagerConfiguration);
+        var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients, leaseManagerConfig);
         var acceptor = new Acceptor();
         var learner = new LmLearner(processConfiguration, consensusState);
 
@@ -77,7 +76,7 @@ internal static class Program
         server.Start();
         proposer.Start();
 
-        _logger.LogInformation($"Lease Manager server listening on port {serverProcessPort}");
+        Logger.LogInformation($"Lease Manager server listening on port {serverProcessPort}");
         Console.WriteLine("Press Enter to stop the server.");
         Console.ReadLine();
 

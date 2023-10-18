@@ -1,6 +1,5 @@
 syntax = "proto3";
 package dadtkv;
-
 option csharp_namespace = "Dadtkv";
 
 import "DadIntDto.proto";
@@ -16,7 +15,7 @@ message UpdateRequestDto {
   uint64 broadcasterId = 2;
   uint64 sequenceNum = 3;
   LeaseIdDto leaseId = 4;
-  repeated dadtkv.DadIntDto writeSet = 5;
+  repeated DadIntDto writeSet = 5;
   bool freeLease = 6;
 }
 

@@ -12,12 +12,10 @@ public class LmLearner : LearnerService.LearnerServiceBase
     private readonly ConsensusState _consensusState;
 
     private readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState)
     {
-        _serverProcessConfiguration = serverProcessConfiguration;
         _consensusState = consensusState;
 
         var learnerServiceClients = serverProcessConfiguration.OtherServerProcesses

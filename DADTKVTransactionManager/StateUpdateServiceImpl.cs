@@ -59,29 +59,33 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
-        // Obtain the serverw id from the context.Peer string by searching the clients
-        _logger.LogDebug(
-            $"Received Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
+        // Obtain the server id from the context.Peer string by searching the clients
+        _logger.LogDebug($"Received Update request from server " +
+                         $"{_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, " +
+                         $"request: {request}");
 
         new Thread(() =>
-        {
-            _fifoUrbReceiver.FifoUrbProcessRequest(
-                UpdateRequestDtoConverter.ConvertFromDto(request));
-        }).Start();
+            _fifoUrbReceiver.FifoUrbProcessRequest(UpdateRequestDtoConverter.ConvertFromDto(request))
+        ).Start();
 
-        _logger.LogDebug(
-            $"Responding Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
+        _logger.LogDebug($"Responding Update request from server " +
+                         $"{_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, " +
+                         $"request: {request}");
 
         return Task.FromResult(new UpdateResponseDto { Ok = true });
     }
 
+    /// <summary>
+    ///     Delivers an update request.
+    /// </summary>
+    /// <param name="request">The update request.</param>
     private void FifoUrbDeliver(UpdateRequest request)
     {
         // TODO: Abstract this duplication check out if this
         if (request.BroadcasterId == _serverProcessConfiguration.ServerId)
             return;
 
-        //TODO, can't be just a thread, otherwise fifo order is not guaranteed
+        // TODO, can't be just a thread, otherwise fifo order is not guaranteed
         _logger.LogDebug($"Received Update request 2: {request}");
 
         lock (_leaseQueues)
