@@ -34,22 +34,21 @@ public class Proposer : LeaseService.LeaseServiceBase
                 learnerServiceClients);
         _initialProposalNumber =
             (ulong)_leaseManagerConfiguration.LeaseManagers.IndexOf(_leaseManagerConfiguration.ProcessInfo) + 1;
-        
+
         var timeSlotTimer = new Timer(leaseManagerConfiguration.TimeSlotDuration);
         var currentTimeSlot = 1;
-        
+
         timeSlotTimer.Elapsed += (_, _) =>
         {
             _logger.LogDebug($"Time slot {currentTimeSlot} ended. Starting time slot {currentTimeSlot + 1}");
             currentTimeSlot++;
-            
-            if (leaseManagerConfiguration.TimeSlotCursor + 1 < leaseManagerConfiguration.TimeSlotSuspicionsList.Count && 
-                currentTimeSlot >= leaseManagerConfiguration.TimeSlotSuspicionsList[leaseManagerConfiguration.TimeSlotCursor].TimeSlot)
-            {
+
+            if (leaseManagerConfiguration.TimeSlotCursor + 1 < leaseManagerConfiguration.TimeSlotSuspicionsList.Count &&
+                currentTimeSlot >= leaseManagerConfiguration
+                    .TimeSlotSuspicionsList[leaseManagerConfiguration.TimeSlotCursor].TimeSlot)
                 leaseManagerConfiguration.TimeSlotCursor++;
-            }
         };
-        
+
         timeSlotTimer.Start();
     }
 
@@ -175,7 +174,7 @@ public class Proposer : LeaseService.LeaseServiceBase
             // Update the lease queues in the proposal value
             foreach (var currentRequest in _leaseRequests)
                 if (_consensusState.Values.Any(consensusValue =>
-                        consensusValue!.LeaseRequests.Exists(((req) => req.Equals(currentRequest)))))
+                        consensusValue!.LeaseRequests.Exists(req => req.Equals(currentRequest))))
                     toRemove.Add(currentRequest);
                 else
                     myProposalValue.LeaseRequests.Add(currentRequest);
@@ -199,7 +198,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         if (!_leaseManagerConfiguration.IsLeader())
             return false;
-        
+
         _logger.LogDebug($"Proposing {myProposalValue} for round {roundNumber}");
 
         // Step 1 - Prepare

@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Dadtkv;
 
 /// <summary>
@@ -7,15 +5,15 @@ namespace Dadtkv;
 /// </summary>
 public class LeaseRequest
 {
-    public LeaseId LeaseId { get; }
-    public List<string> Keys { get; }
-
     public LeaseRequest(LeaseId leaseId, List<string> keys)
     {
         LeaseId = leaseId;
         Keys = keys;
     }
-    
+
+    public LeaseId LeaseId { get; }
+    public List<string> Keys { get; }
+
     protected bool Equals(LeaseRequest other)
     {
         return LeaseId.Equals(other.LeaseId);
@@ -25,7 +23,7 @@ public class LeaseRequest
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;
-        if (obj.GetType() != this.GetType()) return false;
+        if (obj.GetType() != GetType()) return false;
         return Equals((LeaseRequest)obj);
     }
 

@@ -13,12 +13,13 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 {
     private readonly List<TC> _clients;
     private readonly Func<TC, TR, Task<TA>> _getResponse;
-    private readonly HashSet<ulong> _msgIdLookup;
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
-    private readonly Action<TR> _urbDeliver;
 
     private readonly ILogger<UrbReceiver<TR, TA, TC>> _logger =
         DadtkvLogger.Factory.CreateLogger<UrbReceiver<TR, TA, TC>>();
+
+    private readonly HashSet<ulong> _msgIdLookup;
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+    private readonly Action<TR> _urbDeliver;
 
     public UrbReceiver(List<TC> clients, Action<TR> urbDeliver, Func<TC, TR, Task<TA>> getResponse,
         ServerProcessConfiguration serverProcessConfiguration)
@@ -39,7 +40,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">Request to be processed.</param>
     public void UrbProcessRequest(TR request)
     {
-        var msgId = request.ServerId + request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
+        var msgId = request.SenderId + request.SequenceNum * (ulong)_serverProcessConfiguration.ServerProcesses.Count;
 
         lock (_msgIdLookup)
         {

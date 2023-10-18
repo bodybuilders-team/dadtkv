@@ -48,7 +48,7 @@ internal static class Program
 
         server.Start();
         _logger.LogInformation($"Transaction Manager server listening on port {serverProcessPort}");
-        
+
         Console.WriteLine("Press Enter to stop the server.");
         Console.ReadLine();
 

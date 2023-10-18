@@ -5,32 +5,32 @@ namespace Dadtkv;
 /// </summary>
 public class LeaseId
 {
+    public readonly ulong SenderId;
     public readonly ulong SequenceNum;
-    public readonly ulong ServerId;
 
-    public LeaseId(ulong sequenceNum, ulong serverId)
+    public LeaseId(ulong sequenceNum, ulong senderId)
     {
         SequenceNum = sequenceNum;
-        ServerId = serverId;
+        SenderId = senderId;
     }
 
     public override bool Equals(object? obj)
     {
         if (null == obj) return false;
         if (this == obj) return true;
-        if (obj.GetType() != this.GetType()) return false;
-        
+        if (obj.GetType() != GetType()) return false;
+
         var other = (LeaseId)obj;
-        return SequenceNum.Equals(other.SequenceNum) && ServerId.Equals(other.ServerId);
+        return SequenceNum.Equals(other.SequenceNum) && SenderId.Equals(other.SenderId);
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(SequenceNum, ServerId);
+        return HashCode.Combine(SequenceNum, SenderId);
     }
 
     public override string ToString()
     {
-        return $"(SequenceNum: {SequenceNum}, ServerId: {ServerId})";
+        return $"(SequenceNum: {SequenceNum}, SenderId: {SenderId})";
     }
 }

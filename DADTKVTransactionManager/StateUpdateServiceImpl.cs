@@ -15,10 +15,11 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _fifoUrbReceiver;
 
     private readonly LeaseQueues _leaseQueues;
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     private readonly ILogger<StateUpdateServiceImpl> _logger =
         DadtkvLogger.Factory.CreateLogger<StateUpdateServiceImpl>();
+
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     public StateUpdateServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues)
@@ -28,7 +29,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _leaseQueues = leaseQueues;
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
-        foreach (var process in serverProcessConfiguration.TransactionManagers)
+        foreach (var process in serverProcessConfiguration.OtherTransactionManagers)
         {
             var channel = GrpcChannel.ForAddress(process.Url);
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
@@ -38,7 +39,14 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
                 FifoUrbDeliver,
-                (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync,
+                (client, req) =>
+                {
+                    // TODO: Put in metadata
+                    var upReq = UpdateRequestDtoConverter.ConvertToDto(req);
+                    upReq.ServerId = _serverProcessConfiguration.ServerId;
+
+                    return client.UpdateAsync(upReq).ResponseAsync;
+                },
                 serverProcessConfiguration
             );
     }
@@ -52,41 +60,48 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
         // Obtain the serverw id from the context.Peer string by searching the clients
-        _logger.LogDebug($"Received Update request from server with url (request: {request})");
+        _logger.LogDebug(
+            $"Received Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
 
         _fifoUrbReceiver.FifoUrbProcessRequest(
             UpdateRequestDtoConverter.ConvertFromDto(request));
+
+        _logger.LogDebug(
+            $"Responding Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
 
         return Task.FromResult(new UpdateResponseDto { Ok = true });
     }
 
     private void FifoUrbDeliver(UpdateRequest request)
     {
-        _logger.LogDebug($"Received Update request 2: {request}");
-
-        lock (_leaseQueues)
+        new Thread(() =>
         {
-            var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
+            _logger.LogDebug($"Received Update request 2: {request}");
 
-            // TODO what if we never obtain the leases
-            while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
+            lock (_leaseQueues)
             {
-                Monitor.Exit(_leaseQueues);
-                Thread.Sleep(10);
-                Monitor.Enter(_leaseQueues);
+                var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
+
+                // TODO what if we never obtain the leases
+                while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
+                {
+                    Monitor.Exit(_leaseQueues);
+                    Thread.Sleep(10);
+                    Monitor.Enter(_leaseQueues);
+                }
+
+                lock (_dataStore)
+                {
+                    _dataStore.ExecuteTransaction(request.WriteSet);
+                }
+
+                if (request.FreeLease)
+                    foreach (var (key, queue) in _leaseQueues)
+                        if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
+                            queue.Dequeue();
+
+                _logger.LogDebug($"Lease queues after update request: {_leaseQueues}");
             }
-
-            lock (_dataStore)
-            {
-                _dataStore.ExecuteTransaction(request.WriteSet);
-            }
-
-            if (request.FreeLease)
-                foreach (var (key, queue) in _leaseQueues)
-                    if (queue.Count > 0 && queue.Peek().Equals(request.LeaseId))
-                        queue.Dequeue();
-
-            _logger.LogDebug($"Lease queues after update request: {_leaseQueues}");
-        }
+        }).Start();
     }
 }

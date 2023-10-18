@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Dadtkv;
 
 /// <summary>
@@ -33,8 +31,8 @@ public class DataStore
         // TODO: Change DadInt to include null value
         foreach (var key in readSet)
             readData.Add(new DadInt(
-                key: key,
-                value: _dataStorage.GetValueOrNull(key)
+                key,
+                _dataStorage.GetValueOrNull(key)
             ));
 
         ExecuteTransaction(writeSet);

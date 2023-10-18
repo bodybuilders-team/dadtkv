@@ -14,8 +14,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
@@ -148,6 +148,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
         _logger.LogDebug($"Sending update request for lease {leaseId}" + (freeLease ? " and freeing the lease." : "."));
         _urBroadcaster.UrBroadcast(
             new UpdateRequest(
+                _serverProcessConfiguration.ServerId,
                 _serverProcessConfiguration.ServerId,
                 leaseId,
                 writeSet,

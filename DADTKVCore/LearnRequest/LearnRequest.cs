@@ -5,10 +5,10 @@ namespace Dadtkv;
 /// </summary>
 public class LearnRequest : ITobRequest<LearnRequest>
 {
-    public LearnRequest(ulong serverId, ulong roundNumber,
+    public LearnRequest(ulong senderId, ulong roundNumber,
         ConsensusValue consensusValue, ulong sequenceNum = 0)
     {
-        ServerId = serverId;
+        SenderId = senderId;
         SequenceNum = sequenceNum;
         RoundNumber = roundNumber;
         ConsensusValue = consensusValue;
@@ -16,7 +16,7 @@ public class LearnRequest : ITobRequest<LearnRequest>
 
     public ConsensusValue ConsensusValue { get; }
     public ulong RoundNumber { get; }
-    public ulong ServerId { get; }
+    public ulong SenderId { get; }
     public ulong SequenceNum { get; set; }
 
     public ulong TobMessageId => RoundNumber;
@@ -24,6 +24,6 @@ public class LearnRequest : ITobRequest<LearnRequest>
     public override string ToString()
     {
         return
-            $"LearnRequest(ConsensusValue: {ConsensusValue}, RoundNumber: {RoundNumber}, ServerId: {ServerId}, SequenceNum: {SequenceNum})";
+            $"LearnRequest(ConsensusValue: {ConsensusValue}, RoundNumber: {RoundNumber}, SenderId: {SenderId}, SequenceNum: {SequenceNum})";
     }
 }

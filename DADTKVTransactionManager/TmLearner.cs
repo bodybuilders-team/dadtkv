@@ -11,13 +11,13 @@ public class TmLearner : LearnerService.LearnerServiceBase
 {
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
+
+    private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly TobReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _tobReceiver;
 
     private readonly UrBroadcaster<FreeLeaseRequest, FreeLeaseResponseDto, StateUpdateService.StateUpdateServiceClient>
         _urBroadcaster;
-
-    private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
 
     public TmLearner(ServerProcessConfiguration serverProcessConfiguration,
         Dictionary<LeaseId, bool> executedTrans,
@@ -95,7 +95,8 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
                 var leaseId = queue.Peek();
 
-                if (leaseId.ServerId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 && _executedTrans[leaseId])
+                if (leaseId.SenderId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 &&
+                    _executedTrans[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);
                     queue.Dequeue();

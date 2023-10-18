@@ -6,6 +6,6 @@ namespace Dadtkv;
 /// <typeparam name="TR">The type of the request.</typeparam>
 public interface IUrbRequest<in TR>
 {
-    public ulong ServerId { get; }
+    public ulong SenderId { get; }
     public ulong SequenceNum { get; set; }
 }

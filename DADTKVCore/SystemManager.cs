@@ -8,8 +8,8 @@ namespace Dadtkv;
 /// </summary>
 internal class SystemManager
 {
-    private readonly List<Process> _processes = new();
     private readonly ILogger<SystemManager> _logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
+    private readonly List<Process> _processes = new();
 
     /// <summary>
     ///     Starts the Dadtkv servers (Transaction Managers, Lease Managers).

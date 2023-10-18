@@ -27,7 +27,7 @@ public class ServerProcessConfiguration : SystemConfiguration
     {
         get
         {
-            var index = FindProcessIndex(ProcessInfo.Id);
+            var index = FindServerProcessIndex(ProcessInfo.Id);
 
             if (index < 0)
                 throw new Exception("Server not found");

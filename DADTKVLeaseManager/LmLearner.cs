@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
@@ -12,10 +11,10 @@ public class LmLearner : LearnerService.LearnerServiceBase
 {
     private readonly ConsensusState _consensusState;
     private readonly object _consensusStateLockObject = new();
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
-    private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     private readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+    private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState)
     {

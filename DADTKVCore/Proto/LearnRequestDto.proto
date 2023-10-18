@@ -5,7 +5,7 @@ option csharp_namespace = "Dadtkv";
 import "ConsensusValueDto.proto";
 
 message LearnRequestDto {
-  uint64 serverId = 1;
+  uint64 senderId = 1;
   uint64 sequenceNum = 2;
   uint64 roundNumber = 3;
   ConsensusValueDto consensusValue = 4;

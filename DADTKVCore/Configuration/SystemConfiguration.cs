@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace Dadtkv;
 
 /// <summary>
@@ -7,6 +5,13 @@ namespace Dadtkv;
 /// </summary>
 public class SystemConfiguration
 {
+    public readonly List<ClientProcessInfo> Clients = new();
+    public readonly List<ServerProcessInfo> LeaseManagers = new();
+    public readonly List<ServerProcessInfo> ServerProcesses = new();
+    public readonly List<ServerProcessInfo> TransactionManagers = new();
+
+    public int TimeSlotCursor = 0;
+
     private SystemConfiguration()
     {
     }
@@ -26,42 +31,12 @@ public class SystemConfiguration
     }
 
     protected List<IProcessInfo> Processes { get; } = new();
-    public readonly List<ServerProcessInfo> ServerProcesses = new();
-    public readonly List<ServerProcessInfo> LeaseManagers = new();
-    public readonly List<ServerProcessInfo> TransactionManagers = new();
-    public readonly List<ClientProcessInfo> Clients = new();
 
     private int NumberOfTimeSlots { get; set; }
     public int TimeSlotDuration { get; set; }
     private DateTime WallTime { get; set; }
 
     public List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
-
-    public class TimeSlotSuspicions
-    {
-        public int TimeSlot { get; set; }
-        public List<Suspicion> Suspicions { get; }
-
-        public TimeSlotSuspicions(int timeSlot, List<Suspicion> suspicions)
-        {
-            TimeSlot = timeSlot;
-            Suspicions = suspicions;
-        }
-    }
-
-    public class Suspicion
-    {
-        public string Suspect { get; set; }
-        public string Suspected { get; set; }
-
-        public Suspicion(string suspect, string suspected)
-        {
-            Suspect = suspect;
-            Suspected = suspected;
-        }
-    }
-    
-    public int TimeSlotCursor = 0;
 
     protected List<Suspicion> CurrentSuspicions =>
         TimeSlotSuspicionsList.Count > 0 ? TimeSlotSuspicionsList[TimeSlotCursor].Suspicions : new List<Suspicion>();
@@ -76,7 +51,15 @@ public class SystemConfiguration
         return LeaseManagers.FindIndex(proc => proc.Id.Equals(id)) + 1;
     }
 
-    public int FindProcessIndex(string id) => Processes.FindIndex(p => p.Id.Equals(id));
+    public int FindServerProcessIndex(string id)
+    {
+        return Processes.FindIndex(p => p.Id.Equals(id));
+    }
+
+    public string FindServerProcessId(int index)
+    {
+        return Processes[index].Id;
+    }
 
     /// <summary>
     ///     Reads the system configuration from a file and returns a <see cref="SystemConfiguration" /> object.
@@ -152,8 +135,8 @@ public class SystemConfiguration
                         systemConfig.TimeSlotSuspicionsList.Add(new TimeSlotSuspicions(slotNumber, suspicions
                             .Select(s => s.Trim('(', ')'))
                             .Select(s => new Suspicion(
-                                suspect: s.Split(',')[0],
-                                suspected: s.Split(',')[1])
+                                s.Split(',')[0],
+                                s.Split(',')[1])
                             )
                             .ToList()));
 
@@ -168,5 +151,29 @@ public class SystemConfiguration
         });
 
         return systemConfig;
+    }
+
+    public class TimeSlotSuspicions
+    {
+        public TimeSlotSuspicions(int timeSlot, List<Suspicion> suspicions)
+        {
+            TimeSlot = timeSlot;
+            Suspicions = suspicions;
+        }
+
+        public int TimeSlot { get; set; }
+        public List<Suspicion> Suspicions { get; }
+    }
+
+    public class Suspicion
+    {
+        public Suspicion(string suspect, string suspected)
+        {
+            Suspect = suspect;
+            Suspected = suspected;
+        }
+
+        public string Suspect { get; set; }
+        public string Suspected { get; set; }
     }
 }

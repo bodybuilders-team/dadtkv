@@ -4,9 +4,8 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    
     private static readonly ILogger<SystemManager> Logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
-    
+
     /// <summary>
     ///     Entry point for the Dadtkv system.
     /// </summary>

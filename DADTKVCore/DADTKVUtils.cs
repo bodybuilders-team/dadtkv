@@ -47,13 +47,14 @@ public static class DadtkvUtils
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
     public static bool WaitForMajority<TResponse>(
         List<Task<TResponse>> asyncTasks,
+        int majority,
         Func<TResponse, bool> predicate
     )
     {
-        // Majority is defined as n/2 + 1 TODO: why + 1? Do we never send to ourselves?
-        var cde = new CountdownEvent(asyncTasks.Count / 2 + 1);
+        // Majority is defined as n/2 + 1
+        var cde = new CountdownEvent(majority);
 
-        for (int i = 0; i < asyncTasks.Count; i++)
+        for (var i = 0; i < asyncTasks.Count; i++)
         {
             var currentTaskIdx = i;
             var asyncTask = asyncTasks[i];
@@ -75,6 +76,14 @@ public static class DadtkvUtils
 
         // TODO: use the failure detector for each 
         return cde.Wait(999999999);
+    }
+
+    public static bool WaitForMajority<TResponse>(
+        List<Task<TResponse>> asyncTasks,
+        Func<TResponse, bool> predicate
+    )
+    {
+        return WaitForMajority(asyncTasks, asyncTasks.Count / 2 + 1, predicate);
     }
 
     // public static bool WaitForMajority<TResponse>(

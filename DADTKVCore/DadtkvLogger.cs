@@ -15,8 +15,10 @@ public static class DadtkvLogger
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Console(theme: AnsiConsoleTheme.Code)
-            .WriteTo.File("logs.txt")
+            .WriteTo.Console(
+                theme: AnsiConsoleTheme.Code,
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}"
+            )
             .CreateLogger();
 
         // Create LoggerFactory and add Serilog
