@@ -83,7 +83,6 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
 
-            // TODO does it need to be exactly the current read timestamp? Just checked, and greater or equal seems fine
             if (!request.ProposalNumber.Equals(currentRoundAcceptorState.ReadTimestamp))
                 return Task.FromResult(new AcceptResponseDto { Accepted = false });
 

@@ -11,7 +11,7 @@ namespace Dadtkv;
 public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 {
     private readonly Action<TR> _fifoUrbDeliver;
-    private readonly Dictionary<ulong, long> _lastProcessedMessageIdMap = new();
+    private readonly Dictionary<ulong, long> _lastProcessedSequenceNumMap = new();
 
     private readonly ILogger<FifoUrbReceiver<TR, TA, TC>> _logger =
         DadtkvLogger.Factory.CreateLogger<FifoUrbReceiver<TR, TA, TC>>();
@@ -42,40 +42,61 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     private void UrbDeliver(TR request)
     {
         _logger.LogDebug($"Received Fifo Urb Request: {request}");
-        var requestsToDeliver = new List<TR>();
+        var pendingRequestsToDeliver = new List<TR>();
+        var broadcasterId = request.BroadcasterId;
 
+        // TODO: Add lock for each broadcasterId (create map of locks)
         lock (this)
         {
-            var broadcasterId = request.BroadcasterId;
+            _lastProcessedSequenceNumMap.TryAdd(broadcasterId, -1);
 
-            _lastProcessedMessageIdMap.TryAdd(broadcasterId, -1);
-
+            // TODO: Change this linked list
             if (!_pendingRequestsMap.ContainsKey(broadcasterId))
                 _pendingRequestsMap[broadcasterId] = new List<FifoRequest>();
 
-            if ((long)request.SequenceNum > _lastProcessedMessageIdMap[broadcasterId] + 1)
+            if ((long)request.SequenceNum > _lastProcessedSequenceNumMap[broadcasterId] + 1)
             {
                 _pendingRequestsMap[broadcasterId]!.AddSorted(new FifoRequest(request));
                 return;
             }
 
-            _lastProcessedMessageIdMap[broadcasterId]++;
-
-            requestsToDeliver.Add(request);
-            // TODO make this readable
-            for (var i = 0; i < _pendingRequestsMap[broadcasterId]!.Count; i++)
-            {
-                var pendingRequest = _pendingRequestsMap[broadcasterId]![i];
-                if (!pendingRequest.Request.SequenceNum.Equals((ulong)(_lastProcessedMessageIdMap[broadcasterId] + 1)))
-                    break;
-
-                _lastProcessedMessageIdMap[broadcasterId]++;
-                requestsToDeliver.Add(pendingRequest.Request);
-                _pendingRequestsMap[broadcasterId]!.RemoveAt(i--);
-            }
+            pendingRequestsToDeliver.Add(request);
         }
 
-        requestsToDeliver.ForEach(_fifoUrbDeliver);
+        while (true)
+        {
+            lock (this)
+            {
+                if (_pendingRequestsMap[broadcasterId].Count <= 0 && pendingRequestsToDeliver.Count <= 0)
+                    return;
+
+                ProcessPending(broadcasterId, pendingRequestsToDeliver);
+            }
+
+            foreach (var req in pendingRequestsToDeliver)
+            {
+                _fifoUrbDeliver(req);
+                lock (this)
+                {
+                    _lastProcessedSequenceNumMap[broadcasterId]++;
+                }
+            }
+
+            pendingRequestsToDeliver.Clear();
+        }
+    }
+
+    private void ProcessPending(ulong broadcasterId, List<TR> requestsToDeliver)
+    {
+        for (var i = 0; i < _pendingRequestsMap[broadcasterId]!.Count; i++)
+        {
+            var pendingRequest = _pendingRequestsMap[broadcasterId]![i];
+            if (!pendingRequest.Request.SequenceNum.Equals(requestsToDeliver.Last().SequenceNum + 1))
+                break;
+
+            requestsToDeliver.Add(pendingRequest.Request);
+            _pendingRequestsMap[broadcasterId]!.RemoveAt(i--);
+        }
     }
 
     /// <summary>

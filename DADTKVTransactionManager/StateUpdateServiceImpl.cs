@@ -81,12 +81,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <param name="request">The update request.</param>
     private void FifoUrbDeliver(UpdateRequest request)
     {
-        // TODO: Abstract this duplication check out if this
         if (request.BroadcasterId == _serverProcessConfiguration.ServerId)
             return;
-
-        // TODO, can't be just a thread, otherwise fifo order is not guaranteed
-        _logger.LogDebug($"Received Update request 2: {request}");
 
         lock (_leaseQueues)
         {

@@ -62,7 +62,9 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
+        // Maybe no need for thread start here
+        new Thread(() => { _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request)); }).Start();
+
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 

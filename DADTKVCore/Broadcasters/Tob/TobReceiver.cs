@@ -35,35 +35,55 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
-        var requestsToDeliver = new List<TR>();
+        var pendingRequestsToDeliver = new List<TR>();
+        var messageId = request.TobMessageId;
 
         lock (this)
         {
-            var messageId = request.TobMessageId;
-
             if ((long)messageId > _lastProcessedMessageId + 1)
             {
                 _pendingRequests.AddSorted(new TobRequest(request));
                 return;
             }
 
-            _lastProcessedMessageId++;
-            requestsToDeliver.Add(request);
-
-            // TODO make this readable
-            for (var i = 0; i < _pendingRequests.Count; i++)
-            {
-                var pendingRequest = _pendingRequests[i];
-                if (!pendingRequest.Request.TobMessageId.Equals((ulong)(_lastProcessedMessageId + 1)))
-                    break;
-
-                _lastProcessedMessageId++;
-                requestsToDeliver.Add(pendingRequest.Request);
-                _pendingRequests.RemoveAt(i--);
-            }
+            pendingRequestsToDeliver.Add(request);
         }
 
-        requestsToDeliver.ForEach(_tobDeliver);
+
+        while (true)
+        {
+            lock (this)
+            {
+                if (_pendingRequests.Count <= 0 && pendingRequestsToDeliver.Count <= 0)
+                    return;
+
+                ProcessPending(pendingRequestsToDeliver);
+            }
+
+            foreach (var tobRequest in pendingRequestsToDeliver)
+            {
+                _tobDeliver(tobRequest);
+                lock (this)
+                {
+                    _lastProcessedMessageId++;
+                }
+            }
+
+            pendingRequestsToDeliver.Clear();
+        }
+    }
+
+    private void ProcessPending(List<TR> pendingRequestsToDeliver)
+    {
+        for (var i = 0; i < _pendingRequests.Count; i++)
+        {
+            var pendingRequest = _pendingRequests[i];
+            if (!pendingRequest.Request.TobMessageId.Equals(pendingRequestsToDeliver.Last().SequenceNum + 1))
+                break;
+
+            pendingRequestsToDeliver.Add(pendingRequest.Request);
+            _pendingRequests.RemoveAt(i--);
+        }
     }
 
     /// <summary>
