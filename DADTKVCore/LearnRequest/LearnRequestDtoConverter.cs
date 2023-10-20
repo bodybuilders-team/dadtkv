@@ -8,6 +8,7 @@ public static class LearnRequestDtoConverter
     public static LearnRequest ConvertFromDto(LearnRequestDto dto)
     {
         return new LearnRequest(
+            dto.ServerId,
             dto.BroadcasterId,
             dto.RoundNumber,
             ConsensusValueDtoConverter.ConvertFromDto(dto.ConsensusValue),

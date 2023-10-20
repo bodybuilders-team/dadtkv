@@ -5,15 +5,17 @@ namespace Dadtkv;
 /// </summary>
 public class LearnRequest : ITobRequest<LearnRequest>
 {
-    public LearnRequest(ulong broadcasterId, ulong roundNumber,
+    public LearnRequest(ulong serverId, ulong broadcasterId, ulong roundNumber,
         ConsensusValue consensusValue, ulong sequenceNum = 0)
     {
+        ServerId = serverId;
         BroadcasterId = broadcasterId;
         SequenceNum = sequenceNum;
         RoundNumber = roundNumber;
         ConsensusValue = consensusValue;
     }
 
+    public ulong ServerId { get; set; }
     public ConsensusValue ConsensusValue { get; }
     public ulong RoundNumber { get; }
     public ulong BroadcasterId { get; }

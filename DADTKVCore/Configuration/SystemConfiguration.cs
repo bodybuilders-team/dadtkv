@@ -12,10 +12,10 @@ public class SystemConfiguration
     public readonly List<ClientProcessInfo> Clients = new();
     public readonly List<ServerProcessInfo> LeaseManagers = new();
     public readonly List<ServerProcessInfo> ServerProcesses = new();
-    public readonly List<ServerProcessInfo> TransactionManagers = new();
 
     public readonly Timer TimeSlotTimer = new();
-    private int _timeSlotCursor;
+    public readonly List<ServerProcessInfo> TransactionManagers = new();
+    protected int _timeSlotCursor;
 
     private SystemConfiguration()
     {
@@ -36,28 +36,10 @@ public class SystemConfiguration
 
         TimeSlotTimer = new Timer(TimeSlotDuration);
         _timeSlotCursor = 0;
-        var currentTimeSlot = 0;
 
         _logger.LogDebug("At time slot 1, the following suspicions are active:");
         foreach (var suspicion in CurrentSuspicions)
             _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
-
-        TimeSlotTimer.Elapsed += (_, _) =>
-        {
-            // Needed because the timer is started before the first time has elapsed
-            if (currentTimeSlot++ == 0)
-                return;
-
-            _logger.LogDebug($"Time slot {currentTimeSlot - 1} ended. Starting time slot {currentTimeSlot}");
-
-            if (_timeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
-                currentTimeSlot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
-                _timeSlotCursor++;
-
-            _logger.LogDebug($"At time slot {currentTimeSlot}, the following suspicions are active:");
-            foreach (var suspicion in CurrentSuspicions)
-                _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
-        };
     }
 
     private List<IProcessInfo> Processes { get; } = new();
@@ -66,10 +48,10 @@ public class SystemConfiguration
     public int TimeSlotDuration { get; set; }
     private DateTime WallTime { get; set; }
 
-    private List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
+    protected List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
 
-    protected List<Suspicion> CurrentSuspicions => TimeSlotSuspicionsList.Count > 0 
-        ? TimeSlotSuspicionsList[_timeSlotCursor].Suspicions 
+    protected List<Suspicion> CurrentSuspicions => TimeSlotSuspicionsList.Count > 0
+        ? TimeSlotSuspicionsList[_timeSlotCursor].Suspicions
         : new List<Suspicion>();
 
     /// <summary>

@@ -6,13 +6,16 @@ namespace Dadtkv;
 public class FreeLeaseRequest : IUrbRequest<FreeLeaseRequest>
 {
     public readonly LeaseId LeaseId;
-    public ulong BroadcasterId { get; }
-    public ulong SequenceNum { get; set; }
 
-    public FreeLeaseRequest(ulong broadcasterId, LeaseId leaseId, ulong sequenceNum = 0)
+    public FreeLeaseRequest(ulong serverId, ulong broadcasterId, LeaseId leaseId, ulong sequenceNum = 0)
     {
+        ServerId = serverId;
         BroadcasterId = broadcasterId;
         SequenceNum = sequenceNum;
         LeaseId = leaseId;
     }
+
+    public ulong ServerId { get; }
+    public ulong BroadcasterId { get; }
+    public ulong SequenceNum { get; set; }
 }

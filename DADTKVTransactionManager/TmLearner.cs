@@ -62,7 +62,9 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        // Maybe no need for thread start here
+        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+
+        // TODO: Maybe no need for thread start here
         new Thread(() => { _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request)); }).Start();
 
         return Task.FromResult(new LearnResponseDto { Ok = true });
@@ -111,7 +113,11 @@ public class TmLearner : LearnerService.LearnerServiceBase
 
             foreach (var leaseId in leasesToBeFreed)
                 _urBroadcaster.UrBroadcast(
-                    new FreeLeaseRequest(_serverProcessConfiguration.ServerId, leaseId),
+                    new FreeLeaseRequest(
+                        _serverProcessConfiguration.ServerId,
+                        _serverProcessConfiguration.ServerId,
+                        leaseId
+                    ),
                     (client, req) => client.FreeLeaseAsync(FreeLeaseRequestDtoConverter.ConvertToDto(req)).ResponseAsync
                 );
         }

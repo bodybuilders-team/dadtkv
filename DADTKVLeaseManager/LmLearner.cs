@@ -12,11 +12,13 @@ public class LmLearner : LearnerService.LearnerServiceBase
     private readonly ConsensusState _consensusState;
 
     private readonly ILogger<LmLearner> _logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
     private readonly UrbReceiver<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urbReceiver;
 
     public LmLearner(ServerProcessConfiguration serverProcessConfiguration, ConsensusState consensusState)
     {
         _consensusState = consensusState;
+        _serverProcessConfiguration = serverProcessConfiguration;
 
         var learnerServiceClients = serverProcessConfiguration.OtherServerProcesses
             .Select(process => GrpcChannel.ForAddress(process.Url))
@@ -49,7 +51,13 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _urbReceiver.UrbProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request));
+        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+
+        var req = LearnRequestDtoConverter.ConvertFromDto(request);
+        req.ServerId = _serverProcessConfiguration.ServerId;
+
+        _urbReceiver.UrbProcessRequest(req);
+
         return Task.FromResult(new LearnResponseDto { Ok = true });
     }
 

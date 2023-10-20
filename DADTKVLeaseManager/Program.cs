@@ -58,7 +58,7 @@ internal static class Program
         var consensusState = new ConsensusState();
 
         var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients, leaseManagerConfig);
-        var acceptor = new Acceptor();
+        var acceptor = new Acceptor(processConfiguration);
         var learner = new LmLearner(processConfiguration, consensusState);
 
         var server = new Server

@@ -5,13 +5,6 @@ namespace Dadtkv;
 /// </summary>
 public class UpdateRequest : IUrbRequest<UpdateRequest>
 {
-    public ulong ServerId { get; }
-    public LeaseId LeaseId { get; }
-    public List<DadInt> WriteSet { get; }
-    public bool FreeLease { get; }
-    public ulong BroadcasterId { get; }
-    public ulong SequenceNum { get; set; }
-
     public UpdateRequest(ulong serverId, ulong broadcasterId, LeaseId leaseId,
         List<DadInt> writeSet, bool freeLease, ulong sequenceNum = 0)
     {
@@ -22,6 +15,13 @@ public class UpdateRequest : IUrbRequest<UpdateRequest>
         WriteSet = writeSet;
         FreeLease = freeLease;
     }
+
+    public ulong ServerId { get; }
+    public LeaseId LeaseId { get; }
+    public List<DadInt> WriteSet { get; }
+    public bool FreeLease { get; }
+    public ulong BroadcasterId { get; }
+    public ulong SequenceNum { get; set; }
 
     public override string ToString()
     {

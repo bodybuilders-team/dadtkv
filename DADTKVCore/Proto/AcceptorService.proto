@@ -10,8 +10,9 @@ service AcceptorService {
 }
 
 message PrepareRequestDto {
-  uint64 proposalNumber = 1;
-  uint64 roundNumber = 2;
+  uint64 serverId = 1;
+  uint64 proposalNumber = 2;
+  uint64 roundNumber = 3;
 }
 
 message PrepareResponseDto {
@@ -22,9 +23,10 @@ message PrepareResponseDto {
 }
 
 message AcceptRequestDto {
-  uint64 proposalNumber = 1;
-  uint64 roundNumber = 2;
-  ConsensusValueDto value = 3;
+  uint64 serverId = 1;
+  uint64 proposalNumber = 2;
+  uint64 roundNumber = 3;
+  ConsensusValueDto value = 4;
 }
 
 message AcceptResponseDto {

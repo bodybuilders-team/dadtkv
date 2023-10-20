@@ -13,6 +13,7 @@ public static class FreeLeaseRequestDtoConverter
     public static FreeLeaseRequest ConvertFromDto(FreeLeaseRequestDto dto)
     {
         return new FreeLeaseRequest(
+            dto.ServerId,
             dto.BroadcasterId,
             sequenceNum: dto.SequenceNum,
             leaseId: LeaseIdDtoConverter.ConvertFromDto(dto.LeaseId)
@@ -28,6 +29,7 @@ public static class FreeLeaseRequestDtoConverter
     {
         return new FreeLeaseRequestDto
         {
+            ServerId = request.ServerId,
             SequenceNum = request.SequenceNum,
             BroadcasterId = request.BroadcasterId,
             LeaseId = LeaseIdDtoConverter.ConvertToDto(request.LeaseId)

@@ -10,6 +10,12 @@ namespace Dadtkv;
 internal class Acceptor : AcceptorService.AcceptorServiceBase
 {
     private readonly List<AcceptorState> _acceptorState = new();
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+
+    public Acceptor(ServerProcessConfiguration serverProcessConfiguration)
+    {
+        _serverProcessConfiguration = serverProcessConfiguration;
+    }
 
     /// <summary>
     ///     Get the acceptor state for the given round number.
@@ -32,6 +38,8 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The prepare response.</returns>
     public override Task<PrepareResponseDto> Prepare(PrepareRequestDto request, ServerCallContext context)
     {
+        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+
         lock (_acceptorState)
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);
@@ -79,6 +87,8 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The accept response.</returns>
     public override Task<AcceptResponseDto> Accept(AcceptRequestDto request, ServerCallContext context)
     {
+        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+
         lock (_acceptorState)
         {
             var currentRoundAcceptorState = CurrentRoundAcceptorState((int)request.RoundNumber);

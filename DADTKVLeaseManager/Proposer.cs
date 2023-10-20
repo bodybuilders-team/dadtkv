@@ -43,6 +43,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>A lease response.</returns>
     public override Task<LeaseResponseDto> RequestLease(LeaseRequestDto request, ServerCallContext context)
     {
+        // Do not check if is suspected because TMs do not suspect of LMs
         lock (_leaseRequests)
         {
             _leaseRequests.Add(LeaseRequestDtoConverter.ConvertFromDto(request));
@@ -310,6 +311,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         _urBroadcaster.UrBroadcast(
             new LearnRequest(
+                _leaseManagerConfiguration.ServerId,
                 _leaseManagerConfiguration.ServerId,
                 roundNumber,
                 newConsensusValue
