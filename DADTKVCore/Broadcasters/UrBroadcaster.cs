@@ -30,10 +30,12 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
         request.SequenceNum = ConcurrentUtils.GetAndIncrement(ref _sequenceNumCounter);
 
         var resTasks = _clients
-            .Select(client => getResponse(client, request))
+            .Select(client =>
+                new DadtkvUtils.TaskWithRequest<TR, TA>(getResponse(client, request), request)
+            )
             .ToList();
 
-        resTasks.Add(Task.FromResult(default(TA))!);
+        resTasks.Add(new DadtkvUtils.TaskWithRequest<TR, TA>(Task.FromResult(default(TA))!, request));
         var majority = DadtkvUtils.WaitForMajority(resTasks).Result;
 
         if (majority)

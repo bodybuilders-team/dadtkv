@@ -49,8 +49,9 @@ D 10000
 # - The line ends with a sequence of pairs identifying suspected processes
 # each pair includes the ids of the suspecting process and the suspected process,
 # e.g. (A,B) means that process A suspects process B
-# F 1 N N N N N N
-F 1 N N N N N N (TM3,TM2) (TM1,TM2) (LM3,LM2)
+F 1 N N N N N N
+F 2 N N N N N C
+# F 1 N N N N N N (LM2,LM3) (LM1,LM3)
 # F 2 N N C N N N (TM1,TM2)
 # F 12 N N N N N N (TM3,TM2) (TM1,TM2) (LM3,LM2)
 # F 17 N N C N N N (TM1,TM2)

@@ -60,59 +60,59 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// </summary>
     public void Start()
     {
-        var timeDelta = _leaseManagerConfiguration.TimeSlotDuration;
-        var timer = new Timer(timeDelta);
+        var roundNumber = 1;
 
-        // TODO Check timer, to be sure it is waiting for the previous consensus round to end before starting a new one (pipeline it)
-        timer.Elapsed += (_, _) =>
+        var leaderTimeoutTimestamp = 0UL;
+        var leaderTimeoutRoundNumber = 0;
+
+        while (true)
         {
+            while (roundNumber > _leaseManagerConfiguration.CurrentTimeSlot)
+                Thread.Sleep(10);
+
             lock (_leaseRequests)
             {
                 if (_leaseRequests.Count == 0)
                 {
-                    timer.Start();
-                    return;
+                    Thread.Sleep(10);
+                    continue;
                 }
             }
 
-            while (!UpdateConsensusValues())
-                Thread.Sleep(10);
-
             _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
             _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
-
-            ulong roundNumber;
-            lock (_consensusState)
-            {
-                roundNumber = (ulong)_consensusState.Values.Count;
-            }
 
             var myProposalValue = GetMyProposalValue();
 
             if (myProposalValue.LeaseRequests.Count == 0)
             {
-                timer.Start();
-                return;
+                Thread.Sleep(10);
+                continue;
             }
 
-            var decided = Propose(myProposalValue, _initialProposalNumber, roundNumber);
+            var decided = Propose(myProposalValue, _initialProposalNumber, (ulong)roundNumber);
 
             if (!decided)
             {
-                timer.Start();
-                return;
+                if ((ulong)DateTime.UtcNow.ToFileTimeUtc() < leaderTimeoutTimestamp)
+                {
+                    _leaseManagerConfiguration.RealSuspected.Add(
+                        _leaseManagerConfiguration.LeaseManagers[leaderTimeoutRoundNumber - 1].Id
+                    );
+                }
+
+                Thread.Sleep(10);
+                leaderTimeoutTimestamp = (ulong)DateTime.UtcNow.ToFileTimeUtc() + 15000; // 15 seconds
+                leaderTimeoutRoundNumber = roundNumber;
+                continue;
             }
 
-            while ((ulong)_consensusState.Values.Count <= roundNumber ||
-                   _consensusState.Values[(int)roundNumber] == null
-                  )
+            // Wait for the consensus value to be updated (eventually because of URB)
+            while (_consensusState.Values.Count <= roundNumber || _consensusState.Values[roundNumber] == null)
                 Thread.Sleep(10);
 
-            timer.Start();
-        };
-
-        timer.AutoReset = false;
-        timer.Start();
+            roundNumber++;
+        }
     }
 
     /// <summary>
@@ -241,15 +241,21 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var asyncTasks = _acceptorServiceServiceClients
             .Select(acceptorServiceServiceClient =>
-                acceptorServiceServiceClient.PrepareAsync( // TODO -1: Do not send to ourselves, send using methods
-                    new PrepareRequestDto
+                {
+                    var req = new PrepareRequestDto
                     {
+                        ServerId = _leaseManagerConfiguration.ServerId,
                         ProposalNumber = proposalNumber,
                         RoundNumber = roundNumber
-                    }
-                )
+                    };
+
+                    var res = acceptorServiceServiceClient
+                        .PrepareAsync(req); // TODO -1: Do not send to ourselves, send using methods
+
+                    return new DadtkvUtils.TaskWithRequest<PrepareRequestDto, PrepareResponseDto>(res.ResponseAsync,
+                        req);
+                }
             )
-            .Select(res => res.ResponseAsync)
             .ToList();
 
         var highestWriteTimestamp = 0UL;
@@ -271,6 +277,20 @@ public class Proposer : LeaseService.LeaseServiceBase
                 updateAdoptedValue(res.Value);
 
                 return true;
+            },
+            onTimeout: req =>
+            {
+                // Add server id to real suspected servers
+                _leaseManagerConfiguration.RealSuspected.Add(
+                    _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
+                );
+            },
+            onSuccess: req =>
+            {
+                // Remove server id from real suspected servers
+                _leaseManagerConfiguration.RealSuspected.Remove(
+                    _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
+                );
             }
         ).Result;
     }
@@ -284,21 +304,40 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>True if a majority of acceptors accepted the proposal, false otherwise.</returns>
     private bool SendAccepts(ConsensusValue proposalValue, ulong proposalNumber, ulong roundNumber)
     {
-        var acceptCalls = new List<Task<AcceptResponseDto>>();
+        var acceptCalls = new List<DadtkvUtils.TaskWithRequest<AcceptRequestDto, AcceptResponseDto>>();
         _acceptorServiceServiceClients.ForEach(client =>
         {
-            var res = client.AcceptAsync(
-                new AcceptRequestDto
-                {
-                    ProposalNumber = proposalNumber,
-                    Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
-                    RoundNumber = roundNumber
-                }
-            );
-            acceptCalls.Add(res.ResponseAsync);
+            var req = new AcceptRequestDto
+            {
+                ServerId = _leaseManagerConfiguration.ServerId,
+                ProposalNumber = proposalNumber,
+                Value = ConsensusValueDtoConverter.ConvertToDto(proposalValue),
+                RoundNumber = roundNumber
+            };
+            var res = client.AcceptAsync(req);
+
+            acceptCalls.Add(
+                new DadtkvUtils.TaskWithRequest<AcceptRequestDto, AcceptResponseDto>(res.ResponseAsync, req));
         });
 
-        return DadtkvUtils.WaitForMajority(acceptCalls, res => res.Accepted).Result;
+        return DadtkvUtils.WaitForMajority(
+            acceptCalls,
+            res => res.Accepted,
+            onTimeout: req =>
+            {
+                // Add server id to real suspected servers
+                _leaseManagerConfiguration.RealSuspected.Add(
+                    _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
+                );
+            },
+            onSuccess: req =>
+            {
+                // Remove server id from real suspected servers
+                _leaseManagerConfiguration.RealSuspected.Remove(
+                    _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
+                );
+            }
+        ).Result;
     }
 
     /// <summary>

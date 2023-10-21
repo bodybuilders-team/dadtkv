@@ -34,22 +34,38 @@ public static class DadtkvUtils
             action.Invoke(element);
     }
 
+    public class TaskWithRequest<TRequest, TResponse>
+    {
+        public Task<TResponse> Task { get; }
+        public TRequest Request { get; }
+
+        public TaskWithRequest(Task<TResponse> task, TRequest req)
+        {
+            Task = task;
+            Request = req;
+        }
+    }
+
     /// <summary>
     ///     Waits for a majority of the async tasks to complete, checking for a predicate.
     /// </summary>
     /// <param name="asyncTasks">The async tasks to wait for.</param>
     /// <param name="predicate">The predicate to check for.</param>
     /// <param name="timeout">The timeout in milliseconds.</param>
+    /// <param name="onTimeout">The action to invoke on timeout.</param>
+    /// <param name="onSuccess">The action to invoke on success.</param>
     /// <typeparam name="TResponse">The type of the response.</typeparam>
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
-    public static async Task<bool> WaitForMajority<TResponse>(
-        List<Task<TResponse>> asyncTasks,
+    public static async Task<bool> WaitForMajority<TRequest, TResponse>(
+        List<TaskWithRequest<TRequest, TResponse>> asyncTasks,
         Func<TResponse, bool> predicate,
-        int timeout = 10000
+        int timeout = 1000,
+        Action<TRequest>? onTimeout = null,
+        Action<TRequest>? onSuccess = null
     )
     {
         var tasksWithTimeout = asyncTasks
-            .Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout)))
+            .Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout), onTimeout, onSuccess))
             .ToList();
 
         var majority = asyncTasks.Count / 2 + 1;
@@ -85,7 +101,8 @@ public static class DadtkvUtils
     /// </summary>
     /// <param name="asyncTasks">The async tasks to wait for.</param>
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
-    public static async Task<bool> WaitForMajority<TResponse>(List<Task<TResponse>> asyncTasks)
+    public static async Task<bool> WaitForMajority<TRequest, TResponse>(
+        List<TaskWithRequest<TRequest, TResponse>> asyncTasks)
     {
         return await WaitForMajority(asyncTasks, _ => true);
     }
@@ -95,19 +112,34 @@ public static class DadtkvUtils
     /// </summary>
     /// <param name="task">The task to time out.</param>
     /// <param name="timeout">The timeout.</param>
+    /// <param name="onTimeout">The action to invoke on timeout.</param>
+    /// <param name="onSuccess">The action to invoke on success.</param>
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <returns>The task.</returns>
-    private static async Task<TResult> TimeoutAfter<TResult>(this Task<TResult> task, TimeSpan timeout)
+    private static async Task<TResult> TimeoutAfter<TRequest, TResult>(
+        this TaskWithRequest<TRequest, TResult> task,
+        TimeSpan timeout,
+        Action<TRequest>? onTimeout = null,
+        Action<TRequest>? onSuccess = null
+    )
     {
         using var timeoutCancellationTokenSource = new CancellationTokenSource();
 
-        var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
+        var completedTask = await Task.WhenAny(task.Task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
 
-        if (completedTask != task)
+        if (completedTask != task.Task)
+        {
+            onTimeout?.Invoke(task.Request);
             throw new TimeoutException("The operation has timed out.");
+        }
 
         timeoutCancellationTokenSource.Cancel();
-        return await task; // Very important in order to propagate exceptions
+
+        var result = await task.Task;
+        if (!task.Task.IsFaulted)
+            onSuccess?.Invoke(task.Request);
+
+        return result; // Very important in order to propagate exceptions
     }
 
     /// <summary>

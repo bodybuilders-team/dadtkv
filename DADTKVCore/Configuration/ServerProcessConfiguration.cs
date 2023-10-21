@@ -11,20 +11,21 @@ public class ServerProcessConfiguration : SystemConfiguration
         DadtkvLogger.Factory.CreateLogger<ServerProcessConfiguration>();
 
     public readonly ServerProcessInfo ProcessInfo;
+    
+    public int CurrentTimeSlot = 0;
 
     public ServerProcessConfiguration(SystemConfiguration systemConfiguration, string serverId) : base(
         systemConfiguration)
     {
         ProcessInfo = ServerProcesses.Find(info => info.Id.Equals(serverId))!;
 
-        var currentTimeSlot = 0;
         TimeSlotTimer.Elapsed += (_, _) =>
         {
             // Needed because the timer is started before the first time has elapsed
-            if (currentTimeSlot++ == 0)
+            if (CurrentTimeSlot++ == 0)
                 return;
 
-            _logger.LogDebug($"Time slot {currentTimeSlot - 1} ended. Starting time slot {currentTimeSlot}");
+            _logger.LogDebug($"Time slot {CurrentTimeSlot - 1} ended. Starting time slot {CurrentTimeSlot}");
 
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")
@@ -34,10 +35,10 @@ public class ServerProcessConfiguration : SystemConfiguration
             }
 
             if (_timeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
-                currentTimeSlot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
+                CurrentTimeSlot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
                 _timeSlotCursor++;
 
-            _logger.LogDebug($"At time slot {currentTimeSlot}, the following suspicions are active:");
+            _logger.LogDebug($"At time slot {CurrentTimeSlot}, the following suspicions are active:");
             foreach (var suspicion in CurrentSuspicions)
                 _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
         };
@@ -49,19 +50,26 @@ public class ServerProcessConfiguration : SystemConfiguration
     public List<ServerProcessInfo> OtherTransactionManagers =>
         TransactionManagers.Where(info => !info.Id.Equals(ProcessInfo.Id)).ToList();
 
+    // TODO: Arranjar melhores nomes para isto das suspeitas?
     /// <summary>
-    ///     The current suspicions where this server is the suspect.
+    ///     Servers that are suspected by this server.
     /// </summary>
-    public List<string> MyCurrentSuspected => CurrentSuspicions
+    protected List<string> MyCurrentSuspected => CurrentSuspicions
         .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspected).ToList();
 
     /// <summary>
-    ///     The current suspicions where this server is the suspected.
+    ///     Servers that are suspecting this server.
     /// </summary>
-    public List<string> MyCurrentSuspecting => CurrentSuspicions
+    private List<string> MyCurrentSuspecting => CurrentSuspicions
         .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspect).ToList();
+
+    /// <summary>
+    ///     Servers that are suspected by this server.
+    ///     This list is updated when a server takes too long to respond to a request.
+    /// </summary>
+    public List<string> RealSuspected = new();
 
     public ulong ServerId
     {
@@ -83,7 +91,7 @@ public class ServerProcessConfiguration : SystemConfiguration
     public void TimeoutIfBeingSuspectedBy(ulong suspectingServerId)
     {
         var suspectingId = FindServerProcessId((int)suspectingServerId);
-        if (!MyCurrentSuspecting.Contains(suspectingId))
+        if (!MyCurrentSuspecting.Contains(suspectingId)) // TODO: || !MyCurrentSuspected.Contains(suspectingId))
             return;
 
         _logger.LogDebug($"{suspectingId} is suspecting this server. Playing dead.");

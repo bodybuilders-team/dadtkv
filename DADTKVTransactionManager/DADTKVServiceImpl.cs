@@ -150,7 +150,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
-        if (!majority) return new List<DadInt> { new("aborted", 0) };
+        if (!majority) 
+            return new List<DadInt> { new("aborted", 0) };
 
         lock (_dataStore)
         {
