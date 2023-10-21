@@ -4,7 +4,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<ClientLogic> Logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
+    private static ILogger<ClientLogic> Logger;
 
     /// <summary>
     ///     Entry point for the client application.
@@ -21,8 +21,12 @@ internal static class Program
         // Client configuration
         var serverUrl = args[0];
         var clientId = args[1];
+        DadtkvLogger.InitializeLogger(clientId);
+        Logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
+
         var clientLogic = new ClientLogic(clientId, serverUrl);
 
+        
         // Script configuration
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
@@ -74,5 +78,7 @@ internal static class Program
                 }
             }
         }
+
+        Logger.LogInformation($"Client {clientId} stopped");
     }
 }

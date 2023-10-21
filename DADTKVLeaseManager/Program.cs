@@ -6,7 +6,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<LmLearner> Logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+    private static ILogger<LmLearner> Logger;
 
     /// <summary>
     ///     Entry point for the lease manager server application.
@@ -21,13 +21,15 @@ internal static class Program
 
         var serverId = args[0];
 
+        DadtkvLogger.InitializeLogger(serverId);
+        Logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+        
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
-        var processConfiguration = new ServerProcessConfiguration(systemConfiguration, serverId);
-        var leaseManagerConfig = new LeaseManagerConfiguration(processConfiguration);
-        var serverProcessPort = new Uri(processConfiguration.ProcessInfo.Url).Port;
-        var hostname = new Uri(processConfiguration.ProcessInfo.Url).Host;
+        var leaseManagerConfig = new LeaseManagerConfiguration( new ServerProcessConfiguration(systemConfiguration, serverId));
+        var serverProcessPort = new Uri(leaseManagerConfig.ProcessInfo.Url).Port;
+        var hostname = new Uri(leaseManagerConfig.ProcessInfo.Url).Host;
 
         AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -58,8 +60,8 @@ internal static class Program
         var consensusState = new ConsensusState();
 
         var proposer = new Proposer(consensusState, acceptorServiceClients, learnerServiceClients, leaseManagerConfig);
-        var acceptor = new Acceptor(processConfiguration);
-        var learner = new LmLearner(processConfiguration, consensusState);
+        var acceptor = new Acceptor(leaseManagerConfig);
+        var learner = new LmLearner(leaseManagerConfig, consensusState);
 
         var server = new Server
         {
@@ -72,7 +74,7 @@ internal static class Program
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
 
-        processConfiguration.TimeSlotTimer.Start();
+        leaseManagerConfig.TimeSlotTimer.Start();
         server.Start();
         proposer.Start();
 

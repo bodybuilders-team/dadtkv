@@ -4,7 +4,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<SystemManager> Logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
+    private static ILogger<SystemManager> Logger;
 
     /// <summary>
     ///     Entry point for the Dadtkv system.
@@ -14,6 +14,9 @@ internal static class Program
     {
         if (args.Length != 1)
             throw new ArgumentException("Invalid arguments. Usage: DadtkvCore.exe systemConfigFilePath");
+
+        DadtkvLogger.InitializeLogger("SystemManager");
+        Logger = DadtkvLogger.Factory.CreateLogger<SystemManager>();
 
         var systemManager = new SystemManager();
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Timer = System.Timers.Timer;
 
 namespace Dadtkv;
 
@@ -10,23 +11,31 @@ public class ServerProcessConfiguration : SystemConfiguration
     private readonly ILogger<ServerProcessConfiguration> _logger =
         DadtkvLogger.Factory.CreateLogger<ServerProcessConfiguration>();
 
+    public readonly Timer TimeSlotTimer;
+
     public readonly ServerProcessInfo ProcessInfo;
-    
+
     public int CurrentTimeSlot = 0;
 
     public ServerProcessConfiguration(SystemConfiguration systemConfiguration, string serverId) : base(
         systemConfiguration)
     {
         ProcessInfo = ServerProcesses.Find(info => info.Id.Equals(serverId))!;
+        TimeSlotTimer = new Timer(TimeSlotDuration);
 
+        var first = true;
         TimeSlotTimer.Elapsed += (_, _) =>
         {
             // Needed because the timer is started before the first time has elapsed
-            if (CurrentTimeSlot++ == 0)
+            if (first)
+            {
+                first = false;
                 return;
+            }
 
-            _logger.LogDebug($"Time slot {CurrentTimeSlot - 1} ended. Starting time slot {CurrentTimeSlot}");
 
+            var newTimeslot = CurrentTimeSlot + 1;
+            _logger.LogDebug($"Starting time slot {newTimeslot}");
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")
             {
@@ -35,8 +44,11 @@ public class ServerProcessConfiguration : SystemConfiguration
             }
 
             if (_timeSlotCursor + 1 < TimeSlotSuspicionsList.Count &&
-                CurrentTimeSlot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
-                _timeSlotCursor++;
+                newTimeslot >= TimeSlotSuspicionsList[_timeSlotCursor + 1].TimeSlot)
+                Interlocked.Increment(ref _timeSlotCursor);
+
+            //TODO, is there a problem if _timeslotCursor and CurrentTimeSlot are not exchanged at exactly the same time?
+            Interlocked.Increment(ref CurrentTimeSlot);
 
             _logger.LogDebug($"At time slot {CurrentTimeSlot}, the following suspicions are active:");
             foreach (var suspicion in CurrentSuspicions)
@@ -54,22 +66,36 @@ public class ServerProcessConfiguration : SystemConfiguration
     /// <summary>
     ///     Servers that are suspected by this server.
     /// </summary>
-    protected List<string> MyCurrentSuspected => CurrentSuspicions
+    protected HashSet<string> MyCurrentSuspected => new(CurrentSuspicions
         .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
-        .Select(suspicion => suspicion.Suspected).ToList();
+        .Select(suspicion => suspicion.Suspected).ToList());
 
     /// <summary>
     ///     Servers that are suspecting this server.
     /// </summary>
-    private List<string> MyCurrentSuspecting => CurrentSuspicions
+    private HashSet<string> MyCurrentSuspecting => new(CurrentSuspicions
         .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
-        .Select(suspicion => suspicion.Suspect).ToList();
+        .Select(suspicion => suspicion.Suspect).ToList());
 
     /// <summary>
     ///     Servers that are suspected by this server.
     ///     This list is updated when a server takes too long to respond to a request.
     /// </summary>
-    public List<string> RealSuspected = new();
+    private readonly HashSet<string> _realSuspected = new();
+
+    public IEnumerable<string> RealSuspected => _realSuspected;
+
+    public void AddRealSuspicion(string id)
+    {
+        if (id == ProcessInfo!.Id)
+            return;
+        _realSuspected.Add(id);
+    }
+
+    public void RemoveRealSuspicion(string id)
+    {
+        _realSuspected.Remove(id);
+    }
 
     public ulong ServerId
     {

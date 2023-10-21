@@ -77,6 +77,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <exception cref="Exception">If the value for the round already exists.</exception>
     private void TobDeliver(LearnRequest request)
     {
+        _logger.LogDebug($"Received learn request: {request}");
         lock (_leaseQueues)
         {
             request.ConsensusValue.LeaseRequests.ForEach(leaseRequest =>

@@ -77,6 +77,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
                                  $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
                                  $"Current: {request.ConsensusValue}");
 
+            _logger.LogDebug($"Learned value for round {request.RoundNumber}: {request.ConsensusValue}");
             _consensusState.Values[(int)request.RoundNumber] = request.ConsensusValue;
         }
     }

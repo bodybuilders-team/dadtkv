@@ -21,7 +21,7 @@ public class LearnRequest : ITobRequest<LearnRequest>
     public ulong BroadcasterId { get; }
     public ulong SequenceNum { get; set; }
 
-    public ulong TobMessageId => RoundNumber;
+    public ulong TobMessageId => RoundNumber - 1;
 
     public override string ToString()
     {

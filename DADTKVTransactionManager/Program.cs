@@ -5,7 +5,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static readonly ILogger<DadtkvServiceImpl> Logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
+    private static ILogger<DadtkvServiceImpl> Logger ;
 
     /// <summary>
     ///     Entry point for the lease manager server application.
@@ -19,7 +19,9 @@ internal static class Program
                 "Invalid arguments. Usage: DadtkvTransactionManager.exe serverId systemConfigFilePath");
 
         var serverId = args[0];
-
+        DadtkvLogger.InitializeLogger(serverId);
+        Logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
+        
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 

@@ -62,14 +62,26 @@ public class Proposer : LeaseService.LeaseServiceBase
     {
         var roundNumber = 1;
 
-        var leaderTimeoutTimestamp = 0UL;
-        var leaderTimeoutRoundNumber = 0;
+        var leaderTimeoutTimestamp = DateTime.UtcNow;
+        var leaderTimeoutRoundNumber = -1;
 
         while (true)
         {
+            // _logger.LogDebug($"Waiting for round {roundNumber} to start");
             while (roundNumber > _leaseManagerConfiguration.CurrentTimeSlot)
-                Thread.Sleep(10);
+            {
+                Thread.Sleep(100);
+            }
 
+            if (_consensusState.Values.Count > roundNumber && _consensusState.Values[roundNumber] != null)
+            {
+                _logger.LogDebug($"Consensus value for round {roundNumber} is {_consensusState.Values[roundNumber]}");
+
+                roundNumber++;
+                continue;
+            }
+
+            // _logger.LogDebug($"Trying round {roundNumber}");
             lock (_leaseRequests)
             {
                 if (_leaseRequests.Count == 0)
@@ -78,9 +90,6 @@ public class Proposer : LeaseService.LeaseServiceBase
                     continue;
                 }
             }
-
-            _logger.LogDebug($"Consensus values updated {string.Join(", ", _consensusState.Values)}");
-            _logger.LogDebug($"Current lease requests {string.Join(", ", _leaseRequests)}");
 
             var myProposalValue = GetMyProposalValue();
 
@@ -94,22 +103,44 @@ public class Proposer : LeaseService.LeaseServiceBase
 
             if (!decided)
             {
-                if ((ulong)DateTime.UtcNow.ToFileTimeUtc() < leaderTimeoutTimestamp)
+                _logger.LogDebug($"Round {roundNumber} not decided {DateTime.Now} {leaderTimeoutTimestamp}");
+                var leaderId = _leaseManagerConfiguration.GetLeaderId();
+
+                if (leaderTimeoutRoundNumber == roundNumber && DateTime.Now > leaderTimeoutTimestamp)
                 {
-                    _leaseManagerConfiguration.RealSuspected.Add(
-                        _leaseManagerConfiguration.LeaseManagers[leaderTimeoutRoundNumber - 1].Id
+                    _logger.LogDebug(
+                        $"Leader {leaderId} timeout for round {leaderTimeoutRoundNumber}");
+                    _leaseManagerConfiguration.AddRealSuspicion(
+                        leaderId
                     );
+                    continue;
                 }
 
-                Thread.Sleep(10);
-                leaderTimeoutTimestamp = (ulong)DateTime.UtcNow.ToFileTimeUtc() + 15000; // 15 seconds
-                leaderTimeoutRoundNumber = roundNumber;
+                if (leaderTimeoutRoundNumber != roundNumber)
+                {
+                    leaderTimeoutTimestamp = DateTime.Now.AddSeconds(15); // 15 seconds
+                    leaderTimeoutRoundNumber = roundNumber;
+                }
+
+                Thread.Sleep(100);
                 continue;
             }
 
-            // Wait for the consensus value to be updated (eventually because of URB)
-            while (_consensusState.Values.Count <= roundNumber || _consensusState.Values[roundNumber] == null)
-                Thread.Sleep(10);
+            _logger.LogDebug($"Round {roundNumber} decided");
+
+
+            lock (_consensusState)
+            {
+                // Wait for the consensus value to be updated (eventually because of URB)
+                while (_consensusState.Values.Count <= roundNumber || _consensusState.Values[roundNumber] == null)
+                {
+                    Monitor.Exit(_consensusState);
+                    Thread.Sleep(10);
+                    Monitor.Enter(_consensusState);
+                }
+            }
+
+            _logger.LogDebug($"Consensus value for round {roundNumber} is {_consensusState.Values[roundNumber]}");
 
             roundNumber++;
         }
@@ -159,7 +190,8 @@ public class Proposer : LeaseService.LeaseServiceBase
             // Update the lease queues in the proposal value
             foreach (var currentRequest in _leaseRequests)
                 if (_consensusState.Values.Any(consensusValue =>
-                        consensusValue!.LeaseRequests.Exists(req => req.Equals(currentRequest))))
+                        consensusValue != null &&
+                        consensusValue.LeaseRequests.Exists(req => req.Equals(currentRequest))))
                     toRemove.Add(currentRequest);
                 else
                     myProposalValue.LeaseRequests.Add(currentRequest);
@@ -281,14 +313,14 @@ public class Proposer : LeaseService.LeaseServiceBase
             onTimeout: req =>
             {
                 // Add server id to real suspected servers
-                _leaseManagerConfiguration.RealSuspected.Add(
+                _leaseManagerConfiguration.AddRealSuspicion(
                     _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
                 );
             },
             onSuccess: req =>
             {
                 // Remove server id from real suspected servers
-                _leaseManagerConfiguration.RealSuspected.Remove(
+                _leaseManagerConfiguration.RemoveRealSuspicion(
                     _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
                 );
             }
@@ -326,14 +358,14 @@ public class Proposer : LeaseService.LeaseServiceBase
             onTimeout: req =>
             {
                 // Add server id to real suspected servers
-                _leaseManagerConfiguration.RealSuspected.Add(
+                _leaseManagerConfiguration.AddRealSuspicion(
                     _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
                 );
             },
             onSuccess: req =>
             {
                 // Remove server id from real suspected servers
-                _leaseManagerConfiguration.RealSuspected.Remove(
+                _leaseManagerConfiguration.RemoveRealSuspicion(
                     _leaseManagerConfiguration.FindServerProcessId((int)req.ServerId)
                 );
             }

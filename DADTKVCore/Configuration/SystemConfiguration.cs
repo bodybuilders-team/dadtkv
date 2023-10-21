@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Timer = System.Timers.Timer;
 
 namespace Dadtkv;
 
@@ -13,7 +12,6 @@ public class SystemConfiguration
     public readonly List<ServerProcessInfo> LeaseManagers = new();
     public readonly List<ServerProcessInfo> ServerProcesses = new();
 
-    public readonly Timer TimeSlotTimer = new();
     public readonly List<ServerProcessInfo> TransactionManagers = new();
     protected int _timeSlotCursor;
 
@@ -34,7 +32,6 @@ public class SystemConfiguration
         WallTime = systemConfiguration.WallTime;
         TimeSlotSuspicionsList = systemConfiguration.TimeSlotSuspicionsList;
 
-        TimeSlotTimer = new Timer(TimeSlotDuration);
         _timeSlotCursor = 0;
 
         _logger.LogDebug("At time slot 1, the following suspicions are active:");

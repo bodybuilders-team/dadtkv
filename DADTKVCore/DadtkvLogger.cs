@@ -9,15 +9,16 @@ namespace Dadtkv;
 /// </summary>
 public static class DadtkvLogger
 {
-    public static readonly ILoggerFactory Factory;
+    public static ILoggerFactory Factory;
 
-    static DadtkvLogger()
+    public static void InitializeLogger(string processId)
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.Console(
                 theme: AnsiConsoleTheme.Code,
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} - {Message:lj}{NewLine}{Exception}"
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] - " + processId +
+                                " - {SourceContext} - {Message:lj}{NewLine}{Exception}"
             )
             .CreateLogger();
 

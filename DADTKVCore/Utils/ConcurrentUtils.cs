@@ -15,4 +15,15 @@ public static class ConcurrentUtils
 
         return original;
     }
+    
+    public static int GetAndIncrement(ref int location)
+    {
+        int original;
+        do
+        {
+            original = location;
+        } while (original != Interlocked.CompareExchange(ref location, original + 1, original));
+
+        return original;
+    }
 }

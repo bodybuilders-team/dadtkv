@@ -1,4 +1,5 @@
-﻿using Grpc.Core;
+﻿using System.Reflection;
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +13,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans;
     private readonly LeaseQueues _leaseQueues;
-    private readonly List<LeaseService.LeaseServiceClient> _leaseServiceClients;
+    private readonly List<LeaseServiceClient> _leaseServiceClients;
     private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
@@ -28,11 +29,12 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
         _dataStore = dataStore;
         _executedTrans = executedTrans;
         _leaseQueues = leaseQueues;
-        _leaseServiceClients = new List<LeaseService.LeaseServiceClient>();
+        _leaseServiceClients = new List<LeaseServiceClient>();
         foreach (var leaseManager in _serverProcessConfiguration.LeaseManagers)
         {
             var channel = GrpcChannel.ForAddress(leaseManager.Url);
-            _leaseServiceClients.Add(new LeaseService.LeaseServiceClient(channel));
+            _leaseServiceClients.Add(new LeaseServiceClient(new LeaseService.LeaseServiceClient(channel),
+                leaseManager));
         }
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
@@ -84,7 +86,10 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             // TODO: Optimization: Fast path
 
             foreach (var leaseServiceClient in _leaseServiceClients)
-                leaseServiceClient.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
+            {
+                // Get channel from client using reflection
+                leaseServiceClient.Client.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
+            }
 
             _executedTrans.Add(leaseId, false);
 
@@ -150,7 +155,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             (client, req) => client.UpdateAsync(UpdateRequestDtoConverter.ConvertToDto(req)).ResponseAsync
         );
 
-        if (!majority) 
+        if (!majority)
             return new List<DadInt> { new("aborted", 0) };
 
         lock (_dataStore)

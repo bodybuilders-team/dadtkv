@@ -17,7 +17,7 @@ public class LeaseManagerConfiguration : ServerProcessConfiguration
     ///     The lease manager with the lowest id is the leader.
     /// </summary>
     /// <returns>The id of the leader.</returns>
-    private string GetLeaderId()
+    public string GetLeaderId()
     {
         return LeaseManagers
                    .Where(lm => !MyCurrentSuspected.Contains(lm.Id) && !RealSuspected.Contains(lm.Id))
