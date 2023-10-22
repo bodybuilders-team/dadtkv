@@ -21,19 +21,10 @@ public class ServerProcessConfiguration : SystemConfiguration
         systemConfiguration)
     {
         ProcessInfo = ServerProcesses.Find(info => info.Id.Equals(serverId))!;
-        TimeSlotTimer = new Timer(TimeSlotDuration);
+        TimeSlotTimer = new Timer();
 
-        var first = true;
         TimeSlotTimer.Elapsed += (_, _) =>
         {
-            // Needed because the timer is started before the first time has elapsed
-            if (first)
-            {
-                first = false;
-                return;
-            }
-
-
             var newTimeslot = CurrentTimeSlot + 1;
             _logger.LogDebug($"Starting time slot {newTimeslot}");
             // Check if process is crashed in the current time slot
@@ -54,6 +45,12 @@ public class ServerProcessConfiguration : SystemConfiguration
             foreach (var suspicion in CurrentSuspicions)
                 _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
         };
+    }
+
+    public void StartTimer()
+    {
+        TimeSlotTimer.Interval = TimeSlotDuration;
+        TimeSlotTimer.Start();
     }
 
     public List<ServerProcessInfo> OtherServerProcesses =>
@@ -114,13 +111,14 @@ public class ServerProcessConfiguration : SystemConfiguration
     ///     Throws an exception if this server is being suspected by the server with the given id.
     /// </summary>
     /// <param name="suspectingServerId">The id of the server that is suspecting this server.</param>
-    public void TimeoutIfBeingSuspectedBy(ulong suspectingServerId)
+    public void WaitIfBeingSuspectedBy(ulong suspectingServerId)
     {
         var suspectingId = FindServerProcessId((int)suspectingServerId);
-        if (!MyCurrentSuspecting.Contains(suspectingId)) // TODO: || !MyCurrentSuspected.Contains(suspectingId))
-            return;
-
         _logger.LogDebug($"{suspectingId} is suspecting this server. Playing dead.");
-        throw new Exception(); // Play dead
+
+        while (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
+        {
+            Thread.Sleep(100);
+        }
     }
 }

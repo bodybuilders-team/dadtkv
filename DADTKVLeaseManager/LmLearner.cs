@@ -51,7 +51,7 @@ public class LmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+        _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         var req = LearnRequestDtoConverter.ConvertFromDto(request);
         req.ServerId = _serverProcessConfiguration.ServerId;

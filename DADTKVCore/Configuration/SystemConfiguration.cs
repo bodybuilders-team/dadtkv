@@ -43,7 +43,7 @@ public class SystemConfiguration
 
     private int NumberOfTimeSlots { get; set; }
     public int TimeSlotDuration { get; set; }
-    private DateTime WallTime { get; set; }
+    protected DateTime WallTime { get; set; }
 
     protected List<TimeSlotSuspicions> TimeSlotSuspicionsList { get; } = new();
 

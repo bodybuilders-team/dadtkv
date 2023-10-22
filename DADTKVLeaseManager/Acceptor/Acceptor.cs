@@ -38,7 +38,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The prepare response.</returns>
     public override Task<PrepareResponseDto> Prepare(PrepareRequestDto request, ServerCallContext context)
     {
-        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+        _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         lock (_acceptorState)
         {
@@ -87,7 +87,7 @@ internal class Acceptor : AcceptorService.AcceptorServiceBase
     /// <returns>The accept response.</returns>
     public override Task<AcceptResponseDto> Accept(AcceptRequestDto request, ServerCallContext context)
     {
-        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+        _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         lock (_acceptorState)
         {

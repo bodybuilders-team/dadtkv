@@ -58,7 +58,7 @@ public class UrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         resTasks.Add(new DadtkvUtils.TaskWithRequest<TR, TA>(Task.FromResult(default(TA))!, request));
 
         _logger.LogDebug($"Waiting for URB majority for request: {request} (num tasks: {resTasks.Count})");
-        var majority = DadtkvUtils.WaitForMajority(resTasks).Result;
+        var majority = DadtkvUtils.WaitForMajority(resTasks, timeout: 0).Result;
         _logger.LogDebug($"Finished waiting for URB, majority: {majority} for request: {request}");
 
         if (majority)

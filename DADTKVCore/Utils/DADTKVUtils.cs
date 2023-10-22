@@ -65,7 +65,7 @@ public static class DadtkvUtils
     )
     {
         var tasksWithTimeout = asyncTasks
-            .Select(task => task.TimeoutAfter(TimeSpan.FromMilliseconds(timeout), onTimeout, onSuccess))
+            .Select(task => task.TimeoutAfter(timeout, onTimeout, onSuccess))
             .ToList();
 
         var majority = asyncTasks.Count / 2 + 1;
@@ -102,9 +102,9 @@ public static class DadtkvUtils
     /// <param name="asyncTasks">The async tasks to wait for.</param>
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
     public static async Task<bool> WaitForMajority<TRequest, TResponse>(
-        List<TaskWithRequest<TRequest, TResponse>> asyncTasks)
+        List<TaskWithRequest<TRequest, TResponse>> asyncTasks, int timeout = 1000)
     {
-        return await WaitForMajority(asyncTasks, _ => true);
+        return await WaitForMajority(asyncTasks, _ => true, timeout);
     }
 
     /// <summary>
@@ -118,11 +118,20 @@ public static class DadtkvUtils
     /// <returns>The task.</returns>
     private static async Task<TResult> TimeoutAfter<TRequest, TResult>(
         this TaskWithRequest<TRequest, TResult> task,
-        TimeSpan timeout,
+        int timeout,
         Action<TRequest>? onTimeout = null,
         Action<TRequest>? onSuccess = null
     )
     {
+        if (timeout <= 0)
+        {
+            var result2 = await task.Task;
+            if (!task.Task.IsFaulted)
+                onSuccess?.Invoke(task.Request);
+            
+            return result2;
+        }
+
         using var timeoutCancellationTokenSource = new CancellationTokenSource();
 
         var completedTask = await Task.WhenAny(task.Task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));

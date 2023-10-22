@@ -59,7 +59,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     /// <returns>The update response.</returns>
     public override Task<UpdateResponseDto> Update(UpdateRequestDto request, ServerCallContext context)
     {
-        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+        _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         // Obtain the server id from the context.Peer string by searching the clients
         _logger.LogDebug($"Received Update request from server " +

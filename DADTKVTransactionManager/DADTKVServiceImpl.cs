@@ -79,12 +79,14 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
         lock (_leaseQueues)
         {
             var request = TxSubmitRequestDtoConverter.ConvertFromDto(requestDto);
+
             var leases = ExtractLeases(request);
             var leaseId = new LeaseId(_leaseSequenceNumCounter++, _serverProcessConfiguration.ServerId);
+
             var leaseReq = new LeaseRequest(leaseId, leases.ToList());
+            _logger.LogDebug($"Received transaction from client : {request}, lease request id: {leaseReq.LeaseId}");
 
             // TODO: Optimization: Fast path
-
             foreach (var leaseServiceClient in _leaseServiceClients)
             {
                 // Get channel from client using reflection
@@ -94,8 +96,14 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             _executedTrans.Add(leaseId, false);
 
             var start = DateTime.Now;
+            var i = 0;
             while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
+                if (i++ % 1000 == 0)
+                {
+                    _logger.LogDebug($"Waiting for leases: {leaseReq}, lease queues: {_leaseQueues}");
+                }
+
                 Monitor.Exit(_leaseQueues);
                 Thread.Sleep(10);
                 Monitor.Enter(_leaseQueues);
@@ -115,6 +123,11 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
             // Commit transaction
             var readData = ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), conflict);
+
+            if (readData.Count == 1 && readData[0].Key == "aborted")
+                _logger.LogDebug($"Transaction {request} aborted");
+            else
+                _logger.LogDebug($"Transaction {request} executed successfully");
 
             return Task.FromResult(new TxSubmitResponseDto
             {

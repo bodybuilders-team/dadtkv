@@ -74,7 +74,7 @@ internal static class Program
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
 
-        leaseManagerConfig.TimeSlotTimer.Start();
+        leaseManagerConfig.StartTimer();
         server.Start();
         proposer.Start();
 

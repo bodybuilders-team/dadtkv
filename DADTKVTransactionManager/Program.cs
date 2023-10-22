@@ -48,7 +48,7 @@ internal static class Program
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
 
-        processConfiguration.TimeSlotTimer.Start();
+        processConfiguration.StartTimer();
         server.Start();
 
         Logger.LogInformation($"Transaction Manager server listening on port {serverProcessPort}");

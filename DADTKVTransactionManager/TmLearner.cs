@@ -62,7 +62,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
     /// <returns>The learn response.</returns>
     public override Task<LearnResponseDto> Learn(LearnRequestDto request, ServerCallContext context)
     {
-        _serverProcessConfiguration.TimeoutIfBeingSuspectedBy(request.ServerId);
+        _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         // TODO: Maybe no need for thread start here
         new Thread(() => { _tobReceiver.TobProcessRequest(LearnRequestDtoConverter.ConvertFromDto(request)); }).Start();

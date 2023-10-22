@@ -68,17 +68,22 @@ public class Proposer : LeaseService.LeaseServiceBase
         while (true)
         {
             // _logger.LogDebug($"Waiting for round {roundNumber} to start");
-            while (roundNumber > _leaseManagerConfiguration.CurrentTimeSlot)
+            if (roundNumber > _leaseManagerConfiguration.CurrentTimeSlot)
             {
                 Thread.Sleep(100);
+                continue;
             }
 
-            if (_consensusState.Values.Count > roundNumber && _consensusState.Values[roundNumber] != null)
+            lock (_consensusState)
             {
-                _logger.LogDebug($"Consensus value for round {roundNumber} is {_consensusState.Values[roundNumber]}");
+                if (_consensusState.Values.Count > roundNumber && _consensusState.Values[roundNumber] != null)
+                {
+                    _logger.LogDebug(
+                        $"Consensus value for round {roundNumber} is {_consensusState.Values[roundNumber]}");
 
-                roundNumber++;
-                continue;
+                    roundNumber++;
+                    continue;
+                }
             }
 
             // _logger.LogDebug($"Trying round {roundNumber}");
@@ -104,22 +109,24 @@ public class Proposer : LeaseService.LeaseServiceBase
             if (!decided)
             {
                 _logger.LogDebug($"Round {roundNumber} not decided {DateTime.Now} {leaderTimeoutTimestamp}");
-                var leaderId = _leaseManagerConfiguration.GetLeaderId();
-
-                if (leaderTimeoutRoundNumber == roundNumber && DateTime.Now > leaderTimeoutTimestamp)
-                {
-                    _logger.LogDebug(
-                        $"Leader {leaderId} timeout for round {leaderTimeoutRoundNumber}");
-                    _leaseManagerConfiguration.AddRealSuspicion(
-                        leaderId
-                    );
-                    continue;
-                }
 
                 if (leaderTimeoutRoundNumber != roundNumber)
                 {
                     leaderTimeoutTimestamp = DateTime.Now.AddSeconds(15); // 15 seconds
                     leaderTimeoutRoundNumber = roundNumber;
+                }
+
+                if (leaderTimeoutRoundNumber == roundNumber && DateTime.Now > leaderTimeoutTimestamp)
+                {
+                    var leaderId = _leaseManagerConfiguration.GetLeaderId();
+
+                    _logger.LogDebug(
+                        $"Leader {leaderId} timeout for round {leaderTimeoutRoundNumber}");
+                    _leaseManagerConfiguration.AddRealSuspicion(
+                        leaderId
+                    );
+                    leaderTimeoutRoundNumber = -1;
+                    continue;
                 }
 
                 Thread.Sleep(100);
@@ -224,8 +231,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         if (!majorityPromised)
         {
-            RePropose(myProposalValue, proposalNumber, roundNumber);
-            return true;
+            return RePropose(myProposalValue, proposalNumber, roundNumber);
         }
 
         var proposalValue = adoptedValue == null
@@ -238,7 +244,7 @@ public class Proposer : LeaseService.LeaseServiceBase
         if (majorityAccepted)
             Decide(proposalValue, roundNumber);
         else
-            RePropose(myProposalValue, proposalNumber, roundNumber);
+            return RePropose(myProposalValue, proposalNumber, roundNumber);
 
         return true;
     }
@@ -250,9 +256,11 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <param name="proposalNumber">The proposal number.</param>
     /// <param name="roundNumber">The round number.</param>
     /// <returns>True if the value was decided for the round, false otherwise.</returns>
-    private void RePropose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
+    private bool RePropose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
     {
-        Propose(
+        //TODO -1: If we are not the leader, after reproposing, the proposal number is reset.
+
+        return Propose(
             myProposalValue,
             proposalNumber + (ulong)_leaseManagerConfiguration.LeaseManagers.Count,
             roundNumber
@@ -380,6 +388,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>True if the value was decided for the round, false otherwise.</returns>
     private void Decide(ConsensusValue newConsensusValue, ulong roundNumber)
     {
+        // TODO -1: Decide in learners instead.
         _urBroadcaster.UrBroadcast(
             new LearnRequest(
                 _leaseManagerConfiguration.ServerId,
