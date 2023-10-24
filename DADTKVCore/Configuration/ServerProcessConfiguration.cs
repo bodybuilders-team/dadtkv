@@ -114,7 +114,9 @@ public class ServerProcessConfiguration : SystemConfiguration
     public void WaitIfBeingSuspectedBy(ulong suspectingServerId)
     {
         var suspectingId = FindServerProcessId((int)suspectingServerId);
-        _logger.LogDebug($"{suspectingId} is suspecting this server. Playing dead.");
+
+        if (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
+            _logger.LogDebug($"{suspectingId} is suspecting this server. Playing dead.");
 
         while (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
         {
