@@ -73,11 +73,10 @@ public class LmLearner : LearnerService.LearnerServiceBase
             ResizeConsensusStateList((int)request.RoundNumber);
 
             if (_consensusState.Values[(int)request.RoundNumber] != null)
-                _logger.LogDebug($"Value for the round already exists." +
-                                 $"Previous: {_consensusState.Values[(int)request.RoundNumber]}, " +
-                                 $"Current: {request.ConsensusValue}");
+                _logger.LogDebug("Value for the round already exists. Previous: {previous}, Current: {current}",
+                    _consensusState.Values[(int)request.RoundNumber], request.ConsensusValue);
 
-            _logger.LogDebug($"Learned value for round {request.RoundNumber}: {request.ConsensusValue}");
+            _logger.LogDebug("Learned value for round {round}: {value}", request.RoundNumber, request.ConsensusValue);
             _consensusState.Values[(int)request.RoundNumber] = request.ConsensusValue;
         }
     }

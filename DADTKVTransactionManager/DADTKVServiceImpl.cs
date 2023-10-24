@@ -18,9 +18,19 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
-        _urBroadcaster;
+        _updateUrbBroadcaster;
+
+    private readonly UrBroadcaster<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
+            StateUpdateService.StateUpdateServiceClient>
+        _prepareForFreeLeaseUrbBroadcaster;
+
+    private readonly UrBroadcaster<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
+            StateUpdateService.StateUpdateServiceClient>
+        _forceFreeLeaseUrbBroadcaster;
 
     private ulong _leaseSequenceNumCounter;
+
+    private const int ObtainLeaseTimeout = 7000;
 
     public DadtkvServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
         Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues)
@@ -44,8 +54,20 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             stateUpdateServiceClients.Add(new StateUpdateService.StateUpdateServiceClient(channel));
         }
 
-        _urBroadcaster =
+        _updateUrbBroadcaster =
             new UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>(
+                stateUpdateServiceClients
+            );
+
+        _prepareForFreeLeaseUrbBroadcaster =
+            new UrBroadcaster<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
+                StateUpdateService.StateUpdateServiceClient>(
+                stateUpdateServiceClients
+            );
+
+        _forceFreeLeaseUrbBroadcaster =
+            new UrBroadcaster<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
+                StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients
             );
 
@@ -96,12 +118,88 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             _executedTrans.Add(leaseId, false);
 
             var start = DateTime.Now;
+            var obtainLeaseTimeoutTime = DateTime.MinValue;
+
             var i = 0;
             while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
                 if (i++ % 1000 == 0)
                 {
-                    _logger.LogDebug($"Waiting for leases: {leaseReq}, lease queues: {_leaseQueues}");
+                    _logger.LogDebug("Waiting for leases: {leaseReq}, lease queues: {leaseQueues}, timeoutTime: {timeoutTime}",
+                        leaseReq, _leaseQueues.ToString(), obtainLeaseTimeoutTime);
+                }
+
+                var timeoutConflict = false;
+
+                foreach (var key in leaseReq.Keys)
+                {
+                    if (!_leaseQueues.ContainsKey(key) || _leaseQueues[key].Count == 0)
+                        continue;
+
+                    var leaseOnTop = _leaseQueues[key].Peek();
+                    if (leaseOnTop.Equals(leaseId))
+                        continue;
+                    
+                    timeoutConflict = true;
+                }
+
+                if (obtainLeaseTimeoutTime == DateTime.MinValue && timeoutConflict)
+                {
+                    obtainLeaseTimeoutTime = DateTime.Now.AddMilliseconds(ObtainLeaseTimeout);
+                    _logger.LogDebug("Timeout defined for {timeoutTime}", obtainLeaseTimeoutTime);
+                }
+
+                if (DateTime.Now >= obtainLeaseTimeoutTime)
+                {
+                    _logger.LogDebug("Timeout while waiting for leases: {leaseReq}, lease queues: {leaseQueues}",
+                        leaseReq, _leaseQueues.ToString());
+
+                    foreach (var key in leaseReq.Keys)
+                    {
+                        if (!_leaseQueues.ContainsKey(key) || _leaseQueues[key].Count == 0)
+                            continue;
+
+                        var leaseOnTop = _leaseQueues[key].Peek();
+                        if (leaseOnTop.Equals(leaseId))
+                            continue;
+
+                        _logger.LogDebug("Sending prepare for forced free lease request for lease {leaseId}",
+                            leaseOnTop);
+
+                        _prepareForFreeLeaseUrbBroadcaster.UrBroadcast(
+                            new PrepareForFreeLeaseRequest(
+                                _serverProcessConfiguration.ServerId,
+                                _serverProcessConfiguration.ServerId,
+                                leaseOnTop
+                            ),
+                            _ =>
+                            {
+                                _forceFreeLeaseUrbBroadcaster.UrBroadcast(
+                                    new ForceFreeLeaseRequest(
+                                        _serverProcessConfiguration.ServerId,
+                                        _serverProcessConfiguration.ServerId,
+                                        leaseOnTop
+                                    ),
+                                    _ =>
+                                    {
+                                        lock (_leaseQueues)
+                                        {
+                                            _leaseQueues.FreeLeases(leaseOnTop);
+                                        }
+                                    },
+                                    (client, req) =>
+                                        client.ForceFreeLeaseAsync(
+                                                ForceFreeLeaseRequestDtoConverter.ConvertToDto(req))
+                                            .ResponseAsync
+                                );
+                            },
+                            (client, req) =>
+                                client.PrepareForFreeLeaseAsync(
+                                        PrepareForFreeLeaseRequestDtoConverter.ConvertToDto(req))
+                                    .ResponseAsync
+                        );
+                        break;
+                    }
                 }
 
                 Monitor.Exit(_leaseQueues);
@@ -110,7 +208,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             }
 
             var end = DateTime.Now;
-            _logger.LogDebug($"Time taken to obtain leases: {(end - start).TotalMilliseconds} ms");
+            _logger.LogDebug("Time taken to obtain leases: {timeTaken} ms", (end - start).TotalMilliseconds);
 
             // TODO put to false and add free lease request handler
             var conflict = true;
@@ -153,10 +251,11 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     {
         List<DadInt> returnReadSet;
 
-        _logger.LogDebug($"Sending update request for lease {leaseId}" + (freeLease ? " and freeing the lease." : "."));
+        _logger.LogDebug("Sending update request for lease {leaseId}{freeingLeaseString}", leaseId,
+            freeLease ? " and freeing the lease." : ".");
         var majority = false;
 
-        _urBroadcaster.UrBroadcast(
+        _updateUrbBroadcaster.UrBroadcast(
             new UpdateRequest(
                 _serverProcessConfiguration.ServerId,
                 _serverProcessConfiguration.ServerId,

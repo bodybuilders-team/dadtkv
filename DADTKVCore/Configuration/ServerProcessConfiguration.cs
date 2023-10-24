@@ -26,7 +26,7 @@ public class ServerProcessConfiguration : SystemConfiguration
         TimeSlotTimer.Elapsed += (_, _) =>
         {
             var newTimeslot = CurrentTimeSlot + 1;
-            _logger.LogDebug($"Starting time slot {newTimeslot}");
+            _logger.LogDebug("Starting time slot {newTimeslot}", newTimeslot);
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")
             {
@@ -41,11 +41,10 @@ public class ServerProcessConfiguration : SystemConfiguration
             //TODO, is there a problem if _timeslotCursor and CurrentTimeSlot are not exchanged at exactly the same time?
             Interlocked.Increment(ref CurrentTimeSlot);
 
-            _logger.LogDebug("At time slot {0}, the following suspicions are active: {1}", CurrentSuspicions,
-                CurrentSuspicions.Count > 0 ? "" : "None");
-
+            _logger.LogDebug("At the time slot {currentTimeSlot}, the following suspicions are active: {suspicions}",
+                CurrentTimeSlot, CurrentSuspicions.Count > 0 ? "" : "None");
             foreach (var suspicion in CurrentSuspicions)
-                _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
+                _logger.LogDebug("- {suspector} suspects {suspected}", suspicion.Suspector, suspicion.Suspected);
         };
     }
 
@@ -66,7 +65,7 @@ public class ServerProcessConfiguration : SystemConfiguration
     ///     Servers that are suspected by this server.
     /// </summary>
     protected HashSet<string> MyCurrentSuspected => new(CurrentSuspicions
-        .Where(suspicion => suspicion.Suspect.Equals(ProcessInfo.Id))
+        .Where(suspicion => suspicion.Suspector.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspected).ToList());
 
     /// <summary>
@@ -74,7 +73,7 @@ public class ServerProcessConfiguration : SystemConfiguration
     /// </summary>
     private HashSet<string> MyCurrentSuspecting => new(CurrentSuspicions
         .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
-        .Select(suspicion => suspicion.Suspect).ToList());
+        .Select(suspicion => suspicion.Suspector).ToList());
 
     /// <summary>
     ///     Servers that are suspected by this server.
@@ -118,7 +117,7 @@ public class ServerProcessConfiguration : SystemConfiguration
         var suspectingId = FindServerProcessId((int)suspectingServerId);
 
         if (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
-            _logger.LogDebug($"{suspectingId} is suspecting this server. Playing dead.");
+            _logger.LogDebug("{suspectingId} is suspecting this server. Playing dead.", suspectingId);
 
         while (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
         {

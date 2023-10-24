@@ -104,13 +104,13 @@ public class TmLearner : LearnerService.LearnerServiceBase
                     _executedTrans[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);
-                    queue.Dequeue();
+                    queue.Dequeue(); // TODO only in deliver?
                 }
             }
 
             _logger.LogDebug($"Received learn request: {request}");
-            _logger.LogDebug($"Leases that were freed: {leasesToBeFreed.ToStringRep()}");
-            _logger.LogDebug($"Lease queues after learn request: {_leaseQueues}");
+            _logger.LogDebug("Leases that were freed: {freedLeases}", leasesToBeFreed.ToStringRep());
+            _logger.LogDebug("Lease queues after learn request: {leaseQueues}", _leaseQueues.ToString());
 
             foreach (var leaseId in leasesToBeFreed)
                 _urBroadcaster.UrBroadcast(

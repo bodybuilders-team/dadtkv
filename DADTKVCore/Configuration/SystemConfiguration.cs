@@ -35,7 +35,7 @@ public class SystemConfiguration
         _timeSlotCursor = 0;
 
         foreach (var suspicion in CurrentSuspicions)
-            _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
+            _logger.LogDebug("- {suspector} suspects {suspected}", suspicion.Suspector, suspicion.Suspected);
     }
 
     private List<IProcessInfo> Processes { get; } = new();
@@ -176,13 +176,13 @@ public class SystemConfiguration
 
     public class Suspicion
     {
-        public Suspicion(string suspect, string suspected)
+        public Suspicion(string suspector, string suspected)
         {
-            Suspect = suspect;
+            Suspector = suspector;
             Suspected = suspected;
         }
 
-        public string Suspect { get; set; }
+        public string Suspector { get; set; }
         public string Suspected { get; set; }
     }
 }

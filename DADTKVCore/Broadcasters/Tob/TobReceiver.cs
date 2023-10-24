@@ -54,7 +54,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         {
             lock (this)
             {
-                if (_pendingRequests.Count <= 0 && pendingRequestsToDeliver.Count <= 0)
+                if (pendingRequestsToDeliver.Count <= 0)
                     return;
 
                 ProcessPending(pendingRequestsToDeliver);

@@ -38,7 +38,7 @@ internal class ClientLogic
         var response = await _client.TxSubmitAsync(request);
         var end = DateTime.Now;
 
-        _logger.LogDebug($"Time taken: {(end - start).TotalMilliseconds} ms");
+        _logger.LogDebug("Time taken: {timeTaken} ms", (end - start).TotalMilliseconds);
 
         return response.ReadSet.ToList();
     }
