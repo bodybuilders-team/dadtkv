@@ -34,7 +34,6 @@ public class SystemConfiguration
 
         _timeSlotCursor = 0;
 
-        _logger.LogDebug("At time slot 1, the following suspicions are active:");
         foreach (var suspicion in CurrentSuspicions)
             _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
     }

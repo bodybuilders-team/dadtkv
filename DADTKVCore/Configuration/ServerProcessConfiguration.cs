@@ -41,7 +41,9 @@ public class ServerProcessConfiguration : SystemConfiguration
             //TODO, is there a problem if _timeslotCursor and CurrentTimeSlot are not exchanged at exactly the same time?
             Interlocked.Increment(ref CurrentTimeSlot);
 
-            _logger.LogDebug($"At time slot {CurrentTimeSlot}, the following suspicions are active:");
+            _logger.LogDebug("At time slot {0}, the following suspicions are active: {1}", CurrentSuspicions,
+                CurrentSuspicions.Count > 0 ? "" : "None");
+
             foreach (var suspicion in CurrentSuspicions)
                 _logger.LogDebug($"- {suspicion.Suspect} suspects {suspicion.Suspected}");
         };

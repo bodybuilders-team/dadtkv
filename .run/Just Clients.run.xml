@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Just Clients" type="CompoundRunConfigurationType">
+    <toRun name="31DADTKVClient" type="DotNetProject" />
+    <toRun name="32DADTKVClient" type="DotNetProject" />
+    <toRun name="33DADTKVClient" type="DotNetProject" />
+    <toRun name="34DADTKVClient" type="DotNetProject" />
+    <toRun name="35DADTKVClient" type="DotNetProject" />
+    <toRun name="36DADTKVClient" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>

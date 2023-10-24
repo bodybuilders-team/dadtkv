@@ -10,7 +10,7 @@ namespace Dadtkv;
 /// </summary>
 public class Proposer : LeaseService.LeaseServiceBase
 {
-    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceServiceClients;
+    private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceClients;
     private readonly ConsensusState _consensusState;
 
     private readonly ulong _initialProposalNumber;
@@ -18,6 +18,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<LeaseRequest> _leaseRequests = new();
     private readonly ILogger<Proposer> _logger = DadtkvLogger.Factory.CreateLogger<Proposer>();
     private readonly UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urBroadcaster;
+
+    private const int LeaderTimeout = 3;
 
     public Proposer(
         ConsensusState consensusState,
@@ -27,7 +29,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     )
     {
         _consensusState = consensusState;
-        _acceptorServiceServiceClients = acceptorServiceClients;
+        _acceptorServiceClients = acceptorServiceClients;
         _leaseManagerConfiguration = leaseManagerConfiguration;
         _urBroadcaster = new UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient>(
             learnerServiceClients);
@@ -64,6 +66,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         var leaderTimeoutTimestamp = DateTime.UtcNow;
         var leaderTimeoutRoundNumber = -1;
+        var leaderTimeoutId = "";
 
         while (true)
         {
@@ -108,22 +111,21 @@ public class Proposer : LeaseService.LeaseServiceBase
 
             if (!decided)
             {
-                _logger.LogDebug($"Round {roundNumber} not decided {DateTime.Now} {leaderTimeoutTimestamp}");
-
                 if (leaderTimeoutRoundNumber != roundNumber)
                 {
-                    leaderTimeoutTimestamp = DateTime.Now.AddSeconds(15); // 15 seconds
+                    _logger.LogDebug($"Round {roundNumber} not decided {DateTime.Now}");
+
+                    leaderTimeoutTimestamp = DateTime.Now.AddSeconds(LeaderTimeout);
                     leaderTimeoutRoundNumber = roundNumber;
+                    leaderTimeoutId = _leaseManagerConfiguration.GetLeaderId();
                 }
 
                 if (leaderTimeoutRoundNumber == roundNumber && DateTime.Now > leaderTimeoutTimestamp)
                 {
-                    var leaderId = _leaseManagerConfiguration.GetLeaderId();
-
                     _logger.LogDebug(
-                        $"Leader {leaderId} timeout for round {leaderTimeoutRoundNumber}");
+                        $"Leader {leaderTimeoutId} timeout for round {leaderTimeoutRoundNumber}");
                     _leaseManagerConfiguration.AddRealSuspicion(
-                        leaderId
+                        leaderTimeoutId
                     );
                     leaderTimeoutRoundNumber = -1;
                     continue;
@@ -220,51 +222,50 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>True if the value was decided for the round, false otherwise.</returns>
     private bool Propose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
     {
-        if (!_leaseManagerConfiguration.IsLeader())
-            return false;
-
-        _logger.LogDebug($"Proposing {myProposalValue} for round {roundNumber}");
-
-        // Step 1 - Prepare
-        ConsensusValueDto? adoptedValue = null;
-        var majorityPromised = SendPrepares(proposalNumber, roundNumber, v => adoptedValue = v);
-
-        if (!majorityPromised)
+        var currentProposalValue = myProposalValue;
+        var currentProposalNumber = proposalNumber;
+        
+        while (true)
         {
-            return RePropose(myProposalValue, proposalNumber, roundNumber);
+            if (!_leaseManagerConfiguration.IsLeader())
+            {
+                _logger.LogDebug($"Not leader for round {roundNumber}");
+                return false;
+            }
+
+            _logger.LogDebug($"Proposing {currentProposalValue} and proposal number {currentProposalNumber} for round {roundNumber}");
+
+            // Step 1 - Prepare
+            ConsensusValueDto? adoptedValue = null;
+            var majorityPromised = SendPrepares(currentProposalNumber, roundNumber, v => adoptedValue = v);
+
+            currentProposalValue = adoptedValue == null // TODO check if there's an issue with adopting if not majority promised
+                ? currentProposalValue
+                : ConsensusValueDtoConverter.ConvertFromDto(adoptedValue);
+            
+            if (!majorityPromised)
+            {
+                currentProposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+                Thread.Sleep(20);
+                continue;
+            }
+
+            _logger.LogDebug($"Majority promised for round {roundNumber}");
+
+            // Step 2 - Accept
+            var majorityAccepted = SendAccepts(currentProposalValue, currentProposalNumber, roundNumber);
+
+            if (majorityAccepted)
+            {
+                Decide(currentProposalValue, roundNumber);
+                return true;
+            }
+            else
+            {
+                currentProposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+                Thread.Sleep(20);
+            }
         }
-
-        var proposalValue = adoptedValue == null
-            ? myProposalValue
-            : ConsensusValueDtoConverter.ConvertFromDto(adoptedValue);
-
-        // Step 2 - Accept
-        var majorityAccepted = SendAccepts(proposalValue, proposalNumber, roundNumber);
-
-        if (majorityAccepted)
-            Decide(proposalValue, roundNumber);
-        else
-            return RePropose(myProposalValue, proposalNumber, roundNumber);
-
-        return true;
-    }
-
-    /// <summary>
-    ///     Re-propose with a higher proposal number.
-    /// </summary>
-    /// <param name="myProposalValue">The value to propose.</param>
-    /// <param name="proposalNumber">The proposal number.</param>
-    /// <param name="roundNumber">The round number.</param>
-    /// <returns>True if the value was decided for the round, false otherwise.</returns>
-    private bool RePropose(ConsensusValue myProposalValue, ulong proposalNumber, ulong roundNumber)
-    {
-        //TODO -1: If we are not the leader, after reproposing, the proposal number is reset.
-
-        return Propose(
-            myProposalValue,
-            proposalNumber + (ulong)_leaseManagerConfiguration.LeaseManagers.Count,
-            roundNumber
-        );
     }
 
     /// <summary>
@@ -279,7 +280,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// </returns>
     private bool SendPrepares(ulong proposalNumber, ulong roundNumber, Action<ConsensusValueDto?> updateAdoptedValue)
     {
-        var asyncTasks = _acceptorServiceServiceClients
+        var asyncTasks = _acceptorServiceClients
             .Select(acceptorServiceServiceClient =>
                 {
                     var req = new PrepareRequestDto
@@ -345,7 +346,7 @@ public class Proposer : LeaseService.LeaseServiceBase
     private bool SendAccepts(ConsensusValue proposalValue, ulong proposalNumber, ulong roundNumber)
     {
         var acceptCalls = new List<DadtkvUtils.TaskWithRequest<AcceptRequestDto, AcceptResponseDto>>();
-        _acceptorServiceServiceClients.ForEach(client =>
+        _acceptorServiceClients.ForEach(client =>
         {
             var req = new AcceptRequestDto
             {
@@ -388,6 +389,8 @@ public class Proposer : LeaseService.LeaseServiceBase
     /// <returns>True if the value was decided for the round, false otherwise.</returns>
     private void Decide(ConsensusValue newConsensusValue, ulong roundNumber)
     {
+        _logger.LogDebug($"Deciding {newConsensusValue} for round {roundNumber}");
+
         // TODO -1: Decide in learners instead.
         _urBroadcaster.UrBroadcast(
             new LearnRequest(

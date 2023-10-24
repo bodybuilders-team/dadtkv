@@ -67,7 +67,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         {
             lock (this)
             {
-                if (_pendingRequestsMap[broadcasterId].Count <= 0 && pendingRequestsToDeliver.Count <= 0)
+                if (pendingRequestsToDeliver.Count <= 0)
                     return;
 
                 ProcessPending(broadcasterId, pendingRequestsToDeliver);
