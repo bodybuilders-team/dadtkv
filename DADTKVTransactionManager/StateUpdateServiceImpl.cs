@@ -131,15 +131,17 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _serverProcessConfiguration.WaitIfBeingSuspectedBy(request.ServerId);
 
         // Obtain the server id from the context.Peer string by searching the clients
-        _logger.LogDebug(
-            $"Received Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
+        _logger.LogDebug("Received Update request from server {serverId}, request: {request}",
+            _serverProcessConfiguration.FindServerProcessId((int)request.ServerId),
+            UpdateRequestDtoConverter.ConvertFromDto(request));
 
         new Thread(() =>
             _updateFifoUrbReceiver.FifoUrbProcessRequest(UpdateRequestDtoConverter.ConvertFromDto(request))
         ).Start();
 
-        _logger.LogDebug(
-            $"Responding Update request from server {_serverProcessConfiguration.FindServerProcessId((int)request.ServerId)}, request: {request}");
+        _logger.LogDebug("Responding Update request from server {serverId}, request: {request}",
+            _serverProcessConfiguration.FindServerProcessId((int)request.ServerId),
+            UpdateRequestDtoConverter.ConvertFromDto(request));
 
         return Task.FromResult(new UpdateResponseDto { Ok = true });
     }
@@ -172,7 +174,16 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                 PrepareForFreeLeaseRequestDtoConverter.ConvertFromDto(request));
         }).Start();
 
-        return Task.FromResult(new PrepareForFreeLeaseResponseDto { Ok = true });
+        // TODO check if has received update for the lease already
+        var ok = false;
+
+        foreach (var queue in _leaseQueues)
+        {
+            if (queue.Value.Contains(LeaseIdDtoConverter.ConvertFromDto(request.LeaseId)))
+                ok = true;
+        }
+
+        return Task.FromResult(new PrepareForFreeLeaseResponseDto { Ok = ok });
     }
 
     public override Task<ForceFreeLeaseResponseDto> ForceFreeLease(ForceFreeLeaseRequestDto request,
@@ -204,6 +215,12 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             var set = request.WriteSet.Select(dadInt => dadInt.Key).ToList();
 
             // TODO what if we never obtain the leases
+            if (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
+            {
+                _logger.LogDebug("Waiting for leases of {leaseId} for update request {request}",
+                    request.LeaseId.ToString(), request.ToString());
+            }
+
             while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
             {
                 Monitor.Exit(_leaseQueues);
@@ -219,7 +236,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             if (request.FreeLease)
                 _leaseQueues.FreeLeases(request.LeaseId);
 
-            _logger.LogDebug("Lease queues after update request: {leaseQueues}", _leaseQueues.ToString());
+            _logger.LogDebug("Lease queues after update request {request} : {leaseQueues}", request.ToString(),
+                _leaseQueues.ToString());
         }
     }
 }

@@ -70,11 +70,6 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients
             );
-
-        _serverProcessConfiguration.OtherTransactionManagers
-            .Select(tm => GrpcChannel.ForAddress(tm.Url))
-            .Select(channel => new StateUpdateService.StateUpdateServiceClient(channel))
-            .ForEach(client => stateUpdateServiceClients.Add(client));
     }
 
     /// <summary>
@@ -125,7 +120,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             {
                 if (i++ % 1000 == 0)
                 {
-                    _logger.LogDebug("Waiting for leases: {leaseReq}, lease queues: {leaseQueues}, timeoutTime: {timeoutTime}",
+                    _logger.LogDebug(
+                        "Waiting for leases: {leaseReq}, lease queues: {leaseQueues}, timeoutTime: {timeoutTime}",
                         leaseReq, _leaseQueues.ToString(), obtainLeaseTimeoutTime);
                 }
 
@@ -139,7 +135,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                     var leaseOnTop = _leaseQueues[key].Peek();
                     if (leaseOnTop.Equals(leaseId))
                         continue;
-                    
+
                     timeoutConflict = true;
                 }
 
@@ -147,9 +143,10 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 {
                     obtainLeaseTimeoutTime = DateTime.Now.AddMilliseconds(ObtainLeaseTimeout);
                     _logger.LogDebug("Timeout defined for {timeoutTime}", obtainLeaseTimeoutTime);
+                    continue;
                 }
 
-                if (DateTime.Now >= obtainLeaseTimeoutTime)
+                if (DateTime.Now >= obtainLeaseTimeoutTime && obtainLeaseTimeoutTime != DateTime.MinValue)
                 {
                     _logger.LogDebug("Timeout while waiting for leases: {leaseReq}, lease queues: {leaseQueues}",
                         leaseReq, _leaseQueues.ToString());
@@ -174,6 +171,9 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                             ),
                             _ =>
                             {
+                                _logger.LogDebug("Sending forced free lease request for lease {leaseId}",
+                                    leaseOnTop);
+                                
                                 _forceFreeLeaseUrbBroadcaster.UrBroadcast(
                                     new ForceFreeLeaseRequest(
                                         _serverProcessConfiguration.ServerId,
@@ -185,6 +185,9 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                                         lock (_leaseQueues)
                                         {
                                             _leaseQueues.FreeLeases(leaseOnTop);
+                                            _logger.LogDebug(
+                                                "Lease queues after force free lease request: {leaseQueues}",
+                                                _leaseQueues.ToString());
                                         }
                                     },
                                     (client, req) =>
@@ -192,6 +195,12 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                                                 ForceFreeLeaseRequestDtoConverter.ConvertToDto(req))
                                             .ResponseAsync
                                 );
+                            },
+                            predicate: responseDto =>
+                            {
+                                _logger.LogDebug("Received response for prepare for free lease request for lease {leaseId}: {responseDto}",
+                                    leaseOnTop, responseDto.Ok);
+                                return responseDto.Ok;
                             },
                             (client, req) =>
                                 client.PrepareForFreeLeaseAsync(

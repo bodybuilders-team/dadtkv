@@ -108,7 +108,6 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 }
             }
 
-            _logger.LogDebug($"Received learn request: {request}");
             _logger.LogDebug("Leases that were freed: {freedLeases}", leasesToBeFreed.ToStringRep());
             _logger.LogDebug("Lease queues after learn request: {leaseQueues}", _leaseQueues.ToString());
 

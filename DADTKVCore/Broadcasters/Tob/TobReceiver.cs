@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Dadtkv;
 
 /// <summary>
@@ -12,6 +14,9 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     private readonly Action<TR> _tobDeliver;
     private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
     private long _lastProcessedMessageId = -1;
+
+    private readonly ILogger<TobReceiver<TR, TA, TC>> _logger =
+        DadtkvLogger.Factory.CreateLogger<TobReceiver<TR, TA, TC>>();
 
     public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse,
         ServerProcessConfiguration serverProcessConfiguration)
@@ -35,6 +40,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
+        _logger.LogDebug($"Received TOB Request: {request}");
         var pendingRequestsToDeliver = new List<TR>();
         var messageId = request.TobMessageId;
 
@@ -42,6 +48,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         {
             if ((long)messageId > _lastProcessedMessageId + 1)
             {
+                _logger.LogDebug($"Adding TOB request to pending: {request}");
                 _pendingRequests.AddSorted(new TobRequest(request));
                 return;
             }
@@ -54,7 +61,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         {
             lock (this)
             {
-                if (pendingRequestsToDeliver.Count <= 0)
+                if (_pendingRequests.Count <= 0 && pendingRequestsToDeliver.Count <= 0)
                     return;
 
                 ProcessPending(pendingRequestsToDeliver);
@@ -62,6 +69,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 
             foreach (var tobRequest in pendingRequestsToDeliver)
             {
+                _logger.LogDebug($"Delivering TOB request: {tobRequest}");
                 _tobDeliver(tobRequest);
                 lock (this)
                 {
@@ -78,7 +86,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         for (var i = 0; i < _pendingRequests.Count; i++)
         {
             var pendingRequest = _pendingRequests[i];
-            if (!pendingRequest.Request.TobMessageId.Equals(pendingRequestsToDeliver.Last().SequenceNum + 1))
+            if (!pendingRequest.Request.TobMessageId.Equals((ulong)_lastProcessedMessageId + 1))
                 break;
 
             pendingRequestsToDeliver.Add(pendingRequest.Request);
@@ -102,6 +110,11 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         public int CompareTo(TobRequest? other)
         {
             return Request.TobMessageId.CompareTo(other?.Request.TobMessageId);
+        }
+
+        public override string ToString()
+        {
+            return $"TobRequest(Request: {Request})";
         }
     }
 }

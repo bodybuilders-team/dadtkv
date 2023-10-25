@@ -41,7 +41,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
-        _logger.LogDebug($"Received Fifo Urb Request: {request}");
+        _logger.LogDebug($"Received FIFO Request: {request}");
         var pendingRequestsToDeliver = new List<TR>();
         var broadcasterId = request.BroadcasterId;
 
@@ -56,6 +56,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
             if ((long)request.SequenceNum > _lastProcessedSequenceNumMap[broadcasterId] + 1)
             {
+                _logger.LogDebug($"Adding FIFO request to pending: {request}");
                 _pendingRequestsMap[broadcasterId]!.AddSorted(new FifoRequest(request));
                 return;
             }
@@ -67,7 +68,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         {
             lock (this)
             {
-                if (pendingRequestsToDeliver.Count <= 0)
+                if (_pendingRequestsMap[broadcasterId]!.Count <= 0 && pendingRequestsToDeliver.Count <= 0)
                     return;
 
                 ProcessPending(broadcasterId, pendingRequestsToDeliver);
@@ -75,6 +76,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
             foreach (var req in pendingRequestsToDeliver)
             {
+                _logger.LogDebug($"Delivering FIFO request: {req}");
                 _fifoUrbDeliver(req);
                 lock (this)
                 {
@@ -91,7 +93,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         for (var i = 0; i < _pendingRequestsMap[broadcasterId]!.Count; i++)
         {
             var pendingRequest = _pendingRequestsMap[broadcasterId]![i];
-            if (!pendingRequest.Request.SequenceNum.Equals(requestsToDeliver.Last().SequenceNum + 1))
+            if (!pendingRequest.Request.SequenceNum.Equals((ulong)_lastProcessedSequenceNumMap[broadcasterId] + 1))
                 break;
 
             requestsToDeliver.Add(pendingRequest.Request);

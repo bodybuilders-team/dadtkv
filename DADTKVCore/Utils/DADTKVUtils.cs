@@ -58,6 +58,7 @@ public static class DadtkvUtils
     /// <returns>True if a majority of the async tasks completed, false otherwise.</returns>
     public static async Task<bool> WaitForMajority<TRequest, TResponse>(
         List<TaskWithRequest<TRequest, TResponse>> asyncTasks,
+        bool countSelf,
         Func<TResponse, bool> predicate,
         int timeout = 1000,
         Action<TRequest>? onTimeout = null,
@@ -74,6 +75,9 @@ public static class DadtkvUtils
         var completedTaskCount = 0;
 
         var remainingTasks = new HashSet<Task<TResponse>>(tasksWithTimeout);
+
+        if (countSelf)
+            countSatisfyingPredicate++;
 
         while (remainingTasks.Count > 0)
         {
@@ -104,7 +108,7 @@ public static class DadtkvUtils
     public static async Task<bool> WaitForMajority<TRequest, TResponse>(
         List<TaskWithRequest<TRequest, TResponse>> asyncTasks, int timeout = 1000)
     {
-        return await WaitForMajority(asyncTasks, _ => true, timeout);
+        return await WaitForMajority(asyncTasks, countSelf: false, _ => true, timeout);
     }
 
     /// <summary>
@@ -128,7 +132,7 @@ public static class DadtkvUtils
             var result2 = await task.Task;
             if (!task.Task.IsFaulted)
                 onSuccess?.Invoke(task.Request);
-            
+
             return result2;
         }
 

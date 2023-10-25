@@ -306,6 +306,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         return DadtkvUtils.WaitForMajority(
             asyncTasks,
+            countSelf: false,
             res =>
             {
                 if (!res.Promise)
@@ -366,6 +367,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         return DadtkvUtils.WaitForMajority(
             acceptCalls,
+            countSelf: false,
             res => res.Accepted,
             onTimeout: req =>
             {
