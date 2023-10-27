@@ -99,13 +99,26 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
         {
             var request = TxSubmitRequestDtoConverter.ConvertFromDto(requestDto);
 
-            var leases = ExtractLeases(request);
+            var keys = ExtractKeys(request);
             var leaseId = new LeaseId(_leaseSequenceNumCounter++, _serverProcessConfiguration.ServerId);
 
-            var leaseReq = new LeaseRequest(leaseId, leases.ToList());
+            var leaseReq = new LeaseRequest(leaseId, keys.ToList());
             _logger.LogDebug($"Received transaction from client : {request}, lease request id: {leaseReq.LeaseId}");
 
-            // TODO: Optimization: Fast path
+            // Fast path
+            if (_leaseQueues.IsOwnerOfLeases(keys.ToList(), _serverProcessConfiguration.ServerId))
+            {
+                _logger.LogDebug(
+                    $"Received transaction from client : {request}. Already have necessary leases, executing right away.)");
+                var readDataFastPath =
+                    ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), freeLease: false);
+
+                return Task.FromResult(new TxSubmitResponseDto
+                {
+                    ReadSet = { readDataFastPath.Select(DadIntDtoConverter.ConvertToDto) }
+                });
+            }
+
             foreach (var leaseServiceClient in _leaseServiceClients)
                 // Get channel from client using reflection
                 leaseServiceClient.Client.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
@@ -223,10 +236,9 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             var end = DateTime.Now;
             _logger.LogDebug("Time taken to obtain leases: {timeTaken} ms", (end - start).TotalMilliseconds);
 
-            // TODO put to false and add free lease request handler
-            var conflict = true;
+            var conflict = false;
             foreach (var (_, queue) in _leaseQueues)
-                if (queue.Count > 0 && queue.Peek().Equals(leaseId) && queue.Count > 1)
+                if (queue.Count > 1 && queue.Peek().Equals(leaseId))
                 {
                     conflict = true;
                     break;
@@ -297,20 +309,20 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     }
 
     /// <summary>
-    ///     Extract the leases from a transaction.
+    ///     Extract the keys from a transaction.
     /// </summary>
     /// <param name="request">The transaction.</param>
-    /// <returns>The leases.</returns>
-    private static HashSet<string> ExtractLeases(TxSubmitRequest request)
+    /// <returns>The keys.</returns>
+    private static HashSet<string> ExtractKeys(TxSubmitRequest request)
     {
-        var leases = new HashSet<string>();
-        foreach (var lease in request.WriteSet.Select(x => x.Key))
-            leases.Add(lease);
+        var keys = new HashSet<string>();
+        foreach (var key in request.WriteSet.Select(x => x.Key))
+            keys.Add(key);
 
-        foreach (var lease in request.ReadSet)
-            leases.Add(lease);
+        foreach (var key in request.ReadSet)
+            keys.Add(key);
 
-        return leases;
+        return keys;
     }
 
     /// <summary>

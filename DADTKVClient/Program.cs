@@ -30,50 +30,57 @@ internal static class Program
 
         logger.LogInformation("Client started");
 
-        while (scriptReader.HasNextCommand())
+        try
         {
-            var command = scriptReader.NextCommand();
-            lock (clientLogic)
+            while (scriptReader.HasNextCommand())
             {
-                switch (command)
+                var command = scriptReader.NextCommand();
+                lock (clientLogic)
                 {
-                    case TransactionCommand transactionCommand:
-                        var writeSet = transactionCommand.WriteSet
-                            .Select(x => new DadIntDto
+                    switch (command)
+                    {
+                        case TransactionCommand transactionCommand:
+                            var writeSet = transactionCommand.WriteSet
+                                .Select(x => new DadIntDto
+                                {
+                                    Key = x.Key,
+                                    Value = x.Value
+                                }).ToList();
+
+                            logger.LogInformation($"Executing transaction {transactionCommand}");
+                            var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
+                                .Result;
+
+                            logger.LogInformation($"Transaction {transactionCommand} executed successfully");
+                            if (readSet.Count == 0)
                             {
-                                Key = x.Key,
-                                Value = x.Value
-                            }).ToList();
+                                logger.LogInformation("No read set");
+                                break;
+                            }
 
-                        logger.LogInformation($"Executing transaction {transactionCommand}");
-                        var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
-                            .Result;
-
-                        logger.LogInformation($"Transaction {transactionCommand} executed successfully");
-                        if (readSet.Count == 0)
-                        {
-                            logger.LogInformation("No read set");
+                            logger.LogInformation("Read set:");
+                            foreach (var dadInt in readSet)
+                                logger.LogInformation(dadInt.Key + " " + dadInt.Value);
                             break;
-                        }
 
-                        logger.LogInformation("Read set:");
-                        foreach (var dadInt in readSet)
-                            logger.LogInformation(dadInt.Key + " " + dadInt.Value);
-                        break;
+                        case WaitCommand waitCommand:
+                            logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
+                            Thread.Sleep(waitCommand.Milliseconds);
+                            break;
 
-                    case WaitCommand waitCommand:
-                        logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
-                        Thread.Sleep(waitCommand.Milliseconds);
-                        break;
-
-                    case StatusCommand:
-                        var status = clientLogic.Status().Result;
-                        logger.LogInformation("Status:");
-                        foreach (var statusEntry in status)
-                            logger.LogInformation(statusEntry);
-                        break;
+                        case StatusCommand:
+                            var status = clientLogic.Status().Result;
+                            logger.LogInformation("Status:");
+                            foreach (var statusEntry in status)
+                                logger.LogInformation(statusEntry);
+                            break;
+                    }
                 }
             }
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation($"Client {clientId} connection with TM ended abruptly.");
         }
 
         logger.LogInformation($"Client {clientId} stopped");

@@ -27,6 +27,15 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
         return ObtainedLeases(leaseReq.Keys, leaseReq.LeaseId);
     }
 
+    public bool IsOwnerOfLeases(List<string> set, ulong processId)
+    {
+        foreach (var key in set)
+            if (!ContainsKey(key) || this[key].Count == 0 || !this[key].Peek().BroadcasterId.Equals(processId))
+                return false;
+
+        return true;
+    }
+
     /// <summary>
     ///     Checks if the leases of a request are on the top of the queue.
     ///     If so, removes the leases from the queue (only from the top).
