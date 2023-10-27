@@ -1,0 +1,8 @@
+To run the system, follow these steps:
+
+1. Open a terminal in the solution's root directory.
+2. Run `dotnet clean` to clean the solution (if needed).
+3. Run `dotnet build` to build the solution.
+4. Run `dotnet run --project DADTKVCore/DADTKVCore.csproj "./DADTKVCore/Configuration/configuration_sample.txt"`.
+
+For more information, read the README.md file, or contact the developers.
