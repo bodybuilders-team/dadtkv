@@ -42,6 +42,6 @@ public class DataStore
 
     public override string ToString()
     {
-        return $"DataStore( DataStorage: {_dataStorage.ToStringRep()})";
+        return $"DataStore: {_dataStorage.ToStringRep()}";
     }
 }

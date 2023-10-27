@@ -5,7 +5,7 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static ILogger<DadtkvServiceImpl> Logger ;
+    private static ILogger<DadtkvServiceImpl> Logger;
 
     /// <summary>
     ///     Entry point for the lease manager server application.
@@ -14,14 +14,17 @@ internal static class Program
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
     public static void Main(string[] args)
     {
-        if (args.Length != 2)
+        if (args.Length > 3)
             throw new ArgumentException(
-                "Invalid arguments. Usage: DadtkvTransactionManager.exe serverId systemConfigFilePath");
+                "Invalid arguments. Usage: DadtkvTransactionManager.exe serverId systemConfigFilePath wallTime");
 
         var serverId = args[0];
+        
         DadtkvLogger.InitializeLogger(serverId);
         Logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
-        
+
+        var wallTime = args.Length == 3 ? args[2] : null;
+
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile)!;
 
@@ -48,12 +51,14 @@ internal static class Program
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
-        
-        while (DateTime.Now < processConfiguration.WallTime)
+
+        var actualWallTime = wallTime != null ? DateTime.Parse(wallTime) : processConfiguration.WallTime;
+
+        while (DateTime.Now < actualWallTime)
         {
             Thread.Sleep(10);
         }
-        
+
         processConfiguration.StartTimer();
         server.Start();
 

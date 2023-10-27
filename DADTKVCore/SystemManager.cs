@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
@@ -16,14 +17,14 @@ internal class SystemManager
     /// </summary>
     /// <param name="config">The system configuration.</param>
     /// <param name="configurationFile">The system configuration file.</param>
-    public void StartServers(SystemConfiguration config, string configurationFile)
+    public void StartServers(SystemConfiguration config, string configurationFile, DateTime WallTime)
     {
-        StartServers(config.LeaseManagers, configurationFile);
-        Thread.Sleep(1000);
-        StartServers(config.TransactionManagers, configurationFile);
+        StartServers(config.LeaseManagers, configurationFile, WallTime);
+        Thread.Sleep(200);
+        StartServers(config.TransactionManagers, configurationFile, WallTime);
     }
 
-    private void StartServers(List<ServerProcessInfo> serverProcesses, string configurationFile)
+    private void StartServers(List<ServerProcessInfo> serverProcesses, string configurationFile, DateTime WallTime)
     {
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var leaseManagerExePath =
@@ -33,13 +34,15 @@ internal class SystemManager
 
         foreach (var process in serverProcesses)
         {
-            _logger.LogInformation($"Starting {process.Role} {process.Id} at {process.Url}");
+            var wallTime = WallTime.ToString(CultureInfo.CurrentCulture);
+            
+            _logger.LogInformation($"Starting {process.Role} {process.Id} at {process.Url}. Passing wall time {wallTime}");
             var fileName = process.Role.Equals("L") ? leaseManagerExePath : transactionManagerExePath;
-
+            
             var p = Process.Start(new ProcessStartInfo
             {
                 FileName = fileName,
-                ArgumentList = { process.Id, configurationFile }
+                ArgumentList = { process.Id, configurationFile, wallTime }
             }) ?? throw new Exception("Failed to start server process: " + process.Id);
             _processes.Add(p);
         }
@@ -55,6 +58,8 @@ internal class SystemManager
         var clientExePath = Path.Combine(solutionDirectory, "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
         var clientScriptsDirectory = Path.Combine(solutionDirectory, "DadtkvClient/Script");
 
+        var tmCount = 0;
+
         foreach (var client in config.Clients)
         {
             _logger.LogInformation($"Starting client {client.Id} with script {client.Script}");
@@ -64,7 +69,7 @@ internal class SystemManager
                 FileName = clientExePath,
                 ArgumentList =
                 {
-                    config.TransactionManagers[new Random().Next(config.TransactionManagers.Count)].Url,
+                    config.TransactionManagers[tmCount++ % config.TransactionManagers.Count].Url,
                     client.Id,
                     Path.Combine(clientScriptsDirectory, client.Script + ".txt")
                 }

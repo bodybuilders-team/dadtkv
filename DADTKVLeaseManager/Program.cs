@@ -15,14 +15,16 @@ internal static class Program
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
     private static void Main(string[] args)
     {
-        if (args.Length != 2)
+        if (args.Length > 3)
             throw new ArgumentException(
-                "Invalid arguments. Usage: DadtkvLeaseManager.exe serverId systemConfigFilePath");
+                "Invalid arguments. Usage: DadtkvLeaseManager.exe serverId systemConfigFilePath wallTime");
 
         var serverId = args[0];
-
+        
         DadtkvLogger.InitializeLogger(serverId);
         Logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+        
+        var wallTime = args.Length == 3 ? args[2] : null;
         
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
@@ -50,8 +52,8 @@ internal static class Program
         foreach (var (_, transactionManagerChannel) in transactionManagersChannels)
             learnerServiceClients.Add(new LearnerService.LearnerServiceClient(transactionManagerChannel));
 
-        foreach (var (_, leaseManagersChannel) in leaseManagersChannels)
-            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagersChannel));
+        foreach (var (_, leaseManagerChannel) in leaseManagersChannels)
+            learnerServiceClients.Add(new LearnerService.LearnerServiceClient(leaseManagerChannel));
 
         var acceptorServiceClients = new List<AcceptorService.AcceptorServiceClient>();
         foreach (var (_, leaseManagerChannel) in leaseManagersChannels)
@@ -74,7 +76,9 @@ internal static class Program
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
         
-        while (DateTime.Now < leaseManagerConfig.WallTime)
+        var actualWallTime = wallTime != null ? DateTime.Parse(wallTime) : leaseManagerConfig.WallTime;
+
+        while (DateTime.Now < actualWallTime)
         {
             Thread.Sleep(10);
         }

@@ -6,6 +6,8 @@ internal static class Program
 {
     private static ILogger<SystemManager> Logger;
 
+    private const int WallTimeSecondsToPass = 10;
+
     /// <summary>
     ///     Entry point for the Dadtkv system.
     /// </summary>
@@ -30,8 +32,8 @@ internal static class Program
             throw new Exception($"Failed to read system configuration file at {configurationFile}");
 
         // Start Dadtkv servers (Transaction Managers, Lease Managers)
-        systemManager.StartServers(configuration, configurationFile);
-        Thread.Sleep(5000);
+        systemManager.StartServers(configuration, configurationFile, DateTime.Now.AddSeconds(WallTimeSecondsToPass));
+        Thread.Sleep(2000);
 
         // Start Dadtkv clients
         systemManager.StartClients(configuration);
