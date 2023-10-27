@@ -9,7 +9,7 @@ namespace Dadtkv;
 /// </summary>
 public static class DadtkvLogger
 {
-    public static ILoggerFactory Factory;
+    public static ILoggerFactory Factory = null!;
 
     public static void InitializeLogger(string processId)
     {

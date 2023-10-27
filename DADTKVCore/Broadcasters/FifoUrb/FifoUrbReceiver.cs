@@ -118,7 +118,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         {
             return Request.SequenceNum.CompareTo(other?.Request.SequenceNum);
         }
-        
+
         public override string ToString()
         {
             return $"FifoRequest(Request: {Request})";

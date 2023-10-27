@@ -4,12 +4,10 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static ILogger<ClientLogic> Logger;
-
     /// <summary>
     ///     Entry point for the client application.
     /// </summary>
-    /// <param name="args">Arguments: serverUrl clientID scriptFilePath</param>
+    /// <param name="args">Arguments: serverUrl clientID scriptFilePath (relative to solution)</param>
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
     public static void Main(string[] args)
     {
@@ -22,15 +20,15 @@ internal static class Program
         var serverUrl = args[0];
         var clientId = args[1];
         DadtkvLogger.InitializeLogger(clientId);
-        Logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
+        var logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
 
         var clientLogic = new ClientLogic(clientId, serverUrl);
-        
+
         // Script configuration
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
-        
-        Logger.LogInformation("Client started");
+
+        logger.LogInformation("Client started");
 
         while (scriptReader.HasNextCommand())
         {
@@ -47,37 +45,37 @@ internal static class Program
                                 Value = x.Value
                             }).ToList();
 
-                        Logger.LogInformation($"Executing transaction {transactionCommand}");
+                        logger.LogInformation($"Executing transaction {transactionCommand}");
                         var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                             .Result;
 
-                        Logger.LogInformation($"Transaction {transactionCommand} executed successfully");
+                        logger.LogInformation($"Transaction {transactionCommand} executed successfully");
                         if (readSet.Count == 0)
                         {
-                            Logger.LogInformation("No read set");
+                            logger.LogInformation("No read set");
                             break;
                         }
 
-                        Logger.LogInformation("Read set:");
+                        logger.LogInformation("Read set:");
                         foreach (var dadInt in readSet)
-                            Logger.LogInformation(dadInt.Key + " " + dadInt.Value);
+                            logger.LogInformation(dadInt.Key + " " + dadInt.Value);
                         break;
 
                     case WaitCommand waitCommand:
-                        Logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
+                        logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
                         Thread.Sleep(waitCommand.Milliseconds);
                         break;
 
                     case StatusCommand:
                         var status = clientLogic.Status().Result;
-                        Logger.LogInformation("Status:");
+                        logger.LogInformation("Status:");
                         foreach (var statusEntry in status)
-                            Logger.LogInformation(statusEntry);
+                            logger.LogInformation(statusEntry);
                         break;
                 }
             }
         }
 
-        Logger.LogInformation($"Client {clientId} stopped");
+        logger.LogInformation($"Client {clientId} stopped");
     }
 }

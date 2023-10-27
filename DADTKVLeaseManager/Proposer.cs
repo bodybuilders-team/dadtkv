@@ -1,6 +1,5 @@
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Timer = System.Timers.Timer;
 
 namespace Dadtkv;
 
@@ -10,6 +9,7 @@ namespace Dadtkv;
 /// </summary>
 public class Proposer : LeaseService.LeaseServiceBase
 {
+    private const int LeaderTimeout = 3;
     private readonly List<AcceptorService.AcceptorServiceClient> _acceptorServiceClients;
     private readonly ConsensusState _consensusState;
 
@@ -18,8 +18,6 @@ public class Proposer : LeaseService.LeaseServiceBase
     private readonly List<LeaseRequest> _leaseRequests = new();
     private readonly ILogger<Proposer> _logger = DadtkvLogger.Factory.CreateLogger<Proposer>();
     private readonly UrBroadcaster<LearnRequest, LearnResponseDto, LearnerService.LearnerServiceClient> _urBroadcaster;
-
-    private const int LeaderTimeout = 3;
 
     public Proposer(
         ConsensusState consensusState,
@@ -263,11 +261,9 @@ public class Proposer : LeaseService.LeaseServiceBase
                 Decide(currentProposalValue, roundNumber);
                 return true;
             }
-            else
-            {
-                currentProposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
-                Thread.Sleep(20);
-            }
+
+            currentProposalNumber += (ulong)_leaseManagerConfiguration.LeaseManagers.Count;
+            Thread.Sleep(20);
         }
     }
 
@@ -367,7 +363,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         return DadtkvUtils.WaitForMajority(
             acceptCalls,
-            countSelf: false,
+            false,
             res => res.Accepted,
             onTimeout: req =>
             {

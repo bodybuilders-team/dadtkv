@@ -9,29 +9,29 @@ namespace Dadtkv;
 /// </summary>
 internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBase
 {
+    private readonly HashSet<LeaseId> _abortedTrans;
     private readonly DataStore _dataStore;
-
-    private readonly FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
-        _updateFifoUrbReceiver;
-
-    private readonly FifoUrbReceiver<FreeLeaseRequest, FreeLeaseResponseDto,
-        StateUpdateService.StateUpdateServiceClient> _freeLeaseFifoUrbReceiver;
-
-    private readonly FifoUrbReceiver<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
-            StateUpdateService.StateUpdateServiceClient>
-        _prepareForFreeLeaseFifoUrbReceiver;
 
     private readonly FifoUrbReceiver<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
             StateUpdateService.StateUpdateServiceClient>
         _forceFreeLeaseFifoUrbReceiver;
 
+    private readonly FifoUrbReceiver<FreeLeaseRequest, FreeLeaseResponseDto,
+        StateUpdateService.StateUpdateServiceClient> _freeLeaseFifoUrbReceiver;
+
     private readonly LeaseQueues _leaseQueues;
-    private readonly HashSet<LeaseId> _abortedTrans;
 
     private readonly ILogger<StateUpdateServiceImpl> _logger =
         DadtkvLogger.Factory.CreateLogger<StateUpdateServiceImpl>();
 
+    private readonly FifoUrbReceiver<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
+            StateUpdateService.StateUpdateServiceClient>
+        _prepareForFreeLeaseFifoUrbReceiver;
+
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
+
+    private readonly FifoUrbReceiver<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
+        _updateFifoUrbReceiver;
 
     public StateUpdateServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
         LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
@@ -67,7 +67,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<FreeLeaseRequest, FreeLeaseResponseDto,
                 StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
-                (request =>
+                request =>
                 {
                     lock (_leaseQueues)
                     {
@@ -75,7 +75,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                         _logger.LogDebug("Lease queues after free lease request: {leaseQueues}",
                             _leaseQueues.ToString());
                     }
-                }),
+                },
                 (client, req) =>
                 {
                     var upReq = FreeLeaseRequestDtoConverter.ConvertToDto(req);
@@ -89,7 +89,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
                 StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
-                (request => { }),
+                request => { },
                 (client, req) =>
                 {
                     var upReq = PrepareForFreeLeaseRequestDtoConverter.ConvertToDto(req);
@@ -103,7 +103,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
             new FifoUrbReceiver<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
                 StateUpdateService.StateUpdateServiceClient>(
                 stateUpdateServiceClients,
-                (request =>
+                request =>
                 {
                     lock (_leaseQueues)
                     {
@@ -115,7 +115,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                             _abortedTrans.Add(request.LeaseId);
                         }
                     }
-                }),
+                },
                 (client, req) =>
                 {
                     var upReq = ForceFreeLeaseRequestDtoConverter.ConvertToDto(req);
@@ -184,10 +184,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         var ok = false;
 
         foreach (var queue in _leaseQueues)
-        {
             if (queue.Value.Contains(LeaseIdDtoConverter.ConvertFromDto(request.LeaseId)))
                 ok = true;
-        }
 
         return Task.FromResult(new PrepareForFreeLeaseResponseDto { Ok = ok });
     }
@@ -222,10 +220,8 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
 
             // TODO what if we never obtain the leases
             if (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
-            {
                 _logger.LogDebug("Waiting for leases of {leaseId} for update request {request}",
                     request.LeaseId.ToString(), request.ToString());
-            }
 
             while (!_leaseQueues.ObtainedLeases(set, request.LeaseId))
             {

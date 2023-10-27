@@ -34,18 +34,6 @@ public static class DadtkvUtils
             action.Invoke(element);
     }
 
-    public class TaskWithRequest<TRequest, TResponse>
-    {
-        public Task<TResponse> Task { get; }
-        public TRequest Request { get; }
-
-        public TaskWithRequest(Task<TResponse> task, TRequest req)
-        {
-            Task = task;
-            Request = req;
-        }
-    }
-
     /// <summary>
     ///     Waits for a majority of the async tasks to complete, checking for a predicate.
     /// </summary>
@@ -108,7 +96,7 @@ public static class DadtkvUtils
     public static async Task<bool> WaitForMajority<TRequest, TResponse>(
         List<TaskWithRequest<TRequest, TResponse>> asyncTasks, int timeout = 1000)
     {
-        return await WaitForMajority(asyncTasks, countSelf: false, _ => true, timeout);
+        return await WaitForMajority(asyncTasks, false, _ => true, timeout);
     }
 
     /// <summary>
@@ -273,5 +261,17 @@ public static class DadtkvUtils
 
         sb.Append(']');
         return sb.ToString();
+    }
+
+    public class TaskWithRequest<TRequest, TResponse>
+    {
+        public TaskWithRequest(Task<TResponse> task, TRequest req)
+        {
+            Task = task;
+            Request = req;
+        }
+
+        public Task<TResponse> Task { get; }
+        public TRequest Request { get; }
     }
 }

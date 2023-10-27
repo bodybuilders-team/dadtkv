@@ -15,6 +15,15 @@ Master in Computer Science and Computer Engineering<br>
 Design and Implementation of Distributed Applications - Group 05<br>
 Winter Semester of 2023/2024
 
+## Table of Contents
+
+- [Organization Description](#organization-description)
+- [How to Run](#how-to-run)
+- [Project Situation at the Checkpoint](#project-situation-at-the-checkpoint)
+    - [What has been done](#what-has-been-done)
+    - [Current issues](#current-issues)
+    - [What needs to be done](#what-needs-to-be-done)
+
 ---
 
 ## Organization Description
@@ -23,11 +32,31 @@ The solution to the project is divided into 4 projects:
 
 * **DADTKVClient**: Client application that communicates with the Transaction Managers, using the DADTKVService
   interface.
-* **DADTKVTransactionManager**: Transaction Manager application that communicates with the Lease Managers, using the
-  LeaseService interface.
+* **DADTKVTransactionManager**: Transaction Manager application.
 * **DADTKVLeaseManager**: Lease Manager application.
 * **DADTKVCore**: Contains the interfaces and classes that are common to all the other projects, including the
-  configuration of the system.
+  configuration of the system. It also contains the System Manager application, which is used to start and shutdown the
+  system.
+
+---
+
+## How to Run
+
+The project can be run using the System Manager application, which is located in the DADTKVCore project.
+
+The System Manager only receives one argument, which is the path to the configuration file (relative to the solution). A
+configuration file is located in `DADTKVCore/Configuration/configuration_sample.txt`.
+
+To run the system, follow these steps:
+
+1. Open a terminal in the **solution's root directory**.
+2. Run `dotnet clean` to clean the solution (if needed).
+3. Run `dotnet build` to build the solution.
+4. Run `dotnet run --project DADTKVCore/DADTKVCore.csproj <configuration_file_path>` to run the System
+   Manager application. For example, as the configuration file is located in the Configuration folder, the command would
+   be `dotnet run --project DADTKVCore/DADTKVCore.csproj "./DADTKVCore/Configuration/configuration_sample.txt"`.
+
+---
 
 ## Project Situation at the Checkpoint
 

@@ -10,13 +10,13 @@ namespace Dadtkv;
 /// <typeparam name="TC">Type of the client.</typeparam>
 public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 {
+    private readonly ILogger<TobReceiver<TR, TA, TC>> _logger =
+        DadtkvLogger.Factory.CreateLogger<TobReceiver<TR, TA, TC>>();
+
     private readonly List<TobRequest> _pendingRequests = new();
     private readonly Action<TR> _tobDeliver;
     private readonly UrbReceiver<TR, TA, TC> _urbReceiver;
     private long _lastProcessedMessageId = -1;
-
-    private readonly ILogger<TobReceiver<TR, TA, TC>> _logger =
-        DadtkvLogger.Factory.CreateLogger<TobReceiver<TR, TA, TC>>();
 
     public TobReceiver(List<TC> clients, Action<TR> tobDeliver, Func<TC, TR, Task<TA>> getResponse,
         ServerProcessConfiguration serverProcessConfiguration)

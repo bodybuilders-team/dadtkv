@@ -15,7 +15,7 @@ public static class ConcurrentUtils
 
         return original;
     }
-    
+
     public static int GetAndIncrement(ref int location)
     {
         int original;

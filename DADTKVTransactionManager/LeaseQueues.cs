@@ -38,7 +38,7 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
             if (queue.Count > 0 && queue.Peek().Equals(leaseId))
                 queue.Dequeue();
     }
-    
+
     /// <summary>
     ///     Checks if the leases of a request exist on a queue.
     ///     If so, removes the leases from the queue (from the middle if needed).
@@ -48,22 +48,16 @@ public class LeaseQueues : Dictionary<string, Queue<LeaseId>>
     {
         foreach (var (_, queue) in this)
         {
-            Queue<LeaseId> tempQueue = new Queue<LeaseId>();
+            var tempQueue = new Queue<LeaseId>();
 
             while (queue.Count > 0)
             {
-                LeaseId item = queue.Dequeue();
-                if (!item.Equals(leaseId))
-                {
-                    tempQueue.Enqueue(item);
-                }
+                var item = queue.Dequeue();
+                if (!item.Equals(leaseId)) tempQueue.Enqueue(item);
             }
 
             // Restore the items back to the original queue
-            while (tempQueue.Count > 0)
-            {
-                queue.Enqueue(tempQueue.Dequeue());
-            }
+            while (tempQueue.Count > 0) queue.Enqueue(tempQueue.Dequeue());
         }
     }
 

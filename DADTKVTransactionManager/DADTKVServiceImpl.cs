@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Grpc.Core;
+﻿using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Logging;
 
@@ -10,28 +9,29 @@ namespace Dadtkv;
 /// </summary>
 public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 {
+    private const int ObtainLeaseTimeout = 4000;
+    private readonly HashSet<LeaseId> _abortedTrans;
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans;
-    private readonly HashSet<LeaseId> _abortedTrans;
-    private readonly LeaseQueues _leaseQueues;
-    private readonly List<LeaseServiceClient> _leaseServiceClients;
-    private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
-    private readonly ServerProcessConfiguration _serverProcessConfiguration;
-
-    private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
-        _updateUrbBroadcaster;
-
-    private readonly UrBroadcaster<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
-            StateUpdateService.StateUpdateServiceClient>
-        _prepareForFreeLeaseUrbBroadcaster;
 
     private readonly UrBroadcaster<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
             StateUpdateService.StateUpdateServiceClient>
         _forceFreeLeaseUrbBroadcaster;
 
-    private ulong _leaseSequenceNumCounter;
+    private readonly LeaseQueues _leaseQueues;
+    private readonly List<LeaseServiceClient> _leaseServiceClients;
+    private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
 
-    private const int ObtainLeaseTimeout = 4000;
+    private readonly UrBroadcaster<PrepareForFreeLeaseRequest, PrepareForFreeLeaseResponseDto,
+            StateUpdateService.StateUpdateServiceClient>
+        _prepareForFreeLeaseUrbBroadcaster;
+
+    private readonly ServerProcessConfiguration _serverProcessConfiguration;
+
+    private readonly UrBroadcaster<UpdateRequest, UpdateResponseDto, StateUpdateService.StateUpdateServiceClient>
+        _updateUrbBroadcaster;
+
+    private ulong _leaseSequenceNumCounter;
 
     public DadtkvServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
         Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
@@ -107,10 +107,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
             // TODO: Optimization: Fast path
             foreach (var leaseServiceClient in _leaseServiceClients)
-            {
                 // Get channel from client using reflection
                 leaseServiceClient.Client.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
-            }
 
             _executedTrans.Add(leaseId, false);
 
@@ -121,11 +119,9 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
             while (!_leaseQueues.ObtainedLeases(leaseReq))
             {
                 if (i++ % 1000 == 0)
-                {
                     _logger.LogDebug(
                         "Waiting for leases: {leaseReq}, lease queues: {leaseQueues}, timeoutTime: {timeoutTime}",
                         leaseReq, _leaseQueues.ToString(), obtainLeaseTimeoutTime);
-                }
 
                 lock (_abortedTrans)
                 {

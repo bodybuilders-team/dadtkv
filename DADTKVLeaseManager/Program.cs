@@ -6,12 +6,10 @@ namespace Dadtkv;
 
 internal static class Program
 {
-    private static ILogger<LmLearner> Logger;
-
     /// <summary>
     ///     Entry point for the lease manager server application.
     /// </summary>
-    /// <param name="args">Arguments: serverId systemConfigFilePath</param>
+    /// <param name="args">Arguments: serverId systemConfigFilePath (relative to solution)</param>
     /// <exception cref="ArgumentException">Invalid arguments.</exception>
     private static void Main(string[] args)
     {
@@ -20,16 +18,17 @@ internal static class Program
                 "Invalid arguments. Usage: DadtkvLeaseManager.exe serverId systemConfigFilePath wallTime");
 
         var serverId = args[0];
-        
+
         DadtkvLogger.InitializeLogger(serverId);
-        Logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
-        
+        var logger = DadtkvLogger.Factory.CreateLogger<LmLearner>();
+
         var wallTime = args.Length == 3 ? args[2] : null;
-        
+
         var configurationFile = Path.Combine(Environment.CurrentDirectory, args[1]);
         var systemConfiguration = SystemConfiguration.ReadSystemConfiguration(configurationFile);
 
-        var leaseManagerConfig = new LeaseManagerConfiguration( new ServerProcessConfiguration(systemConfiguration, serverId));
+        var leaseManagerConfig =
+            new LeaseManagerConfiguration(new ServerProcessConfiguration(systemConfiguration, serverId));
         var serverProcessPort = new Uri(leaseManagerConfig.ProcessInfo.Url).Port;
         var hostname = new Uri(leaseManagerConfig.ProcessInfo.Url).Host;
 
@@ -75,19 +74,16 @@ internal static class Program
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
-        
+
         var actualWallTime = wallTime != null ? DateTime.Parse(wallTime) : leaseManagerConfig.WallTime;
 
-        while (DateTime.Now < actualWallTime)
-        {
-            Thread.Sleep(10);
-        }
+        while (DateTime.Now < actualWallTime) Thread.Sleep(10);
 
         leaseManagerConfig.StartTimer();
         server.Start();
         proposer.Start();
 
-        Logger.LogInformation($"Lease Manager server listening on port {serverProcessPort}");
+        logger.LogInformation($"Lease Manager server listening on port {serverProcessPort}");
         Console.WriteLine("Press Enter to stop the server.");
         Console.ReadLine();
 

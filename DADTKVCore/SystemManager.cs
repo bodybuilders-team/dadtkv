@@ -26,19 +26,20 @@ internal class SystemManager
 
     private void StartServers(List<ServerProcessInfo> serverProcesses, string configurationFile, DateTime WallTime)
     {
-        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
+        //var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var leaseManagerExePath =
-            Path.Combine(solutionDirectory, "DadtkvLeaseManager/bin/Debug/net6.0/DadtkvLeaseManager.exe");
-        var transactionManagerExePath = Path.Combine(solutionDirectory,
+            Path.Combine(Directory.GetCurrentDirectory(), "DadtkvLeaseManager/bin/Debug/net6.0/DadtkvLeaseManager.exe");
+        var transactionManagerExePath = Path.Combine(Directory.GetCurrentDirectory(),
             "DadtkvTransactionManager/bin/Debug/net6.0/DadtkvTransactionManager.exe");
 
         foreach (var process in serverProcesses)
         {
             var wallTime = WallTime.ToString(CultureInfo.CurrentCulture);
-            
-            _logger.LogInformation($"Starting {process.Role} {process.Id} at {process.Url}. Passing wall time {wallTime}");
+
+            _logger.LogInformation(
+                $"Starting {process.Role} {process.Id} at {process.Url}. Passing wall time {wallTime}");
             var fileName = process.Role.Equals("L") ? leaseManagerExePath : transactionManagerExePath;
-            
+
             var p = Process.Start(new ProcessStartInfo
             {
                 FileName = fileName,
@@ -55,8 +56,9 @@ internal class SystemManager
     public void StartClients(SystemConfiguration config)
     {
         var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
-        var clientExePath = Path.Combine(solutionDirectory, "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
-        var clientScriptsDirectory = Path.Combine(solutionDirectory, "DadtkvClient/Script");
+        var clientExePath =
+            Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
+        var clientScriptsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/Script");
 
         var tmCount = 0;
 

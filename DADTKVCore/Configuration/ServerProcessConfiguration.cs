@@ -11,11 +11,17 @@ public class ServerProcessConfiguration : SystemConfiguration
     private readonly ILogger<ServerProcessConfiguration> _logger =
         DadtkvLogger.Factory.CreateLogger<ServerProcessConfiguration>();
 
-    public readonly Timer TimeSlotTimer;
+    /// <summary>
+    ///     Servers that are suspected by this server.
+    ///     This list is updated when a server takes too long to respond to a request.
+    /// </summary>
+    private readonly HashSet<string> _realSuspected = new();
 
     public readonly ServerProcessInfo ProcessInfo;
 
-    public int CurrentTimeSlot = 0;
+    public readonly Timer TimeSlotTimer;
+
+    public int CurrentTimeSlot;
 
     public ServerProcessConfiguration(SystemConfiguration systemConfiguration, string serverId) : base(
         systemConfiguration)
@@ -48,12 +54,6 @@ public class ServerProcessConfiguration : SystemConfiguration
         };
     }
 
-    public void StartTimer()
-    {
-        TimeSlotTimer.Interval = TimeSlotDuration;
-        TimeSlotTimer.Start();
-    }
-
     public List<ServerProcessInfo> OtherServerProcesses =>
         ServerProcesses.Where(info => !info.Id.Equals(ProcessInfo.Id)).ToList();
 
@@ -75,25 +75,7 @@ public class ServerProcessConfiguration : SystemConfiguration
         .Where(suspicion => suspicion.Suspected.Equals(ProcessInfo.Id))
         .Select(suspicion => suspicion.Suspector).ToList());
 
-    /// <summary>
-    ///     Servers that are suspected by this server.
-    ///     This list is updated when a server takes too long to respond to a request.
-    /// </summary>
-    private readonly HashSet<string> _realSuspected = new();
-
     public IEnumerable<string> RealSuspected => _realSuspected;
-
-    public void AddRealSuspicion(string id)
-    {
-        if (id == ProcessInfo!.Id)
-            return;
-        _realSuspected.Add(id);
-    }
-
-    public void RemoveRealSuspicion(string id)
-    {
-        _realSuspected.Remove(id);
-    }
 
     public ulong ServerId
     {
@@ -108,6 +90,24 @@ public class ServerProcessConfiguration : SystemConfiguration
         }
     }
 
+    public void StartTimer()
+    {
+        TimeSlotTimer.Interval = TimeSlotDuration;
+        TimeSlotTimer.Start();
+    }
+
+    public void AddRealSuspicion(string id)
+    {
+        if (id == ProcessInfo!.Id)
+            return;
+        _realSuspected.Add(id);
+    }
+
+    public void RemoveRealSuspicion(string id)
+    {
+        _realSuspected.Remove(id);
+    }
+
     /// <summary>
     ///     Throws an exception if this server is being suspected by the server with the given id.
     /// </summary>
@@ -120,8 +120,6 @@ public class ServerProcessConfiguration : SystemConfiguration
             _logger.LogDebug("{suspectingId} is suspecting this server. Playing dead.", suspectingId);
 
         while (MyCurrentSuspecting.Contains(suspectingId) || MyCurrentSuspected.Contains(suspectingId))
-        {
             Thread.Sleep(100);
-        }
     }
 }

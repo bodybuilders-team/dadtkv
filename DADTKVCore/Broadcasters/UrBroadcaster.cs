@@ -12,9 +12,11 @@ namespace Dadtkv;
 public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
 {
     private readonly List<TC> _clients;
+
+    private readonly ILogger<UrBroadcaster<TR, TA, TC>> _logger =
+        DadtkvLogger.Factory.CreateLogger<UrBroadcaster<TR, TA, TC>>();
+
     private ulong _sequenceNumCounter;
-    
-    private readonly ILogger<UrBroadcaster<TR, TA, TC>> _logger = DadtkvLogger.Factory.CreateLogger<UrBroadcaster<TR, TA, TC>>();
 
     public UrBroadcaster(List<TC> clients)
     {
@@ -40,12 +42,12 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
             .ToList();
 
         resTasks.Add(new DadtkvUtils.TaskWithRequest<TR, TA>(Task.FromResult(default(TA))!, request));
-        var majority = DadtkvUtils.WaitForMajority(resTasks, timeout: 0).Result;
+        var majority = DadtkvUtils.WaitForMajority(resTasks, 0).Result;
 
         if (majority)
             urbDeliver(request);
     }
-    
+
     /// <summary>
     ///     Broadcasts a request to all clients.
     ///     If a majority of clients respond, the request is delivered.
@@ -53,7 +55,8 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">Request to broadcast.</param>
     /// <param name="urbDeliver">Function to deliver the request.</param>
     /// <param name="getResponse">Function to get the response from a client.</param>
-    public void UrBroadcast(TR request, Action<TR> urbDeliver, Func<TA, bool> predicate, Func<TC, TR, Task<TA>> getResponse)
+    public void UrBroadcast(TR request, Action<TR> urbDeliver, Func<TA, bool> predicate,
+        Func<TC, TR, Task<TA>> getResponse)
     {
         request.SequenceNum = ConcurrentUtils.GetAndIncrement(ref _sequenceNumCounter);
 
@@ -64,11 +67,11 @@ public class UrBroadcaster<TR, TA, TC> where TR : IUrbRequest<TR>
             .ToList();
 
         resTasks.Add(new DadtkvUtils.TaskWithRequest<TR, TA>(Task.FromResult(default(TA))!, request));
-        
+
         _logger.LogDebug($"Broadcasting URB. Waiting for majority of {resTasks.Count} tasks for request {request}");
-        
-        var majority = DadtkvUtils.WaitForMajority(resTasks, countSelf: true, predicate, timeout: 0).Result;
-        
+
+        var majority = DadtkvUtils.WaitForMajority(resTasks, true, predicate, 0).Result;
+
         _logger.LogDebug($"URB Majority is {majority} for request {request}");
 
         if (majority)
