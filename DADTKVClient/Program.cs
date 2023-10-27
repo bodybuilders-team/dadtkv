@@ -78,7 +78,7 @@ internal static class Program
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             logger.LogInformation($"Client {clientId} connection with TM ended abruptly.");
         }
