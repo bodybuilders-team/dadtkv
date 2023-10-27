@@ -40,7 +40,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
     /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
-        _logger.LogDebug($"Received TOB Request: {request}");
+        // _logger.LogDebug($"Received TOB Request: {request}");
         var pendingRequestsToDeliver = new List<TR>();
         var messageId = request.TobMessageId;
 
@@ -48,7 +48,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
         {
             if ((long)messageId > _lastProcessedMessageId + 1)
             {
-                _logger.LogDebug($"Adding TOB request to pending: {request}");
+                // _logger.LogDebug($"Adding TOB request to pending: {request}");
                 _pendingRequests.AddSorted(new TobRequest(request));
                 return;
             }
@@ -69,7 +69,7 @@ public class TobReceiver<TR, TA, TC> where TR : ITobRequest<TR>
 
             foreach (var tobRequest in pendingRequestsToDeliver)
             {
-                _logger.LogDebug($"Delivering TOB request: {tobRequest}");
+                // _logger.LogDebug($"Delivering TOB request: {tobRequest}");
                 _tobDeliver(tobRequest);
                 lock (this)
                 {

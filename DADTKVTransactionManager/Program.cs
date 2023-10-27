@@ -34,20 +34,26 @@ internal static class Program
         LeaseQueues leaseQueues = new();
         var datastore = new DataStore();
         var executedTrans = new Dictionary<LeaseId, bool>();
+        var abortedTrans = new HashSet<LeaseId>();
 
         var server = new Server
         {
             Services =
             {
                 DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration, datastore, executedTrans,
-                    leaseQueues)),
+                    leaseQueues, abortedTrans)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore,
-                    leaseQueues)),
+                    leaseQueues, abortedTrans)),
                 LearnerService.BindService(new TmLearner(processConfiguration, executedTrans, leaseQueues))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
-
+        
+        while (DateTime.Now < processConfiguration.WallTime)
+        {
+            Thread.Sleep(10);
+        }
+        
         processConfiguration.StartTimer();
         server.Start();
 

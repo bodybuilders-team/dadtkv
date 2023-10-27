@@ -12,6 +12,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 {
     private readonly DataStore _dataStore;
     private readonly Dictionary<LeaseId, bool> _executedTrans;
+    private readonly HashSet<LeaseId> _abortedTrans;
     private readonly LeaseQueues _leaseQueues;
     private readonly List<LeaseServiceClient> _leaseServiceClients;
     private readonly ILogger<DadtkvServiceImpl> _logger = DadtkvLogger.Factory.CreateLogger<DadtkvServiceImpl>();
@@ -30,15 +31,16 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
 
     private ulong _leaseSequenceNumCounter;
 
-    private const int ObtainLeaseTimeout = 7000;
+    private const int ObtainLeaseTimeout = 4000;
 
     public DadtkvServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
-        Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues)
+        Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
     {
         _serverProcessConfiguration = serverProcessConfiguration;
         _dataStore = dataStore;
         _executedTrans = executedTrans;
         _leaseQueues = leaseQueues;
+        _abortedTrans = abortedTrans;
         _leaseServiceClients = new List<LeaseServiceClient>();
         foreach (var leaseManager in _serverProcessConfiguration.LeaseManagers)
         {
@@ -125,6 +127,19 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                         leaseReq, _leaseQueues.ToString(), obtainLeaseTimeoutTime);
                 }
 
+                lock (_abortedTrans)
+                {
+                    if (_abortedTrans.Contains(leaseId))
+                    {
+                        _logger.LogDebug("Transaction {leaseId} aborted (force freed by other transaction managers)",
+                            leaseId);
+                        return Task.FromResult(new TxSubmitResponseDto
+                        {
+                            ReadSet = { new DadIntDto { Key = "aborted", Value = 0 } }
+                        });
+                    }
+                }
+
                 var timeoutConflict = false;
 
                 foreach (var key in leaseReq.Keys)
@@ -151,6 +166,8 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                     _logger.LogDebug("Timeout while waiting for leases: {leaseReq}, lease queues: {leaseQueues}",
                         leaseReq, _leaseQueues.ToString());
 
+                    obtainLeaseTimeoutTime = DateTime.MinValue;
+
                     foreach (var key in leaseReq.Keys)
                     {
                         if (!_leaseQueues.ContainsKey(key) || _leaseQueues[key].Count == 0)
@@ -173,35 +190,26 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                             {
                                 _logger.LogDebug("Sending forced free lease request for lease {leaseId}",
                                     leaseOnTop);
-                                
+
                                 _forceFreeLeaseUrbBroadcaster.UrBroadcast(
                                     new ForceFreeLeaseRequest(
                                         _serverProcessConfiguration.ServerId,
                                         _serverProcessConfiguration.ServerId,
                                         leaseOnTop
                                     ),
-                                    _ =>
-                                    {
-                                        lock (_leaseQueues)
-                                        {
-                                            _leaseQueues.FreeLeases(leaseOnTop);
-                                            _logger.LogDebug(
-                                                "Lease queues after force free lease request: {leaseQueues}",
-                                                _leaseQueues.ToString());
-                                        }
-                                    },
+                                    _ => { },
                                     (client, req) =>
                                         client.ForceFreeLeaseAsync(
                                                 ForceFreeLeaseRequestDtoConverter.ConvertToDto(req))
                                             .ResponseAsync
                                 );
                             },
-                            predicate: responseDto =>
+                            /*predicate: responseDto =>
                             {
                                 _logger.LogDebug("Received response for prepare for free lease request for lease {leaseId}: {responseDto}",
                                     leaseOnTop, responseDto.Ok);
                                 return responseDto.Ok;
-                            },
+                            },*/
                             (client, req) =>
                                 client.PrepareForFreeLeaseAsync(
                                         PrepareForFreeLeaseRequestDtoConverter.ConvertToDto(req))

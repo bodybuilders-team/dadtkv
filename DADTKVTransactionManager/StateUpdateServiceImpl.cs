@@ -26,6 +26,7 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
         _forceFreeLeaseFifoUrbReceiver;
 
     private readonly LeaseQueues _leaseQueues;
+    private readonly HashSet<LeaseId> _abortedTrans;
 
     private readonly ILogger<StateUpdateServiceImpl> _logger =
         DadtkvLogger.Factory.CreateLogger<StateUpdateServiceImpl>();
@@ -33,11 +34,12 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
     private readonly ServerProcessConfiguration _serverProcessConfiguration;
 
     public StateUpdateServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
-        LeaseQueues leaseQueues)
+        LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
     {
         _serverProcessConfiguration = serverProcessConfiguration;
         _dataStore = dataStore;
         _leaseQueues = leaseQueues;
+        _abortedTrans = abortedTrans;
 
         var stateUpdateServiceClients = new List<StateUpdateService.StateUpdateServiceClient>();
         foreach (var process in serverProcessConfiguration.OtherTransactionManagers)
@@ -105,9 +107,13 @@ internal class StateUpdateServiceImpl : StateUpdateService.StateUpdateServiceBas
                 {
                     lock (_leaseQueues)
                     {
-                        _leaseQueues.FreeLeases(request.LeaseId);
+                        _leaseQueues.ForceFreeLeases(request.LeaseId);
                         _logger.LogDebug("Lease queues after force free lease request: {leaseQueues}",
                             _leaseQueues.ToString());
+                        lock (_abortedTrans)
+                        {
+                            _abortedTrans.Add(request.LeaseId);
+                        }
                     }
                 }),
                 (client, req) =>

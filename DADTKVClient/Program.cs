@@ -25,12 +25,11 @@ internal static class Program
         Logger = DadtkvLogger.Factory.CreateLogger<ClientLogic>();
 
         var clientLogic = new ClientLogic(clientId, serverUrl);
-
         
         // Script configuration
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
-
+        
         Logger.LogInformation("Client started");
 
         while (scriptReader.HasNextCommand())

@@ -41,7 +41,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
     /// <param name="request">The request to deliver.</param>
     private void UrbDeliver(TR request)
     {
-        _logger.LogDebug($"Received FIFO Request: {request}");
+        // _logger.LogDebug($"Received FIFO Request: {request}");
         var pendingRequestsToDeliver = new List<TR>();
         var broadcasterId = request.BroadcasterId;
 
@@ -56,7 +56,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
             if ((long)request.SequenceNum > _lastProcessedSequenceNumMap[broadcasterId] + 1)
             {
-                _logger.LogDebug($"Adding FIFO request to pending: {request}");
+                // _logger.LogDebug($"Adding FIFO request to pending: {request}");
                 _pendingRequestsMap[broadcasterId]!.AddSorted(new FifoRequest(request));
                 return;
             }
@@ -76,7 +76,7 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
 
             foreach (var req in pendingRequestsToDeliver)
             {
-                _logger.LogDebug($"Delivering FIFO request: {req}");
+                // _logger.LogDebug($"Delivering FIFO request: {req}");
                 _fifoUrbDeliver(req);
                 lock (this)
                 {
@@ -117,6 +117,11 @@ public class FifoUrbReceiver<TR, TA, TC> where TR : IUrbRequest<TR>
         public int CompareTo(FifoRequest? other)
         {
             return Request.SequenceNum.CompareTo(other?.Request.SequenceNum);
+        }
+        
+        public override string ToString()
+        {
+            return $"FifoRequest(Request: {Request})";
         }
     }
 }

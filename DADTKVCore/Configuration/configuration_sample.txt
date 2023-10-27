@@ -31,7 +31,7 @@ P c6 C client_script_2
 S 100
 #
 # this test starts at 12:10:15 (physical wall time)
-T 13:13:13
+T 02:22:50
 #
 # Each time slots lasts 10000 milliseconds
 D 1000 
@@ -51,7 +51,7 @@ D 1000
 # e.g. (A,B) means that process A suspects process B
 F 1 N N N N N N
 F 7 N C N N N N
-F 14 N C N N N N
+F 20 N C N N N N
 # F 1 N N N N N N (LM2,LM3) (LM1,LM3)
 # F 1 N N N N N N (TM3,TM2) (TM1,TM2) (LM3,LM2)
 # F 2 N N C N N N (TM1,TM3)

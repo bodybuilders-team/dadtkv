@@ -73,6 +73,11 @@ internal static class Program
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
+        
+        while (DateTime.Now < leaseManagerConfig.WallTime)
+        {
+            Thread.Sleep(10);
+        }
 
         leaseManagerConfig.StartTimer();
         server.Start();
