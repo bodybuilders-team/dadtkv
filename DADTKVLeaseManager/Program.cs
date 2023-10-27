@@ -81,10 +81,13 @@ internal static class Program
 
         leaseManagerConfig.StartTimer();
         server.Start();
+        logger.LogInformation("Lease Manager {serverId} listening on port {serverProcessPort}", serverId,
+            serverProcessPort);
+
         proposer.Start();
 
-        logger.LogInformation("Lease manager server {serverId} stopping...", serverId);
+        logger.LogInformation("Lease manager {serverId} stopping...", serverId);
         server.ShutdownAsync().Wait();
-        logger.LogInformation("Lease manager server {serverId} stopped.", serverId);
+        logger.LogInformation("Lease manager {serverId} stopped.", serverId);
     }
 }

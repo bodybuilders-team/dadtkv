@@ -39,7 +39,7 @@ public class ServerProcessConfiguration : SystemConfiguration
                 TimeSlotTimer.Stop();
                 return;
             }
-            
+
             _logger.LogDebug("Starting time slot {newTimeslot}", newTimeslot);
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")

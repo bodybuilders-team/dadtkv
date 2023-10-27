@@ -36,8 +36,8 @@ internal class SystemManager
         {
             var wallTime = WallTime.ToString(CultureInfo.CurrentCulture);
 
-            _logger.LogInformation(
-                $"Starting {process.Role} {process.Id} at {process.Url}. Passing wall time {wallTime}");
+            _logger.LogInformation("Starting {processRole} {processId} at {processUrl}. Passing wall time {wallTime}",
+                process.Role, process.Id, process.Url, wallTime);
             var fileName = process.Role.Equals("L") ? leaseManagerExePath : transactionManagerExePath;
 
             var p = Process.Start(new ProcessStartInfo
@@ -63,7 +63,8 @@ internal class SystemManager
 
         foreach (var client in config.Clients)
         {
-            _logger.LogInformation($"Starting client {client.Id} with script {client.Script}");
+            _logger.LogInformation("Starting client {clientId} with script {clientScript}", client.Id,
+                client.Script);
 
             var p = Process.Start(new ProcessStartInfo
             {

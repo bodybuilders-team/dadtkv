@@ -29,7 +29,7 @@ internal static class Program
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
         var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
 
-        logger.LogInformation("Client started");
+        logger.LogInformation("Client {clientId} started", clientId);
 
         try
         {
@@ -48,37 +48,34 @@ internal static class Program
                                     Value = x.Value
                                 }).ToList();
 
-                            logger.LogInformation($"Executing transaction {transactionCommand}");
+                            logger.LogInformation("Executing transaction: {transactionCommand}",
+                                transactionCommand.ToString());
                             var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                                 .Result;
-                            
-                            var strBuilder = new StringBuilder();
-                            strBuilder.AppendLine("Transaction {transactionCommand} executed successfully");
-                            if (readSet.Count == 0)
-                            {
-                                strBuilder.AppendLine("Read set is empty");
-                                logger.LogInformation(strBuilder.ToString());
-                                break;
-                            }
 
-                            strBuilder.AppendLine("Read set:");
+                            var strBuilder = new StringBuilder();
+                            strBuilder.Append("Transaction successfully executed. Read set: {");
                             foreach (var dadInt in readSet)
-                                strBuilder.AppendLine(dadInt.Key + " " + dadInt.Value);
+                                strBuilder.Append($"{dadInt.Key}:{dadInt.Value},");
+                            if (readSet.Count > 0)
+                                strBuilder.Remove(strBuilder.Length - 1, 1);
+                            strBuilder.Append('}');
+
                             logger.LogInformation(strBuilder.ToString());
                             break;
 
                         case WaitCommand waitCommand:
-                            logger.LogInformation($"Waiting {waitCommand.Milliseconds} milliseconds");
+                            logger.LogInformation("Waiting {time} milliseconds", waitCommand.Milliseconds);
                             Thread.Sleep(waitCommand.Milliseconds);
                             break;
 
                         case StatusCommand:
                             var status = clientLogic.Status().Result;
-                            
+
                             var strBuilder2 = new StringBuilder();
-                            strBuilder2.AppendLine("Status:");
+                            strBuilder2.Append("Status: ");
                             foreach (var statusEntry in status)
-                                strBuilder2.AppendLine(statusEntry);
+                                strBuilder2.Append(statusEntry);
                             logger.LogInformation(strBuilder2.ToString());
                             break;
                     }
@@ -87,9 +84,9 @@ internal static class Program
         }
         catch (Exception)
         {
-            logger.LogInformation($"Client {clientId} connection with TM ended abruptly.");
+            logger.LogInformation("Client {clientId} connection with TM ended abruptly.", clientId);
         }
 
-        logger.LogInformation($"Client {clientId} stopped");
+        logger.LogInformation("Client {clientId} stopped", clientId);
     }
 }

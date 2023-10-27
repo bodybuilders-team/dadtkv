@@ -111,7 +111,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 _logger.LogDebug(
                     $"Received transaction from client : {request}. Already have necessary leases, executing right away.)");
                 var readDataFastPath =
-                    ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), freeLease: false);
+                    ExecuteTransaction(leaseId, request.ReadSet, request.WriteSet.ToList(), false);
 
                 return Task.FromResult(new TxSubmitResponseDto
                 {

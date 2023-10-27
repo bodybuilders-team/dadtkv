@@ -56,7 +56,8 @@ internal static class Program
         processConfiguration.StartTimer();
         server.Start();
 
-        logger.LogInformation($"Transaction Manager server listening on port {serverProcessPort}");
+        logger.LogInformation("Transaction Manager {serverId} listening on port {serverProcessPort}", serverId,
+            serverProcessPort);
 
         while (processConfiguration.CurrentTimeSlot < processConfiguration.NumberOfTimeSlots)
         {

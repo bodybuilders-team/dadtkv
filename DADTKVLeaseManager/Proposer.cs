@@ -277,7 +277,7 @@ public class Proposer : LeaseService.LeaseServiceBase
 
         return DadtkvUtils.WaitForMajority(
             asyncTasks,
-            countSelf: false,
+            false,
             res =>
             {
                 if (!res.Promise)
