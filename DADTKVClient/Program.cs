@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Dadtkv;
 
@@ -50,17 +51,20 @@ internal static class Program
                             logger.LogInformation($"Executing transaction {transactionCommand}");
                             var readSet = clientLogic.TxSubmit(transactionCommand.ReadSet.ToList(), writeSet)
                                 .Result;
-
-                            logger.LogInformation($"Transaction {transactionCommand} executed successfully");
+                            
+                            var strBuilder = new StringBuilder();
+                            strBuilder.AppendLine("Transaction {transactionCommand} executed successfully");
                             if (readSet.Count == 0)
                             {
-                                logger.LogInformation("No read set");
+                                strBuilder.AppendLine("Read set is empty");
+                                logger.LogInformation(strBuilder.ToString());
                                 break;
                             }
 
-                            logger.LogInformation("Read set:");
+                            strBuilder.AppendLine("Read set:");
                             foreach (var dadInt in readSet)
-                                logger.LogInformation(dadInt.Key + " " + dadInt.Value);
+                                strBuilder.AppendLine(dadInt.Key + " " + dadInt.Value);
+                            logger.LogInformation(strBuilder.ToString());
                             break;
 
                         case WaitCommand waitCommand:
@@ -70,9 +74,12 @@ internal static class Program
 
                         case StatusCommand:
                             var status = clientLogic.Status().Result;
-                            logger.LogInformation("Status:");
+                            
+                            var strBuilder2 = new StringBuilder();
+                            strBuilder2.AppendLine("Status:");
                             foreach (var statusEntry in status)
-                                logger.LogInformation(statusEntry);
+                                strBuilder2.AppendLine(statusEntry);
+                            logger.LogInformation(strBuilder2.ToString());
                             break;
                     }
                 }

@@ -14,7 +14,8 @@ public static class DadtkvLogger
     public static void InitializeLogger(string processId)
     {
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            //.MinimumLevel.Debug()
+            .MinimumLevel.Information()
             .WriteTo.Console(
                 theme: AnsiConsoleTheme.Code,
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] - " + processId +

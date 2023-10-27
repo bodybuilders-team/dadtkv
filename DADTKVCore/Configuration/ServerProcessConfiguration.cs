@@ -44,7 +44,8 @@ public class ServerProcessConfiguration : SystemConfiguration
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")
             {
-                _logger.LogDebug("Crashing the process");
+                _logger.LogInformation("Crashing the process {processId} in the time slot {timeSlot}",
+                    ProcessInfo.Id, CurrentTimeSlot);
                 Environment.Exit(1);
             }
 
