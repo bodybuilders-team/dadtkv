@@ -40,7 +40,7 @@ public class SystemConfiguration
 
     private List<IProcessInfo> Processes { get; } = new();
 
-    private int NumberOfTimeSlots { get; set; }
+    public int NumberOfTimeSlots { get; set; }
     public int TimeSlotDuration { get; set; }
     public DateTime WallTime { get; set; }
 

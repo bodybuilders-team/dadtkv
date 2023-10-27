@@ -12,7 +12,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private const int ObtainLeaseTimeout = 4000;
     private readonly HashSet<LeaseId> _abortedTrans;
     private readonly DataStore _dataStore;
-    private readonly Dictionary<LeaseId, bool> _executedTrans;
+    private readonly Dictionary<LeaseId, bool> _executedTx;
 
     private readonly UrBroadcaster<ForceFreeLeaseRequest, ForceFreeLeaseResponseDto,
             StateUpdateService.StateUpdateServiceClient>
@@ -34,11 +34,11 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
     private ulong _leaseSequenceNumCounter;
 
     public DadtkvServiceImpl(ServerProcessConfiguration serverProcessConfiguration, DataStore dataStore,
-        Dictionary<LeaseId, bool> executedTrans, LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
+        Dictionary<LeaseId, bool> executedTx, LeaseQueues leaseQueues, HashSet<LeaseId> abortedTrans)
     {
         _serverProcessConfiguration = serverProcessConfiguration;
         _dataStore = dataStore;
-        _executedTrans = executedTrans;
+        _executedTx = executedTx;
         _leaseQueues = leaseQueues;
         _abortedTrans = abortedTrans;
         _leaseServiceClients = new List<LeaseServiceClient>();
@@ -110,7 +110,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
                 // Get channel from client using reflection
                 leaseServiceClient.Client.RequestLeaseAsync(LeaseRequestDtoConverter.ConvertToDto(leaseReq));
 
-            _executedTrans.Add(leaseId, false);
+            _executedTx.Add(leaseId, false);
 
             var start = DateTime.Now;
             var obtainLeaseTimeoutTime = DateTime.MinValue;
@@ -286,7 +286,7 @@ public class DadtkvServiceImpl : DadtkvService.DadtkvServiceBase
         lock (_dataStore)
         {
             returnReadSet = _dataStore.ExecuteTransaction(readSet, writeSet);
-            _executedTrans[leaseId] = true;
+            _executedTx[leaseId] = true;
         }
 
         if (freeLease)

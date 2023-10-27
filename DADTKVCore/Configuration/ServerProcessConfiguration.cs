@@ -32,6 +32,14 @@ public class ServerProcessConfiguration : SystemConfiguration
         TimeSlotTimer.Elapsed += (_, _) =>
         {
             var newTimeslot = CurrentTimeSlot + 1;
+
+            if (newTimeslot > NumberOfTimeSlots)
+            {
+                _logger.LogDebug("Last time slot reached. Stopping timer.");
+                TimeSlotTimer.Stop();
+                return;
+            }
+            
             _logger.LogDebug("Starting time slot {newTimeslot}", newTimeslot);
             // Check if process is crashed in the current time slot
             if (ProcessInfo.TimeSlotStatusList[_timeSlotCursor].Status == "C")

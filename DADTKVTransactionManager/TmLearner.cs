@@ -9,7 +9,7 @@ namespace Dadtkv;
 /// </summary>
 public class TmLearner : LearnerService.LearnerServiceBase
 {
-    private readonly Dictionary<LeaseId, bool> _executedTrans;
+    private readonly Dictionary<LeaseId, bool> _executedTx;
     private readonly LeaseQueues _leaseQueues;
 
     private readonly ILogger<TmLearner> _logger = DadtkvLogger.Factory.CreateLogger<TmLearner>();
@@ -20,11 +20,11 @@ public class TmLearner : LearnerService.LearnerServiceBase
         _urBroadcaster;
 
     public TmLearner(ServerProcessConfiguration serverProcessConfiguration,
-        Dictionary<LeaseId, bool> executedTrans,
+        Dictionary<LeaseId, bool> executedTx,
         LeaseQueues leaseQueues)
     {
         _serverProcessConfiguration = serverProcessConfiguration;
-        _executedTrans = executedTrans;
+        _executedTx = executedTx;
         _leaseQueues = leaseQueues;
 
         var learnerServiceClients = new List<LearnerService.LearnerServiceClient>();
@@ -101,7 +101,7 @@ public class TmLearner : LearnerService.LearnerServiceBase
                 var leaseId = queue.Peek();
 
                 if (leaseId.BroadcasterId.Equals(_serverProcessConfiguration.ServerId) && queue.Count > 1 &&
-                    _executedTrans[leaseId])
+                    _executedTx[leaseId])
                 {
                     leasesToBeFreed.Add(leaseId);
                     queue.Dequeue(); // TODO only in deliver?

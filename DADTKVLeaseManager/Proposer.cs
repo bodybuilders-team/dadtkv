@@ -69,6 +69,9 @@ public class Proposer : LeaseService.LeaseServiceBase
         while (true)
         {
             // _logger.LogDebug("Waiting for round {roundNumber} to start", roundNumber);
+            if (_leaseManagerConfiguration.CurrentTimeSlot > _leaseManagerConfiguration.NumberOfTimeSlots)
+                return;
+
             if (roundNumber > _leaseManagerConfiguration.CurrentTimeSlot)
             {
                 Thread.Sleep(100);
@@ -152,34 +155,6 @@ public class Proposer : LeaseService.LeaseServiceBase
 
             roundNumber++;
         }
-    }
-
-    /// <summary>
-    ///     Update the consensus values to have a value for each previous round. These values are useful to filter out
-    ///     lease requests that have already been applied.
-    /// </summary>
-    /// <returns>True if the consensus values were already updated, false otherwise.</returns>
-    private bool UpdateConsensusValues()
-    {
-        var isUpdated = true;
-
-        lock (_consensusState)
-        {
-            for (var i = 0; i < _consensusState.Values.Count; i++)
-            {
-                if (_consensusState.Values[i] != null)
-                    continue;
-
-                isUpdated = false;
-
-                var roundNumber = (ulong)i;
-                new Thread(() =>
-                    Propose(new ConsensusValue(), _initialProposalNumber, roundNumber)
-                ).Start();
-            }
-        }
-
-        return isUpdated;
     }
 
     /// <summary>

@@ -33,18 +33,18 @@ internal static class Program
 
         LeaseQueues leaseQueues = new();
         var datastore = new DataStore();
-        var executedTrans = new Dictionary<LeaseId, bool>();
+        var executedTx = new Dictionary<LeaseId, bool>();
         var abortedTrans = new HashSet<LeaseId>();
 
         var server = new Server
         {
             Services =
             {
-                DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration, datastore, executedTrans,
+                DadtkvService.BindService(new DadtkvServiceImpl(processConfiguration, datastore, executedTx,
                     leaseQueues, abortedTrans)),
                 StateUpdateService.BindService(new StateUpdateServiceImpl(processConfiguration, datastore,
                     leaseQueues, abortedTrans)),
-                LearnerService.BindService(new TmLearner(processConfiguration, executedTrans, leaseQueues))
+                LearnerService.BindService(new TmLearner(processConfiguration, executedTx, leaseQueues))
             },
             Ports = { new ServerPort(hostname, serverProcessPort, ServerCredentials.Insecure) }
         };
@@ -58,9 +58,12 @@ internal static class Program
 
         logger.LogInformation($"Transaction Manager server listening on port {serverProcessPort}");
 
-        Console.WriteLine("Press Enter to stop the server.");
-        Console.ReadLine();
+        while (processConfiguration.CurrentTimeSlot < processConfiguration.NumberOfTimeSlots)
+        {
+        }
 
+        logger.LogInformation("Transaction Manager {serverId} stopping...", serverId);
         server.ShutdownAsync().Wait();
+        logger.LogInformation("Transaction Manager {serverId} stopped.", serverId);
     }
 }

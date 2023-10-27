@@ -83,10 +83,8 @@ internal static class Program
         server.Start();
         proposer.Start();
 
-        logger.LogInformation($"Lease Manager server listening on port {serverProcessPort}");
-        Console.WriteLine("Press Enter to stop the server.");
-        Console.ReadLine();
-
+        logger.LogInformation("Lease manager server {serverId} stopping...", serverId);
         server.ShutdownAsync().Wait();
+        logger.LogInformation("Lease manager server {serverId} stopped.", serverId);
     }
 }
