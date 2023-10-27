@@ -55,7 +55,6 @@ internal class SystemManager
     /// <param name="config">The system configuration.</param>
     public void StartClients(SystemConfiguration config)
     {
-        var solutionDirectory = Directory.GetParent(Directory.GetCurrentDirectory())!.Parent!.Parent!.Parent!.FullName;
         var clientExePath =
             Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
         var clientScriptsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/Script");
