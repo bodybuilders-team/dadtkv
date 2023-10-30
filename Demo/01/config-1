@@ -1,0 +1,43 @@
+# DAD 2023-24 sample configuration script
+#
+# A line starting with a '#' character is a comment.
+#
+# There are no empty lines in a script.
+# You can assume the scripts are correct and contain
+# no impossible situations.
+# 
+# Process P commands appear always before client P commands.
+#
+# A P command for a server has a string indentifying the server e.g. "TM1"
+# a character indicating whether it's a (T)ransaction or (L)ease manager
+# and a URL for g-RPC calls.
+P TM1 T http://localhost:10000
+P LM1 L http://localhost:10004
+#
+# A client (indicated by the 'C' process code) does not have a g-RPC URL,
+# but has a path to the client script it is running.
+P C1 C Demo/01/client-script-1
+#
+# this test will run for 100 time slots.
+S 2
+#
+# this test starts at 12:10:15 (physical wall time)
+T 12:10:15
+#
+# Each time slots lasts 10000 miliseconds
+D 5000 
+#
+# F commands describe the state of server processes
+#
+# Missing time slots in the sequence of F commands correspond to time slots 
+# where there is no change to the normal/crashed state of the previous 
+# slot and no process suspects any other process.
+#
+# In a F command:
+# - The first integer indentifies the time slot it describes
+# - It is followed by a sequence of (N)ormal or (C)rashed characters,
+#   one for each server process in the system
+# - The line ends with a sequence of pairs indentifying suspected processes
+# each pair includes the ids of the suspecting process and the suspected process,
+# e.g. (A,B) means that process A suspects process B
+F 1 N N

@@ -1,0 +1,60 @@
+# DAD 2023-24 sample configuration script
+#
+# A line starting with a '#' character is a comment.
+#
+# There are no empty lines in a script.
+# You can assume the scripts are correct and contain
+# no impossible situations.
+# 
+# Process P commands appear always before client P commands.
+#
+# A P command for a server has a string indentifying the server e.g. "TM1"
+# a character indicating whether it's a (T)ransaction or (L)ease manager
+# and a URL for g-RPC calls.
+P TM1 T http://localhost:20001
+P TM2 T http://localhost:20002
+P TM3 T http://localhost:20003
+P TM4 T http://localhost:20004
+P TM5 T http://localhost:20005
+P LM1 L http://localhost:10001
+P LM2 L http://localhost:10002
+P LM3 L http://localhost:10003
+P LM4 L http://localhost:10004
+P LM5 L http://localhost:10005
+#
+# A client (indicated by the 'C' process code) does not have a g-RPC URL,
+# but has a path to the client script it is running.
+P C1 C Demo/04/client-script-1
+P C2 C Demo/04/client-script-2
+P C3 C Demo/04/client-script-3
+P C4 C Demo/04/client-script-4
+P C5 C Demo/04/client-script-5
+#
+# number of time slots.
+S 6
+#
+# this test starts at 12:10:15 (physical wall time)
+T 12:10:15
+#
+#  Length of each timeslot in milliseconds
+D 5000 
+#
+# F commands describe the state of server processes
+#
+# Missing time slots in the sequence of F commands correspond to time slots 
+# where there is no change to the normal/crashed state of the previous 
+# slot and no process suspects any other process.
+#
+# In a F command:
+# - The first integer indentifies the time slot it describes
+# - It is followed by a sequence of (N)ormal or (C)rashed characters,
+#   one for each server process in the system
+# - The line ends with a sequence of pairs indentifying suspected processes
+# each pair includes the ids of the suspecting process and the suspected process,
+# e.g. (A,B) means that process A suspects process B
+F 1 N N N N N N N N N N
+F 2 N N N N N N N N N N
+F 3 N N N N N N C N N N (LM3,LM2)
+F 4 N N N N N N C C N N (LM3,LM2)
+F 5 N N N N N N C C N N (LM3,LM2)(LM1,LM2)(LM1,LM3)(LM4,LM3)
+F 6 N N N N N C C C N N (LM3,LM2)(LM1,LM2)(LM1,LM3)(LM4,LM3)(LM4,LM1)(LM5,LM1)

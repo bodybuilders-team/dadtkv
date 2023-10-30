@@ -1,0 +1,33 @@
+# DAD 2023-24 sample client script
+#
+# A line starting with a '#' character is a comment.
+#
+# There are no empty lines in a script.
+# You can assume the scripts are correct and contain
+# no impossible situations.
+#
+# client scripts should be executed in a loop
+#
+# a T command includes a read set and a write set
+# the read set is just a list of string keys
+# the write set contains keys and values
+T () ("k1",103)
+W 1000
+T ("k1") (<"k2",203>)
+W 1000
+T ("k2") (<"k3",303>)
+W 1000
+T ("k3") (<"k4",403>)
+W 1000
+T ("k4") (<"k5",503>)
+W 1000
+T ("k5") (<"k6",603>)
+W 1000
+T ("k6") (<"k7",703>)
+W 1000
+T ("k7") (<"k8",803>)
+W 1000
+T ("k8") (<"k9",903>)
+W 1000
+T ("k9") ()
+S

@@ -57,7 +57,7 @@ internal class SystemManager
     {
         var clientExePath =
             Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/bin/Debug/net6.0/DadtkvClient.exe");
-        var clientScriptsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/Script");
+        var clientScriptsDirectory = Directory.GetCurrentDirectory();//Path.Combine(Directory.GetCurrentDirectory(), "DadtkvClient/Script");
 
         var tmCount = 0;
 
@@ -73,7 +73,7 @@ internal class SystemManager
                 {
                     config.TransactionManagers[tmCount++ % config.TransactionManagers.Count].Url,
                     client.Id,
-                    Path.Combine(clientScriptsDirectory, client.Script + ".txt")
+                    Path.Combine(clientScriptsDirectory, client.Script)
                 }
             }) ?? throw new Exception("Failed to start client process: " + client.Id);
             _processes.Add(p);
