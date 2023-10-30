@@ -19,13 +19,13 @@ P LM1 L http://localhost:10004
 P C1 C Demo/01/client-script-1
 #
 # this test will run for 100 time slots.
-S 2
+S 100
 #
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15
 #
 # Each time slots lasts 10000 miliseconds
-D 5000 
+D 3000 
 #
 # F commands describe the state of server processes
 #

@@ -10,7 +10,7 @@ internal class ScriptReader
 
     public ScriptReader(string script)
     {
-        _lines = script.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+        _lines = script.Split("\n");
         _currentLine = 0;
     }
 

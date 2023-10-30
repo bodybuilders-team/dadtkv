@@ -25,7 +25,7 @@ P C2 C Demo/03/client-script-2
 P C3 C Demo/03/client-script-3
 #
 # number of time slots.
-S 6
+S 50
 #
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15

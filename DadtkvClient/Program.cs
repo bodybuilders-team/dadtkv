@@ -27,12 +27,14 @@ internal static class Program
 
         // Script configuration
         var scriptFilePath = Path.Combine(Environment.CurrentDirectory, args[2]);
-        var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
+        
 
         logger.LogInformation("Client {clientId} started", clientId);
 
         try
         {
+            var scriptReader = new ScriptReader(File.ReadAllText(scriptFilePath));
+            
             while (scriptReader.HasNextCommand())
             {
                 var command = scriptReader.NextCommand();
@@ -41,6 +43,7 @@ internal static class Program
                     switch (command)
                     {
                         case TransactionCommand transactionCommand:
+
                             var writeSet = transactionCommand.WriteSet
                                 .Select(x => new DadIntDto
                                 {

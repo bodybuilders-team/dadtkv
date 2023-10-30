@@ -14,7 +14,7 @@
 T ("a-key-name","another-key-name") (<"name1",10>,<"name2",20>)
 # both the read set and write set can be empty but the parenthesis will still be in the command
 T () (<"name3",456>)
-T ("name1","name2","name3") ()
+T ("name1","name2","name3") (<"name1",10>)
 # wait command (in milliseconds)
 W 5000
 # A status request from all the processes in the system

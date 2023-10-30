@@ -36,13 +36,13 @@ P C9 C Demo/07/client-script-9
 P C10 C Demo/07/client-script-10
 #
 # number of time slots.
-S 10
+S 1200
 #
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15
 #
 #  Length of each timeslot in milliseconds
-D 3000 
+D 200 
 #
 # F commands describe the state of server processes
 #
@@ -58,11 +58,11 @@ D 3000
 # each pair includes the ids of the suspecting process and the suspected process,
 # e.g. (A,B) means that process A suspects process B
 F 1 N N N N N N N N N N
-F 2 N N N N N N N N N N (TM2,TM1)(TM3,TM1)(TM4,TM1)(TM5,TM1)
-F 3 N N N N N N N N N N
-F 4 N N N N N N N N N N (LM2,LM1)
-F 5 N N N N N N N N N N (LM3,LM2)
-F 6 N N N N N N N N N N (LM4,LM3)
-F 7 C N N N N N N N N N
-F 10 C C N N N N N N N N
-F 15 C C C N N N N C C C (LM1,LM3)(LM1,LM4)(LM1,LM5)(LM2,LM3)(LM2,LM4)(LM2,LM5)
+F 30 N N N N N N N N N N (TM2,TM1)(TM3,TM1)(TM4,TM1)(TM5,TM1)
+F 40 N N N N N N N N N N
+F 90 N N N N N N N N N N (LM2,LM1)
+F 120 N N N N N N N N N N (LM3,LM2)
+F 142 N N N N N N N N N N (LM4,LM3)
+F 190 C N N N N N N N N N
+F 400 C C N N N N N N N N
+F 600 C C C N N N N C C C (LM1,LM3)(LM1,LM4)(LM1,LM5)(LM2,LM3)(LM2,LM4)(LM2,LM5)

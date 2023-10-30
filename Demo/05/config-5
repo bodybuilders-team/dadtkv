@@ -31,7 +31,7 @@ P C4 C Demo/05/client-script-4
 P C5 C Demo/05/client-script-5
 #
 # number of time slots.
-S 6
+S 12
 #
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15
@@ -54,7 +54,7 @@ D 3000
 # e.g. (A,B) means that process A suspects process B
 F 1 N N N N N N N N N N
 F 2 N N N N N N N N N N
-F 3 N C N N N N N N N N (TM3,TM2)
-F 4 N C C N N N N N N N (TM3,TM2)
-F 5 N C C N N N N N N N (TM3,TM2)(TM1,TM2)(TM1,TM3)(TM4,TM3)
-F 6 C C C N N N N N N N (TM3,TM2)(TM1,TM2)(TM1,TM3)(TM4,TM3)(TM4,TM1)(TM5,TM1)
+F 5 N C N N N N N N N N (TM3,TM2)
+F 7 N C C N N N N N N N (TM3,TM2)
+F 8 N C C N N N N N N N (TM3,TM2)(TM1,TM2)(TM1,TM3)(TM4,TM3)
+F 9 C C C N N N N N N N (TM3,TM2)(TM1,TM2)(TM1,TM3)(TM4,TM3)(TM4,TM1)(TM5,TM1)

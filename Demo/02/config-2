@@ -23,7 +23,7 @@ P LM5 L http://localhost:10005
 P C1 C Demo/02/client-script-1
 #
 # this test will run for 100 time slots.
-S 2
+S 5
 #
 # this test starts at 12:10:15 (physical wall time)
 T 12:10:15
