@@ -17,8 +17,10 @@ Winter Semester of 2023/2024
 
 ## Table of Contents 📜
 
-- [Organization Description](#organization-description)
+- [Architecture](#architecture)
 - [How to Run](#how-to-run)
+
+For more in-depth knowledge about the project, check the paper about it [here](./ist-meic-dad-g05.pdf).
 
 ---
 
