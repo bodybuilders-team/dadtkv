@@ -1,4 +1,4 @@
-# DADTKV
+# dadtkv
 
 > A **Distributed Transactional Key-Value Store** for Concurrent Data Management
 
